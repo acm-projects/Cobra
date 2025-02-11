@@ -308,7 +308,7 @@ Mastering coding challenges on platforms like LeetCode and HackerRank can be dau
 <br>
 
 ## Other Resources ➕
-- <a href="https://git-scm.com/downloads">GitHub</a> - <a href="https://docs.github.com/en/get-started/quickstart/hello-world">Docs</a> - <a href="https://product.hubspot.com/blog/git-and-github-tutorial-for-beginners">Tutorial/a>
+- <a href="https://git-scm.com/downloads">GitHub</a> - <a href="https://docs.github.com/en/get-started/quickstart/hello-world">Docs</a> - <a href="https://product.hubspot.com/blog/git-and-github-tutorial-for-beginners">Tutorial</a>
 - <a href="https://code.visualstudio.com/">Visual Studio Code</a>
 - <a href="https://www.postman.com/downloads/">Postman</a>
 

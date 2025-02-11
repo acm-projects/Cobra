@@ -198,19 +198,20 @@ Mastering coding challenges on platforms like LeetCode and HackerRank can be dau
 
 ## Tech Stack & Resources :computer:
 
-#### React
-- <a href="https://legacy.reactjs.org/tutorial/tutorial.html#setup-for-the-tutorial">Setup</a>
-- <a href="https://reactnative.dev/docs/environment-setup">Setting up the Environment</a>
-- <a href="https://www.youtube.com/watch?v=mrjy92pW0kM">React Native #1: Setup Visual Studio Code</a>
-- Drag & Drop Documents:
-  - <a href="https://www.youtube.com/watch?v=8uChP5ivQ1Q">Upload Files in React - Typescript, Drag and Drop, & Form Examples</a>
-- Do’s and Don'ts
-  - <a href="https://www.youtube.com/watch?v=b0IZo2Aho9Y">10 React Antipatterns to Avoid - Code This, Not That!</a>
-
-#### Node
-- <a href="https://nodejs.org/en/download/prebuilt-installer">Node Download</a>
-- <a href="https://www.codecademy.com/article/what-is-node">What is Node?</a>
-  - This is optional but I recommend taking a look at this.
+#### React Chrome Extension
+- <a href="https://www.luckymedia.dev/blog/how-to-create-a-chrome-extension-with-react-typescript-tailwindcss-and-vite-in-2024">How to Create a Chrome Extension with React, TypeScript, TailwindCSS, and Vite</a>
+- <a href="https://web-highlights.com/blog/how-to-build-a-chrome-extension-using-react/">How To Build A Chrome Extension Using React</a>
+- Youtube Playlist:
+- <a href="https://www.youtube.com/watch?v=rAZXWkVhCgg&list=PLBS1L3Ug2VVods9GnWbJc__STt9VnrJ9Z">ReactJS Chrome Extension using ReactJS 18 & Webpack 5</a>
+- Tailwind CSS:
+  - <a href="https://tailwindcss.com/docs/installation">Documentation</a>
+  - <a href="https://www.youtube.com/watch?v=bv_YdzsW3XY">Build a Chrome Extension in MINUTES With React and Tailwind CSS!</a>
+- Vite:
+  - <a href="https://vite.dev/guide/">Documentation</a>
+  - <a href="https://www.youtube.com/watch?v=GGi7Brsf7js">Full Tutorial | Building a Chrome Extension in Typescript and Vite</a>
+- <a href="https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts?utm_source=chatgpt.com">Content Scripts:</a>
+  - It allows you to read details from the web page
+  - <a href="https://dev.to/oluwatobi2001/a-beginners-guide-to-building-content-scripts-df?utm_source=chatgpt.com">Beginners guide to Building Content Scripts</a>
 
 #### AWS Tech Stack
 - Great Video to watch!!

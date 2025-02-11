@@ -1,4 +1,6 @@
-
+<p align="center">
+<img src='https://media.giphy.com/media/5ntdy5Ban1dIY/giphy.gif?cid=790b7611lpqdethvgtcjdqtfattblxgvnh969njnwsl8wytr&ep=v1_gifs_search&rid=giphy.gif&ct=g' width='700'>
+</p>
 
 # <h1 align="center">Cobra</h1>
 

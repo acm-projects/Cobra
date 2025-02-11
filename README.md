@@ -264,67 +264,53 @@ Mastering coding challenges on platforms like LeetCode and HackerRank can be dau
 
 ## Alternatives 🔄
 
-#### Flutter
-- <a href="https://docs.flutter.dev/">Documentation</a>
-- Installation:
-  - <a href="https://www.youtube.com/watch?v=8saLa5fh0ZI">How to install flutter in windows 10</a>
-- Beginners Guide:
-  - <a href="https://www.youtube.com/watch?v=33kyEzDMTZU&list=PLdTodMosi-Bxf___3xPh3_NS-on4dc0sJ">How to build a Flutter Website</a>
-- Basics:
-  - <a href="https://www.youtube.com/watch?v=D4nhaszNW4o">Flutter Basics by a REAL Project</a>
+#### React Website (Optional)
+- <a href="https://legacy.reactjs.org/tutorial/tutorial.html#setup-for-the-tutorial">Setup</a>
+- <a href="https://legacy.reactjs.org/tutorial/tutorial.html#setup-for-the-tutorial">Setting up the Environment</a>
+- <a href="https://youtu.be/SqcY0GlETPk?si=7m4sb_bs-ksPQLkv">React Tutorial for Beginners</a>
+- Do’s and Don'ts - 
+  - <a href="https://www.youtube.com/watch?v=b0IZo2Aho9Y">10 React Antipatterns to Avoid - Code This, Not That!</a>
 
-#### MERN Stack
-- This works really well with React Native and with MongoDB it can handle any form of data without any issue
-- MERN Stack Playlist. It goes over how to create user authentication. Hence, I suggest looking at that portion
-  - <a href="https://www.youtube.com/watch?v=P5QbE9aRCLQ&list=PLaAoUJDWH9WrPXMOkqHHsPHxbhvRDqryM">React Native & Node JS Authentication App</a>
-- MongoDB Playlist:
-  - <a href="https://www.youtube.com/watch?v=ExcRbA7fy_A&list=PL4cUxeGkcC9h77dJ-QJlwGlZlTd4ecZOA">Complete MongoDB Tutorial</a>
+#### Node (Optional)
+- Use this in conjunction with React
+- <a href="https://nodejs.org/en/download/prebuilt-installer">Node Download</a>
+- <a href="https://www.codecademy.com/article/what-is-node">What is Node?</a>
+  - This is optional but I recommend taking a look at this.
 
-#### Alternatives to Amazon Kendra
-- <a href="https://www.elastic.co/?utm_campaign=Google-B-Amer-US&utm_content=Brand-Core&utm_source=google&utm_medium=cpc&device=c&utm_term=elasticsearch&gad_source=1&gclid=Cj0KCQjw-uK0BhC0ARIsANQtgGO1pKPMVuSnAdgAh-VXuHT4qjSfQpXrN9Terx7H_twhS92yP3RiO34aAvX2EALw_wcB">Elasticsearch:</a>
-  - Overview: Elasticsearch is a powerful open-source search engine that can index and search large volumes of data quickly.
-- <a href="https://learn.microsoft.com/en-us/azure/search/search-what-is-azure-search">Azure Cognitive Search:</a>
-  - Overview: A fully managed search service by Microsoft that provides AI-powered search capabilities.
-
-#### Alternatives to Amazon Lex
-- <a href="https://cloud.google.com/dialogflow">Dialogflow (by Google Cloud):</a>
-  - Overview: Dialogflow is a natural language understanding platform that makes it easy to design and integrate conversational user interfaces. 
-- <a href="https://dev.botframework.com/">Microsoft Bot Framework:</a>
-  - Overview: A comprehensive framework for building conversational AI experiences, part of the Azure Bot Service.
- 
-#### Alternative to Apify/UTD Coursebook
-- <a href="https://www.utdnebula.com/docs/api-docs/nebula-api">Nebula API:</a>
-  - Overview: An API developed by UTD Nebula Labs that provides data regarding UTD class sections as sourced from Coursebook. 
+#### HTML/CSS:
+- <a href="https://www.youtube.com/watch?v=pQN-pnXPaVg&t=3s">HTML Full Course - Build a Website Tutorial</a>
+- <a href="https://developer.mozilla.org/en-US/docs/Web/HTML">HTML Documentation</a>
+- <a href="https://developer.mozilla.org/en-US/docs/Web/CSS">CSS Documentation</a>
 
 <br>
 
 ## Roadblocks and Possible Solutions :construction: :bulb:
 
-- Having everyone’s machine work with React.
-  - If this is an issue then we can switch to Flutter and see if that works, otherwise confer with others to find a better solution that works for everyone.
 - Either the Frontend or Backend team falling behind.
   - If this happens the best course would be to get some assistance from the other side until caught up
+  - Worst case scenario we move on and focus on implementing the important features
 - Running into AWS Tech Stack Issues.
-  - If for any reason we are having a hard time with utilizing AWS in the early stages of development then we immediately switch over to MERN as it is similar.
-- Issues with Amazon Kendra or Lex
-  - If we are having a hard time developing either of these two, or the cost becomes abnormally high then we switch to alternatives. If not enough available time then switch AI assistance with the next available stretch goal.
+  - If for any reason we are having a hard time with utilizing AWS in the early stages of development then we immediately switch over to another Database like MongoDB, Firebase, ….
 
 <br>
 
 ## Competition :vs:
 
-- Blackboard, Canvas (No dedicated collaboration focus)
-- Discord, Slack, GroupMe, Microsoft Teams (General communication tools)
-- StudyBlue, Quizlet (Study tools without collaboration focus)
-- Google Classroom (Limited collaboration features)
+- LeetCode and HackerRank built-in hints
+  - (limited and often locked behind paywalls)
+- Educational YouTube channels and tutorials
+  - (require switching platforms and are static)
+- Coding blogs like GeeksforGeeks
+  - (comprehensive but lack real-time integration)
+- Browser extensions for syntax help
+  - (doesn’t focus on specific coding challenge platforms)
 
 <br>
 
 ## Other Resources ➕
-- <a href="https://code.visualstudio.com/">Visual Studio Code</a>
-- <a href="https://nodejs.org/en/">Node.js</a>
 - <a href="https://git-scm.com/downloads">GitHub</a> - <a href="https://docs.github.com/en/get-started/quickstart/hello-world">Docs</a> - <a href="https://product.hubspot.com/blog/git-and-github-tutorial-for-beginners">Tutorial/a>
-- <a href="https://react.dev/learn/start-a-new-react-project">React</a>
+- <a href="https://code.visualstudio.com/">Visual Studio Code</a>
+- <a href="https://www.postman.com/downloads/">Postman</a>
 
 <br>
 

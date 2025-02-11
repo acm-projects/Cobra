@@ -331,4 +331,7 @@ Mastering coding challenges on platforms like LeetCode and HackerRank can be dau
 
 ## Cobra TEAM!! :partying_face: :fireworks:
 
-- 
+- Zuhaib B.
+- David M.
+- Srihan M.
+- Ammara S.

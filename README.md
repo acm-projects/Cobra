@@ -214,8 +214,16 @@ Mastering coding challenges on platforms like LeetCode and HackerRank can be dau
   - <a href="https://dev.to/oluwatobi2001/a-beginners-guide-to-building-content-scripts-df?utm_source=chatgpt.com">Beginners guide to Building Content Scripts</a>
 
 #### AWS Tech Stack
-- Great Video to watch!!
-  - <a href="https://www.youtube.com/watch?v=7m_q1ldzw0U">AWS Project: Architect and Build an End-to-End AWS Web Application from Scratch, Step by Step</a>
+- Must Read!!
+  - Provides architecture, walkthroughs and how to set an example 
+  - <a href="https://aws.amazon.com/blogs/mobile/how-to-build-a-chrome-extension-that-integrates-with-amplify-resources/">How to build a Chrome extension that integrates with Amplify resources</a>
+
+- Must Watch!!
+  - <a href="https://www.youtube.com/watch?v=0n809nd4Zu4">Build a Chrome Extension - Course for Beginners</a>
+
+- User Auth:
+  - <a href="https://aws.amazon.com/cognito/">Cognito</a>
+    - <a href="https://www.youtube.com/watch?v=QEGo6ZoN-ao&t=1472s">Amazon Cognito Beginner Guide</a>
 
 - Database/Storage:
   - <a href="https://stackoverflow.com/questions/37880961/aws-dynamodb-over-aws-s3">AWS DynamoDB over AWS S3?</a>
@@ -228,25 +236,26 @@ Mastering coding challenges on platforms like LeetCode and HackerRank can be dau
 
 - API:
   - <a href="https://aws.amazon.com/amplify/">Amplify</a>
-    - <a href="https://www.youtube.com/watch?v=kqi4gPfdVHY">Working with Data in DynamoDB from React with AWS Amplify</a>
-      - This video will go over how to use DynamoDB with AWS Amplify and React.
-      - 
-  - <a href="https://aws.amazon.com/kendra/">Amazon Kendra</a>
-    - Amazon Kendra is an advance search service that will retrieve any information based on a basic search query. This is good for if we treat our documents and chats as a knowledge base and have Kendra retrieve relevant information based off the student’s questions
-    - <a href="https://www.youtube.com/watch?v=NJoEyIZ_Tas">Build an intelligent search application in a few clicks with Amazon Kendra</a>
-    - <a href="https://www.youtube.com/watch?v=QqLE_8mJCR8">AWS Kendra - Enterprise Search Service | Create Index, Custom Datasource & Search Experience</a>
-    
-  - <a href="https://aws.amazon.com/lex/">Amazon Lex</a>
-    - Amazon Lex is a conversational AI that, given any information and question, will be able to reply in a human-like manner. This is great if we combine this with Kendra to gather the important information first and then have Lex reply to the student in a conversational manner.
-    - <a href="https://www.youtube.com/watch?v=RB8yw2nzA2Q&list=PLAMHV77MSKJ7s4jE7F_k_Od8qZlFGf1BY">Conversational AI and Chatbot (Amazon Lex Tutorial)</a>
-    - <a href="https://www.youtube.com/watch?v=iDCWxfI2EQo">Amazon Lex: 8 Things You HAVE To Know 🔥 | AWS</a>
-    
-  - <a href="https://aws.amazon.com/blogs/machine-learning/integrate-amazon-kendra-and-amazon-lex-using-a-search-intent/">Integrating Kendra and Lex</a>
+    - <a href="https://www.youtube.com/watch?v=HdCmo0a3ngM">AWS Amplify (Gen 1) in Plain English | Getting Started Tutorial for Beginners</a>
 
-  - <a href="https://apify.com/?utm_term=apify&utm_campaign=US-EN+%7C+SEA+%7C+Brand&utm_source=adwords&utm_medium=ppc&hsa_acc=9303439903&hsa_cam=12208847443&hsa_grp=115467448485&hsa_ad=495840157411&hsa_src=g&hsa_tgt=kwd-401768082175&hsa_kw=apify&hsa_mt=e&hsa_net=adwords&hsa_ver=3&gad_source=1&gclid=CjwKCAjw2Je1BhAgEiwAp3KY76gLLgb-wTrbohek0h_HAgHMQDZ2w3sbsr5vu651dnyeRYdAiRGe0hoCI8MQAvD_BwE">Apify</a>
-    - A powerful automation platform that offers ready-made scraping tools for websites like Facebook, Amazon, and Twitter, and supports JS rendering, CAPTCHA solving, and IP rotation. Use this to web scrape UTD Coursebook.
-    - <a href="https://www.youtube.com/watch?v=3rrpfW0bEdc">Apify Tutorial For Beginners | How To Use Apify</a>
-    - <a href="https://www.youtube.com/watch?v=K76Hib0cY0k">How to use Web Scraper from Apify to scrape any website</a>
+  - <a href="https://rapidapi.com/bharathkalyans/api/leetcode-api">Leetcode API</a>
+    - Good for gathering user data
+   
+  - OpenAI:
+    - <a href="https://platform.openai.com/docs/api-reference/introduction">Documentation</a>
+    - <a href="https://www.youtube.com/watch?v=GmEfKFI2Ki0">ChatGPT Chrome Extension with React and TailwindCSS</a>
+
+  - Socket.IO (optional):
+    - Good for real-time features like dynamic error suggestions.
+    - <a href="https://socket.io/docs/v4/">Documentation</a>
+
+  - StackExchange API:
+    - Look into this to see if we can use this to get information from StackOverflow
+    - <a href="https://api.stackexchange.com/docs'">Documentation</a>
+
+  - Github API:
+    - <a href="https://docs.github.com/en/rest?apiVersion=2022-11-28">GitHub REST API documentation</a>
+
 
 - Servers: (Optional)
   - <a href="https://aws.amazon.com/ec2/">EC2</a>

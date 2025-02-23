@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - Cobra</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    :root[data-theme="dark"] {
+      --bg-gradient-from: #0A0B1E;
+      --bg-gradient-to: #1a1b3d;
+      --container-bg: rgba(255, 255, 255, 0.05);
+      --container-border: rgba(255, 255, 255, 0.1);
+      --text-primary: white;
+      --text-secondary: #94a3b8;
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --input-border: rgba(255, 255, 255, 0.1);
+      --button-bg: #8B5CF6;
+      --button-hover: #7c4dff;
+      --error-bg: rgba(239, 68, 68, 0.1);
+      --error-border: rgba(239, 68, 68, 0.2);
+      --error-text: #ef4444;
+    }
+
+    :root[data-theme="light"] {
+      --bg-gradient-from: #f0f2f5;
+      --bg-gradient-to: #ffffff;
+      --container-bg: white;
+      --container-border: #e5e7eb;
+      --text-primary: #1f2937;
+      --text-secondary: #4b5563;
+      --input-bg: #f9fafb;
+      --input-border: #d1d5db;
+      --button-bg: #8B5CF6;
+      --button-hover: #7c4dff;
+      --error-bg: #fee2e2;
+      --error-border: #fecaca;
+      --error-text: #dc2626;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-width: 300px;
+      background: linear-gradient(135deg, var(--bg-gradient-from) 0%, var(--bg-gradient-to) 100%);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    .signin-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .signin-container {
+      width: 100%;
+      max-width: 360px;
+      background: var(--container-bg);
+      border: 1px solid var(--container-border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(8px);
+      box-sizing: border-box;
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo {
+      width: 220px;
+      height: auto;
+      margin-bottom: 16px;
+    }
+
+    .welcome-text {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.5;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .signin-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group {
+      position: relative;
+    }
+
+    .form-group i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 12px 12px 36px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--button-bg);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    }
+
+    .form-group input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+
+    .signin-button {
+      flex: 1;
+      background: var(--button-bg);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .theme-toggle {
+      background: var(--container-bg);
+      border: 1px solid var(--container-border);
+      border-radius: 8px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+      padding: 0;
+      font-size: 16px;
+    }
+
+    .theme-toggle:hover {
+      background: var(--input-bg);
+      color: var(--button-bg);
+      border-color: var(--button-bg);
+      transform: translateY(-1px);
+    }
+
+    .theme-toggle i {
+      line-height: 1;
+    }
+
+    .signin-button:hover {
+      background: var(--button-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .error-message {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
+      animation: shake 0.5s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    @media (max-width: 400px) {
+      .signin-container {
+        padding: 20px;
+      }
+
+      .logo {
+        width: 140px;
+      }
+
+      .welcome-text {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="signin-page">
+    <div class="signin-container">
+      <div class="logo-container">
+        <img src="images/cobralogo.png" alt="Cobra - Code smarter, not harder" class="logo">
+        <div class="welcome-text">
+          Welcome back, sign in to continue your coding journey with AI-powered assistance.
+        </div>
+      </div>
+      
+      <form class="signin-form" id="signin-form">
+        <div class="form-group">
+          <i class="fas fa-envelope"></i>
+          <input type="email" id="email" placeholder="Email address" required>
+        </div>
+        
+        <div class="form-group">
+          <i class="fas fa-lock"></i>
+          <input type="password" id="password" placeholder="Password" required>
+        </div>
+        
+        <button type="submit" class="signin-button">
+          Sign In
+        </button>
+      </form>
+      
+      <div class="error-message" id="error-message">
+        Invalid email or password. Please try again.
+      </div>
+    </div>
+  </div>
+  <script src="auth.js"></script>
+  <script src="signin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const themeToggle = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+      const themeIcon = themeToggle.querySelector('i');
+
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      html.setAttribute('data-theme', savedTheme);
+      updateThemeIcon(savedTheme);
+
+      themeToggle.addEventListener('click', () => {
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+      });
+
+      function updateThemeIcon(theme) {
+        themeIcon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+      }
+    });
+  </script>
+</body>
+</html> 

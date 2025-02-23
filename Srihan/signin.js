@@ -26,12 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (success) {
           window.location.href = 'popup.html';
         } else {
-          // If sign in fails, display an error message
+          //display an error message for sign in
           errorMessage.textContent = 'Invalid email or password';
           errorMessage.style.display = 'block';
         }
       } catch (error) {
-        //if there is an error during the sign-in process, display an error message
+        //display an error message for sign in
         errorMessage.textContent = 'An error occurred. Please try again.';
         errorMessage.style.display = 'block';
       }

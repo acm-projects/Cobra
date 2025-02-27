@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cobra</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    body {
+      width: 100%;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    .container {
+      height: 100vh;
+      display: flex;
+      background-color: #0A0B1E;
+    }
+
+    .nav-sidebar {
+      width: 60px;
+      background-color: rgba(255, 255, 255, 0.03);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+    }
+
+    .nav-item {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 0;
+      color: #94a3b8;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .nav-item.active {
+      background-color: #8B5CF6;
+      color: white;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 16px;
+      background-color: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .logo {
+      height: 45px;
+      width: 144px;
+    }
+
+    .sign-out-button {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      padding: 8px 16px;
+      font-size: 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sign-out-button:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    /* scrollbar */
+    .content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .content::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* chat UI Styles */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .chat-input {
+      padding: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input input {
+      flex: 1;
+    }
+
+    .chat-input button {
+      padding: 8px 16px;
+      background: #8B5CF6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- navigation sidebar -->
+    <nav class="nav-sidebar">
+      <div class="nav-item active" data-section="home">
+        <i class="fas fa-home"></i>
+      </div>
+      <div class="nav-item" data-section="hints">
+        <i class="fas fa-lightbulb"></i>
+      </div>
+      <div class="nav-item" data-section="resources">
+        <i class="fas fa-book"></i>
+      </div>
+      <div class="nav-item" data-section="errors">
+        <i class="fas fa-bug"></i>
+      </div>
+      <div class="nav-item" data-section="chat">
+        <i class="fas fa-comments"></i>
+      </div>
+      <div class="nav-item" data-section="settings">
+        <i class="fas fa-cog"></i>
+      </div>
+    </nav>
+
+    <!-- main content -->
+    <div class="main-content">
+      <div class="header">
+        <img src="images/cobralogo.png" alt="Cobra - Code smarter, not harder" class="logo">
+        <div class="header-actions">
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+            <i class="fas fa-moon"></i>
+          </button>
+          <button id="signOutBtn" class="sign-out-button">
+            <i class="fas fa-sign-out-alt"></i>
+            Sign Out
+          </button>
+        </div>
+      </div>
+      
+      <div class="content">
+        <!-- home Section -->
+        <div class="section active" id="home">
+          <!-- current Problem Card -->
+          <div class="dashboard-card current-problem">
+            <div class="card-header">
+              <i class="fas fa-code"></i>
+              <h3>Current Problem</h3>
+            </div>
+            <div id="current-problem" class="card-content"></div>
+          </div>
+
+          <!-- quick Stats -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value">85%</div>
+              <div class="stat-label">Accuracy</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">12</div>
+              <div class="stat-label">Problems Solved</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">4</div>
+              <div class="stat-label">Day Streak</div>
+            </div>
+          </div>
+
+          <!-- recent Activity -->
+          <div class="dashboard-card">
+            <div class="card-header">
+              <i class="fas fa-history"></i>
+              <h3>Recent Activity</h3>
+            </div>
+            <div class="recent-problems">
+              <div class="problem-item">
+                <span class="problem-title">Two Sum</span>
+                <span class="problem-status success">Solved</span>
+              </div>
+              <div class="problem-item">
+                <span class="problem-title">Valid Parentheses</span>
+                <span class="problem-status success">Solved</span>
+              </div>
+              <div class="problem-item">
+                <span class="problem-title">Merge Two Lists</span>
+                <span class="problem-status failed">Failed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- quick Tools -->
+          <div class="dashboard-card">
+            <div class="card-header">
+              <i class="fas fa-tools"></i>
+              <h3>Quick Tools</h3>
+            </div>
+            <div class="tools-grid">
+              <button class="tool-button hints">
+                <i class="fas fa-lightbulb"></i>
+                Get Hints
+              </button>
+              <button class="tool-button errors">
+                <i class="fas fa-bug"></i>
+                Fix Errors
+              </button>
+              <button class="tool-button resources">
+                <i class="fas fa-book"></i>
+                Resources
+              </button>
+              <button class="tool-button chat">
+                <i class="fas fa-comments"></i>
+                AI Chat
+              </button>
+            </div>
+          </div>
+
+          <!-- learning Resources -->
+          <div class="dashboard-card">
+            <div class="card-header">
+              <i class="fas fa-graduation-cap"></i>
+              <h3>Learning Path</h3>
+            </div>
+            <div class="card-content">
+              <div class="learning-path-grid">
+                <div class="learning-section">
+                  <div class="section-label">
+                    <i class="fas fa-cube"></i>
+                    <span>Data Structure Focus</span>
+                  </div>
+                  <select id="dataStructures">
+                    <option value="">Select Data Structure</option>
+                    <option value="array">Arrays</option>
+                    <option value="linkedList">Linked Lists</option>
+                    <option value="tree">Trees</option>
+                    <option value="graph">Graphs</option>
+                    <option value="hashTable">Hash Tables</option>
+                  </select>
+                  <div class="description" id="ds-description"></div>
+                </div>
+
+                <div class="learning-section">
+                  <div class="section-label">
+                    <i class="fas fa-code-branch"></i>
+                    <span>Algorithm Focus</span>
+                  </div>
+                  <select id="algorithms">
+                    <option value="">Select Algorithm</option>
+                    <option value="bfs">Breadth-First Search</option>
+                    <option value="dfs">Depth-First Search</option>
+                    <option value="binarySearch">Binary Search</option>
+                    <option value="dp">Dynamic Programming</option>
+                    <option value="twoPointers">Two Pointers</option>
+                  </select>
+                  <div class="description" id="algo-description"></div>
+                </div>
+              </div>
+
+              <div class="progress-section">
+                <div class="progress-header">
+                  <h4>Learning Progress</h4>
+                  <span class="progress-percent">45%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 45%"></div>
+                </div>
+                <div class="progress-stats">
+                  <div class="stat">
+                    <span class="stat-number">12</span>
+                    <span class="stat-label">Problems</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-number">3</span>
+                    <span class="stat-label">Topics</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-number">5</span>
+                    <span class="stat-label">Days</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="info" class="info-container"></div>
+        </div>
+
+        <!-- hints Section -->
+        <div class="section" id="hints">
+          <div class="section-header">
+            <h2>Hints & Explanations</h2>
+          </div>
+          <!-- content will be added later -->
+        </div>
+
+        <!-- resources Section -->
+        <div class="section" id="resources">
+          <div class="section-header">
+            <h2>Resources</h2>
+          </div>
+          <!-- content will be added later -->
+        </div>
+
+        <!-- error Fixes Section -->
+        <div class="section" id="errors">
+          <div class="section-header">
+            <h2>Error Analysis</h2>
+          </div>
+          <!-- content will be added later -->
+        </div>
+
+        <!-- chat Section -->
+        <div class="section" id="chat">
+          <div class="section-header">
+            <h2>AI Chat</h2>
+          </div>
+          <!-- content will be added later -->
+        </div>
+
+        <!-- settings section -->
+        <div class="section" id="settings">
+          <div class="section-header">
+            <h2>Settings</h2>
+          </div>
+          <!-- sontent will be added later -->
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="auth.js"></script>
+  <script src="popup.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html> 

@@ -1,0 +1,11 @@
+{
+    "manifest_version": 3,
+    "name": "Helpful Stack Overflow Links",
+    "version": "1.0",
+    "permissions": ["activeTab", "storage", "webNavigation"],
+    
+    "action": {
+        "default_popup": "popup.html"
+    }
+}
+

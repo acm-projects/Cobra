@@ -1,23 +1,6 @@
-chrome.runtime.onInstalled.addListener(() => {
-    if (chrome.sidePanel) {
-      chrome.sidePanel.setOptions({
-        enabled: true
-      });
+/*chrome.webNavigation.onCompleted.addListener((details) => {
+    const url = details.url;
+    if (url.includes("leetcode.com/problems/")) {
+        chrome.action.openPopup(); // Opens the extension popup (May not work in all cases)
     }
-  });
-  
-  chrome.action.onClicked.addListener((tab) => {
-    if (chrome.sidePanel) {
-      chrome.sidePanel.open({windowId: tab.windowId});
-    }
-  });
-  
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'detectPlatform') {
-      chrome.storage.local.set({
-        currentPlatform: message.platform,
-        currentProblem: message.problemTitle
-      });
-    }
-    return true;
-  }); 
+}, { url: [{ hostSuffix: "leetcode.com" }] });*/

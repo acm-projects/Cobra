@@ -1,42 +1,10 @@
 {
     "manifest_version": 3,
-    "name": "Cobra",
+    "name": "Display Problem Info",
     "version": "1.0",
-    "description": "Code smarter, not harder - Your AI-powered coding assistant",
-    "permissions": [
-      "activeTab",
-      "scripting",
-      "storage",
-      "sidePanel"
-    ],
-    "host_permissions": [
-      "*://leetcode.com/*"
-    ],
+    "permissions": ["activeTab", "storage", "tabs", "webNavigation"],
+    
     "action": {
-      "default_icon": "images/cobra-icon.png"
-    },
-    "side_panel": {
-      "default_path": "sidepanel.html"
-    },
-    "background": {
-      "service_worker": "background.js",
-      "type": "module"
-    },
-    "content_scripts": [
-      {
-        "matches": [
-          "*://leetcode.com/*"
-        ],
-        "js": ["content.js"],
-        "run_at": "document_idle"
-      }
-    ],
-    "icons": {
-      "16": "images/cobra-icon.png",
-      "48": "images/cobra-icon.png",
-      "128": "images/cobra-icon.png"
-    },
-    "minimum_chrome_version": "114"
-  }
-  
-  
+        "default_popup": "popup.html"
+    }
+}

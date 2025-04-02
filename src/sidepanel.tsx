@@ -39,6 +39,7 @@ const SidePanel: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [windowSize, setWindowSize] = useState<WindowSize['size']>('medium');
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false);
+  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
 
   // New settings
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
@@ -1265,7 +1266,7 @@ const SidePanel: React.FC = () => {
       .message {
         display: flex;
         gap: 10px;
-        max-width: 65%;
+        max-width: 85%;
         position: relative;
       }
       
@@ -1287,10 +1288,17 @@ const SidePanel: React.FC = () => {
         justify-content: center;
         flex-shrink: 0;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+      
+      .message-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
       
       .message.assistant .message-avatar {
-        background: linear-gradient(135deg, #60a5fa, #3b82f6);
+        background: transparent;
       }
       
       .message.assistant .message-avatar i {
@@ -2426,6 +2434,132 @@ const SidePanel: React.FC = () => {
         cursor: pointer;
         font-size: 12px;
       }
+      
+      /* Chat Styles (extended) */
+      .message-text code {
+        font-family: monospace;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #e2e8f0;
+      }
+      
+      .message-code-block {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 8px;
+        margin-top: 10px;
+        margin-bottom: 6px;
+        position: relative;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+      }
+      
+      .message-code-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px 8px 0 0;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      
+      .message-code-language {
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .message-code-actions {
+        display: flex;
+        gap: 8px;
+      }
+      
+      .message-code-action {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        padding: 3px;
+        font-size: 11px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      .message-code-action:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+      
+      .message-code-content {
+        max-height: 300px;
+        overflow-y: auto;
+        position: relative;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(139, 92, 246, 0.3) rgba(0, 0, 0, 0.1);
+      }
+      
+      .message-code-content::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      
+      .message-code-content::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 0 0 8px 0;
+      }
+      
+      .message-code-content::-webkit-scrollbar-thumb {
+        background-color: rgba(139, 92, 246, 0.3);
+        border-radius: 10px;
+      }
+      
+      .message-code-content pre {
+        margin: 0;
+        padding: 12px 16px;
+        white-space: pre;
+        overflow-x: auto;
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #e2e8f0;
+        counter-reset: line;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      
+      .message-code-content pre code {
+        display: block;
+        padding: 0;
+        background: transparent;
+      }
+      
+      .message-code-line-numbers {
+        position: absolute;
+        left: 0;
+        top: 0;
+        padding: 12px 0;
+        text-align: right;
+        color: rgba(255, 255, 255, 0.3);
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        user-select: none;
+        background: rgba(0, 0, 0, 0.2);
+        width: 30px;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .message-code-with-numbers pre {
+        padding-left: 40px;
+      }
     `;
     document.head.appendChild(styleElement);
     
@@ -2891,6 +3025,11 @@ const SidePanel: React.FC = () => {
     localStorage.setItem('sidebarExpanded', newState.toString());
   };
   
+  // Toggle profile menu
+  const handleProfileClick = () => {
+    setShowProfileMenu(!showProfileMenu);
+  };
+  
   // Render the sidepanel UI
   return (
     <div className="container">
@@ -2904,7 +3043,7 @@ const SidePanel: React.FC = () => {
           />
           <img 
             className="full-logo" 
-            src={chrome.runtime.getURL('images/cobralogo.png')} 
+            src={chrome.runtime.getURL('images/cobrawhite_enhanced.png')} 
             alt="Cobra Logo" 
           />
         </div>
@@ -2943,6 +3082,13 @@ const SidePanel: React.FC = () => {
           <i className="fas fa-bug"></i>
           {sidebarExpanded && <span className="nav-label">Errors</span>}
         </div>
+          <div 
+            className={`nav-item ${activeSection === 'stopwatch' ? 'active' : ''}`} 
+            onClick={() => handleNavigation('stopwatch')}
+          >
+            <i className="fas fa-stopwatch"></i>
+            {sidebarExpanded && <span className="nav-label">Stopwatch</span>}
+        </div>
         <div 
           className={`nav-item ${activeSection === 'chat' ? 'active' : ''}`} 
           onClick={() => handleNavigation('chat')}
@@ -2950,14 +3096,30 @@ const SidePanel: React.FC = () => {
           <i className="fas fa-comments"></i>
           {sidebarExpanded && <span className="nav-label">Chat</span>}
         </div>
-          <div 
-            className={`nav-item ${activeSection === 'stopwatch' ? 'active' : ''}`} 
-            onClick={() => handleNavigation('stopwatch')}
-          >
-            <i className="fas fa-stopwatch"></i>
-            {sidebarExpanded && <span className="nav-label">Stopwatch</span>}
-          </div>
         </div>
+
+        {/* Past Chats Section - only visible when sidebar is expanded */}
+        {sidebarExpanded && (
+          <div className="past-chats-section">
+            <div className="past-chats-header">
+              <span>Past Chats</span>
+            </div>
+            <div className="past-chats-list">
+              <div className="past-chat-item">
+                <i className="fas fa-history"></i>
+                <span className="chat-title">Binary Search Trees</span>
+              </div>
+              <div className="past-chat-item">
+                <i className="fas fa-history"></i>
+                <span className="chat-title">Dynamic Programming</span>
+              </div>
+              <div className="past-chat-item">
+                <i className="fas fa-history"></i>
+                <span className="chat-title">Graph Algorithms</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Navigation Items */}
         <div className="nav-items-bottom">
@@ -2970,9 +3132,28 @@ const SidePanel: React.FC = () => {
           </div>
           
           {/* Profile image */}
-          <div className="sidebar-profile">
+          <div className="sidebar-profile" onClick={handleProfileClick}>
             <img src={chrome.runtime.getURL('images/cobrapfp.png')} alt="Profile" />
           </div>
+          
+          {/* Profile Popup Menu */}
+          {showProfileMenu && (
+            <div className="profile-popup">
+              <div className="profile-header">bilbo</div>
+              <div className="profile-menu-item">
+                <i className="fas fa-cog"></i>
+                <span>Settings</span>
+              </div>
+              <div className="profile-menu-item">
+                <i className="fas fa-paper-plane"></i>
+                <span>Contact us</span>
+              </div>
+              <div className="profile-menu-item logout">
+                <i className="fas fa-sign-out-alt"></i>
+                <span>Log out</span>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -2982,6 +3163,8 @@ const SidePanel: React.FC = () => {
           {/* Home Section */}
           <div className={`section ${activeSection === 'home' ? 'active' : ''}`} id="home">
             <div className="content">
+              <h2 className="section-title">Dashboard</h2>
+              
               {/* Current Problem Card */}
               <motion.div 
                 className="dashboard-card"
@@ -2990,206 +3173,199 @@ const SidePanel: React.FC = () => {
                 transition={{ duration: 0.5 }}
               >
                 <div className="card-header">
-                  <motion.i 
-                    className="fas fa-code"
-                    initial={{ rotate: -10 }}
-                    animate={{ rotate: 0 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                  ></motion.i>
+                  <div className="card-header-left">
+                  <i className="fas fa-code"></i>
                   <h3>Current Problem</h3>
                 </div>
-                <motion.div 
-                  id="current-problem" 
-                  className="card-content"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
-                >
-                  <motion.div
-                    initial={{ scale: 0.95 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                    style={{ fontSize: "13px", padding: "8px 0" }}
-                  >
-                  No active problem detected. Navigate to a coding problem to activate.
-                  </motion.div>
-                </motion.div>
+                  <div className="card-header-right">
+                    <div className="card-actions">
+                      <button className="card-action-button">
+                        <i className="fas fa-sync-alt"></i>
+                      </button>
+                      <button className="card-action-button">
+                        <i className="fas fa-external-link-alt"></i>
+                      </button>
+                </div>
+              </div>
+                </div>
+                <div className="card-content">
+                  <div className="problem-info">
+                    <div className="problem-meta">
+                      <div className="problem-difficulty">
+                        <i className="fas fa-signal"></i>
+                        <span>Medium</span>
+                </div>
+                      <div className="problem-time">
+                        <i className="fas fa-clock"></i>
+                        <span>Started 27 min ago</span>
+                </div>
+              </div>
+                    <div className="problem-description">
+                      Design a data structure that follows the constraints of a Least Recently Used (LRU) cache. Implement the LRUCache class with get and put operations.
+                </div>
+                    <div className="problem-tags">
+                      <span className="problem-tag">Hash Table</span>
+                      <span className="problem-tag">Linked List</span>
+                      <span className="problem-tag">Design</span>
+                    </div>
+                    <div className="problem-actions">
+                      <button className="problem-action-btn primary">
+                        <i className="fas fa-lightbulb"></i>
+                        <span>Get Hints</span>
+                      </button>
+                      <button className="problem-action-btn secondary">
+                        <i className="fas fa-book"></i>
+                        <span>View Resources</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
 
               {/* Quick Actions */}
-              <motion.div 
-                className="dashboard-card"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <div className="card-header">
-                  <motion.i 
-                    className="fas fa-bolt"
-                    animate={{
-                      scale: [1, 1.2, 1],
-                      color: ["#8B5CF6", "#60a5fa", "#8B5CF6"]
-                    }}
-                    transition={{ 
-                      duration: 2,
-                      repeat: Infinity,
-                      repeatType: "reverse"
-                    }}
-                  ></motion.i>
-                  <h3>Quick Actions</h3>
-                </div>
+              <h2 className="section-title">Quick Actions</h2>
                 <div className="tools-grid">
-                  <motion.div 
-                    className="tool-button hints" 
-                    onClick={() => handleNavigation('hints')}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.8 }}
-                    whileHover={{ 
-                      scale: 1.02,
-                      boxShadow: "0 4px 12px rgba(139, 92, 246, 0.2)",
-                      y: -2
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                  >
+                <motion.div 
+                  className="tool-button hints"
+                  onClick={() => handleNavigation('hints')}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <div className="tool-button-icon">
                     <i className="fas fa-lightbulb"></i>
-                    <span>Hints</span>
-                  </motion.div>
-                  <motion.div 
-                    className="tool-button resources" 
-                    onClick={() => handleNavigation('resources')}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.9 }}
-                    whileHover={{ 
-                      scale: 1.02,
-                      boxShadow: "0 4px 12px rgba(139, 92, 246, 0.2)",
-                      y: -2
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <i className="fas fa-book"></i>
-                    <span>Resources</span>
-                  </motion.div>
-                  <motion.div 
-                    className="tool-button errors" 
-                    onClick={() => handleNavigation('errors')}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 1.0 }}
-                    whileHover={{ 
-                      scale: 1.02,
-                      boxShadow: "0 4px 12px rgba(139, 92, 246, 0.2)",
-                      y: -2
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <i className="fas fa-bug"></i>
-                    <span>Errors</span>
-                  </motion.div>
-                  <motion.div 
-                    className="tool-button chat" 
-                    onClick={() => handleNavigation('chat')}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 1.1 }}
-                    whileHover={{ 
-                      scale: 1.02,
-                      boxShadow: "0 4px 12px rgba(139, 92, 246, 0.2)",
-                      y: -2
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <i className="fas fa-comments"></i>
-                    <span>Chat</span>
-                  </motion.div>
                   </div>
-              </motion.div>
+                  <div className="tool-button-content">
+                    <div className="tool-button-title">Hints</div>
+                    <div className="tool-button-description">Get problem-specific guidance</div>
+                  </div>
+                </motion.div>
+                
+                <motion.div 
+                  className="tool-button resources"
+                  onClick={() => handleNavigation('resources')}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.4 }}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <div className="tool-button-icon">
+                    <i className="fas fa-book"></i>
+                  </div>
+                  <div className="tool-button-content">
+                    <div className="tool-button-title">Resources</div>
+                    <div className="tool-button-description">Learning materials and guides</div>
+                  </div>
+                </motion.div>
+                
+                <motion.div 
+                  className="tool-button errors"
+                  onClick={() => handleNavigation('errors')}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.6 }}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <div className="tool-button-icon">
+                    <i className="fas fa-bug"></i>
+                  </div>
+                  <div className="tool-button-content">
+                    <div className="tool-button-title">Error Help</div>
+                    <div className="tool-button-description">Analyze and fix code errors</div>
+                  </div>
+                </motion.div>
+                
+                <motion.div 
+                  className="tool-button chat"
+                  onClick={() => handleNavigation('chat')}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.8 }}
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <div className="tool-button-icon">
+                    <i className="fas fa-comments"></i>
+                  </div>
+                  <div className="tool-button-content">
+                    <div className="tool-button-title">AI Chat</div>
+                    <div className="tool-button-description">Get personalized assistance</div>
+                </div>
+                </motion.div>
+              </div>
 
               {/* Recent Activity */}
+              <h2 className="section-title">Recent Activity</h2>
               <motion.div 
                 className="dashboard-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 1.2 }}
+                transition={{ duration: 0.5, delay: 1.0 }}
               >
                 <div className="card-header">
-                  <motion.i 
-                    className="fas fa-history"
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 2, delay: 2, repeat: 0 }}
-                  ></motion.i>
-                  <h3>Recent Activity</h3>
+                  <div className="card-header-left">
+                  <i className="fas fa-history"></i>
+                    <h3>Previously Attempted</h3>
+                  </div>
+                  <div className="card-header-right">
+                    <div className="card-actions">
+                      <button className="card-action-button">
+                        <i className="fas fa-filter"></i>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <motion.div 
-                  className="card-content"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 1.3 }}
-                >
-                  <AnimatePresence>
-                    <motion.div 
-                      className="problem-item"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 1.4 }}
-                      whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.07)" }}
-                    >
+                <div className="card-content">
+                  <div className="recent-problems">
+                  <div className="problem-item">
+                      <div className="problem-item-left">
+                        <div className="problem-icon">
+                          <i className="fas fa-code"></i>
+                        </div>
+                        <div className="problem-details">
                     <div className="problem-title">Two Sum</div>
-                      <motion.div 
-                        className="problem-status success"
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 500, delay: 1.9 }}
-                      >Solved</motion.div>
-                    </motion.div>
-                    <motion.div 
-                      className="problem-item"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 1.5 }}
-                      whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.07)" }}
-                    >
-                    <div className="problem-title">Maximum Subarray</div>
-                      <motion.div 
-                        className="problem-status success"
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 500, delay: 2.0 }}
-                      >Solved</motion.div>
-                    </motion.div>
-                    <motion.div 
-                      className="problem-item"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 1.6 }}
-                      whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.07)" }}
-                    >
-                    <div className="problem-title">Merge Intervals</div>
-                      <motion.div 
-                        className="problem-status failed"
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 500, delay: 2.1 }}
-                      >Failed</motion.div>
-                    </motion.div>
-                    <motion.div 
-                      className="problem-item"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 1.7 }}
-                      whileHover={{ backgroundColor: "rgba(255, 255, 255, 0.07)" }}
-                    >
-                    <div className="problem-title">Valid Parentheses</div>
-                      <motion.div 
-                        className="problem-status success"
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 500, delay: 2.2 }}
-                      >Solved</motion.div>
-                    </motion.div>
-                  </AnimatePresence>
-                </motion.div>
+                          <div className="problem-subtitle">Array, Hash Table</div>
+                  </div>
+                  </div>
+                      <div className="problem-status success">
+                        <i className="fas fa-check-circle"></i>
+                        <span>Solved</span>
+                      </div>
+                    </div>
+                    
+                  <div className="problem-item">
+                      <div className="problem-item-left">
+                        <div className="problem-icon">
+                          <i className="fas fa-code"></i>
+                  </div>
+                        <div className="problem-details">
+                          <div className="problem-title">Merge Sorted Linked Lists</div>
+                          <div className="problem-subtitle">Linked List, Recursion</div>
+                        </div>
+                      </div>
+                      <div className="problem-status in-progress">
+                        <i className="fas fa-spinner"></i>
+                        <span>In Progress</span>
+                      </div>
+                    </div>
+                    
+                  <div className="problem-item">
+                      <div className="problem-item-left">
+                        <div className="problem-icon">
+                          <i className="fas fa-code"></i>
+                  </div>
+                        <div className="problem-details">
+                          <div className="problem-title">Binary Tree Maximum Path Sum</div>
+                          <div className="problem-subtitle">DFS, Binary Tree</div>
+                </div>
+              </div>
+                      <div className="problem-status failed">
+                        <i className="fas fa-times-circle"></i>
+                        <span>Failed</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             </div>
           </div>
@@ -3720,7 +3896,7 @@ function dfs(graph, start, visited = new Set()) {
                     <div className="error-severity high">High</div>
                   </div>
                   <div className="error-details">
-                    <div className="error-location">Line 42 in script.js</div>
+                    <div className="error-location"></div>
                     <div className="error-description">
                       <p>Variable 'x' is used but never declared. Check for typos or missing declarations.</p>
                     </div>
@@ -3760,7 +3936,7 @@ function calculate() {
                     <div className="error-severity high">High</div>
                   </div>
                   <div className="error-details">
-                    <div className="error-location">Line 78 in app.js</div>
+                    <div className="error-location"></div>
                     <div className="error-description">
                       <p>Trying to access a property of an undefined variable. Ensure the object exists before accessing its properties.</p>
                     </div>
@@ -3845,7 +4021,7 @@ function calculate() {
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 15 }}
                     >
-                    <i className="fas fa-robot"></i>
+                      <img src="images/icon.png" alt="Cobra Assistant" />
                     </motion.div>
                     <motion.div 
                       className="message-content"
@@ -3885,7 +4061,7 @@ function calculate() {
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.8 }}
                     >
-                    <i className="fas fa-user"></i>
+                      <img src="images/cobrapfp.png" alt="User" />
                     </motion.div>
                   </motion.div>
                   
@@ -3903,7 +4079,7 @@ function calculate() {
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 15, delay: 1.2 }}
                     >
-                    <i className="fas fa-robot"></i>
+                    <img src="images/icon.png" alt="Cobra Assistant" />
                     </motion.div>
                     <motion.div 
                       className="message-content"
@@ -3920,7 +4096,45 @@ function calculate() {
                         <li>If the target is greater, continue searching in the right half.</li>
                         <li>Repeat until the item is found or the subarray size becomes zero.</li>
                       </ol>
-                      <p>Would you like me to show you a code example?</p>
+                      
+                      <div className="message-code-block">
+                        <div className="message-code-header">
+                          <div className="message-code-language">
+                            <i className="fas fa-code"></i>
+                            <span>JavaScript</span>
+                    </div>
+                          <div className="message-code-actions">
+                            <button className="message-code-action">
+                              <i className="fas fa-copy"></i>
+                              <span>Copy</span>
+                            </button>
+                  </div>
+                        </div>
+                        <div className="message-code-content">
+                          <pre>{`function binarySearch(arr, target) {
+  let left = 0;
+  let right = arr.length - 1;
+  
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    
+    if (arr[mid] === target) {
+      return mid; // Target found
+    }
+    
+    if (arr[mid] < target) {
+      left = mid + 1; // Search in the right half
+    } else {
+      right = mid - 1; // Search in the left half
+    }
+  }
+  
+  return -1; // Target not found
+}`}</pre>
+                </div>
+              </div>
+              
+                      <p>Would you like me to explain the time complexity of this algorithm?</p>
                     </div>
                     <div className="message-time">10:33 AM</div>
                       <motion.div 
@@ -3933,12 +4147,12 @@ function calculate() {
                           className="suggestion-chip"
                           whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
                           whileTap={{ scale: 0.95 }}
-                        >Yes, show me code</motion.button>
+                        >Yes, explain time complexity</motion.button>
                         <motion.button 
                           className="suggestion-chip"
                           whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
                           whileTap={{ scale: 0.95 }}
-                        >Show me a visualization</motion.button>
+                        >Show me another example</motion.button>
                         <motion.button 
                           className="suggestion-chip"
                           whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
@@ -3975,7 +4189,7 @@ function calculate() {
                       whileHover={{ scale: 1.1, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
                       whileTap={{ scale: 0.9 }}
                     >
-                      <i className="fas fa-code"></i>
+                    <i className="fas fa-code"></i>
                     </motion.button>
                 </div>
               </div>

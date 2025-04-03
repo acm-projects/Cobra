@@ -28,7 +28,7 @@ body.auth-page {
 }
 
 /* Updated Navigation Styles */
-.nav-sidebar {
+  .nav-sidebar {
     width: 60px;
     background-color: rgba(30, 31, 44, 0.6);
     border-right: 1px solid rgba(77, 91, 206, 0.2);
@@ -41,14 +41,14 @@ body.auth-page {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
     overflow-y: auto;
     height: 100vh;
-}
-
-.nav-sidebar.expanded {
+  }
+  
+  .nav-sidebar.expanded {
     width: 170px;
     align-items: flex-start;
-}
-
-.sidebar-toggle {
+  }
+  
+  .sidebar-toggle {
     width: 32px;
     height: 32px;
     display: flex;
@@ -61,9 +61,9 @@ body.auth-page {
     transition: all 0.2s ease;
     background-color: rgba(77, 91, 206, 0.08);
     border: 1px solid rgba(77, 91, 206, 0.2);
-}
-
-.sidebar-toggle:hover {
+  }
+  
+  .sidebar-toggle:hover {
     background-color: rgba(77, 91, 206, 0.15);
     color: #4d5bce;
     transform: scale(1.05);
@@ -86,9 +86,9 @@ body.auth-page {
     margin-top: auto;
     padding-top: 16px;
     border-top: 1px solid rgba(77, 91, 206, 0.15);
-}
-
-.nav-item {
+  }
+  
+  .nav-item {
     width: 40px;
     height: 40px;
     display: flex;
@@ -99,22 +99,22 @@ body.auth-page {
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-}
-
-.nav-item:hover {
+  }
+  
+  .nav-item:hover {
     background-color: rgba(77, 91, 206, 0.1);
     color: #e3e3e3;
     transform: translateY(-1px);
-}
-
-.nav-item.active {
+  }
+  
+  .nav-item.active {
     background-color: #4d5bce;
     color: white;
     box-shadow: 0 4px 8px rgba(77, 91, 206, 0.3);
-}
-
+  }
+  
 /* Updated Main Content Styles */
-.main-content {
+  .main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -148,9 +148,9 @@ body.auth-page {
     font-weight: 800;
     font-family: monospace;
     z-index: 0;
-}
-
-.content {
+  }
+  
+  .content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
@@ -204,14 +204,17 @@ body.auth-page {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: 16px 24px;
+    height: 64px;
     background-color: rgba(30, 31, 44, 0.9);
     border-bottom: 1px solid rgba(77, 91, 206, 0.2);
+    box-sizing: border-box;
 }
 
 .card-header-left {
     display: flex;
     align-items: center;
+    gap: 12px;
 }
 
 .card-header i {
@@ -241,23 +244,43 @@ body.auth-page {
     background: rgba(77, 91, 206, 0.1);
     border: none;
     color: #8a8eac;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    display: flex;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
+    padding: 0;
+    position: relative;
 }
 
+.card-action-button i {
+    font-size: 14px;
+    line-height: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+  
 .card-action-button:hover {
     background: rgba(77, 91, 206, 0.2);
     color: #e3e3e3;
+    transform: translateY(-1px);
 }
 
 .card-content {
-    padding: 20px;
+    padding: 24px;
+    min-height: 64px;
+    box-sizing: border-box;
 }
 
 /* Current Problem Card */
@@ -328,8 +351,8 @@ body.auth-page {
     border-radius: 6px;
     font-size: 12px;
     font-weight: 500;
-}
-
+  }
+  
 .problem-actions {
     display: flex;
     gap: 12px;
@@ -372,7 +395,7 @@ body.auth-page {
 }
 
 /* Quick Actions Section */
-.tools-grid {
+  .tools-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
@@ -380,9 +403,9 @@ body.auth-page {
     box-sizing: border-box;
     padding: 0;
     margin-bottom: 28px;
-}
-
-.tool-button {
+  }
+  
+  .tool-button {
     display: flex;
     align-items: center;
     padding: 20px;
@@ -526,13 +549,13 @@ body.auth-page {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
+  }
+  
 .problem-icon i {
     color: #4d5bce;
     font-size: 16px;
-}
-
+  }
+  
 .problem-details {
     display: flex;
     flex-direction: column;
@@ -617,7 +640,7 @@ body.auth-page {
 
 @media (max-width: 520px) {
     .tools-grid {
-        gap: 12px;
+    gap: 12px;
     }
     
     .content {
@@ -699,8 +722,8 @@ body.auth-page {
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-}
-
+  }
+  
 .past-chat-item:hover {
     background-color: rgba(77, 91, 206, 0.1);
     color: #e3e3e3;
@@ -755,7 +778,7 @@ body.auth-page {
 
 @keyframes popupFadeIn {
     from {
-        opacity: 0;
+    opacity: 0;
         transform: scale(0.95);
     }
     to {
@@ -783,8 +806,8 @@ body.auth-page {
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-}
-
+  }
+  
 .profile-menu-item:hover {
     background-color: rgba(77, 91, 206, 0.1);
     transform: translateX(2px);
@@ -803,6 +826,454 @@ body.auth-page {
 
 .profile-menu-item.logout:hover {
     background-color: rgba(241, 76, 76, 0.1);
+  }
+  
+/* Standardize header across all pages */
+.header, 
+.timer-header,
+.hints-header,
+.settings-header,
+.resources-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    height: 64px;
+    background-color: rgba(30, 31, 44, 0.9);
+    border-bottom: 1px solid rgba(77, 91, 206, 0.2);
+    box-sizing: border-box;
+}
+
+/* Standardize footer across all pages */
+.footer,
+.timer-footer,
+.hints-footer,
+.settings-footer,
+.resources-footer,
+.chat-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    height: 64px;
+    background-color: rgba(30, 31, 44, 0.9);
+    border-top: 1px solid rgba(77, 91, 206, 0.2);
+    box-sizing: border-box;
+}
+
+/* Ensure consistent content padding */
+.content,
+.timer-content,
+.hints-content,
+.settings-content,
+.resources-content {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* Media query adjustments */
+@media (max-width: 768px) {
+    .header,
+    .timer-header,
+    .hints-header,
+    .settings-header,
+    .resources-header,
+    .footer,
+    .timer-footer,
+    .hints-footer,
+    .settings-footer,
+    .resources-footer,
+    .chat-footer {
+        padding: 12px 16px;
+        height: 56px;
+    }
+    
+    .content,
+    .timer-content,
+    .hints-content,
+    .settings-content,
+    .resources-content {
+        padding: 16px;
+    }
+}
+
+/* Standardized Search Container */
+.search-container {
+    position: relative;
+    margin-bottom: 24px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 16px 12px 40px;
+    background: rgba(30, 31, 44, 0.7);
+    border: 1px solid rgba(77, 91, 206, 0.2);
+    border-radius: 12px;
+    color: #e3e3e3;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #4d5bce;
+    box-shadow: 0 0 0 2px rgba(77, 91, 206, 0.2);
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8a8eac;
+    font-size: 16px;
+}
+
+/* Standardized Category Filters */
+.resource-categories,
+.error-filters,
+.hint-categories {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0 24px 0;
+    padding-bottom: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    width: 100%;
+}
+
+.resource-categories::-webkit-scrollbar,
+.error-filters::-webkit-scrollbar,
+.hint-categories::-webkit-scrollbar {
+    display: none;
+}
+
+.resource-category-btn,
+.error-filter-btn,
+.hint-category-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 8px 16px;
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.resource-category-btn:hover,
+.error-filter-btn:hover,
+.hint-category-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.resource-category-btn.active,
+.error-filter-btn.active,
+.hint-category-btn.active {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: #8B5CF6;
+    color: white;
+}
+
+/* Standardized Hints Styles */
+.hints-container {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.hint-categories {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0 24px 0;
+    padding-bottom: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    width: 100%;
+}
+
+.hint-categories::-webkit-scrollbar {
+    display: none;
+}
+
+.hint-category-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 8px 16px;
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.hint-category-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+.hint-category-btn.active {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: #8B5CF6;
+    color: white;
+}
+
+.hint-section {
+    margin-bottom: 32px;
+}
+
+.hint-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hint-section-title i {
+    color: #8B5CF6;
+}
+
+.hint-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    width: 100%;
+}
+
+.hint-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.hint-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.hint-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.hint-icon i {
+    color: #8B5CF6;
+    font-size: 20px;
+}
+
+.hint-badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(139, 92, 246, 0.1);
+    color: #8B5CF6;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.hint-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    margin: 0 0 8px 0;
+}
+
+.hint-content {
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.hint-reveal-btn {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    padding: 10px;
+    background: rgba(139, 92, 246, 0.1);
+    color: white;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.hint-reveal-btn:hover {
+    background: rgba(139, 92, 246, 0.2);
+    transform: translateY(-1px);
+}
+
+.hint-card.blurred .blurred-content {
+    filter: blur(5px);
+    user-select: none;
+    pointer-events: none;
+}
+
+/* Media query adjustments */
+@media (max-width: 768px) {
+    .hints-container {
+        padding: 16px;
+    }
+
+    .hint-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .hint-categories {
+        margin: 12px 0 20px 0;
+        padding-bottom: 6px;
+    }
+}
+
+/* Code Snippet Styles with Line-by-Line Reveal */
+.hint-code-snippet {
+    background: rgba(30, 31, 44, 0.95);
+    border-radius: 8px;
+    margin: 16px 0;
+    position: relative;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(77, 91, 206, 0.2);
+    overflow: hidden;
+}
+
+.hint-code-snippet pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.hint-code-snippet code {
+    display: block;
+    counter-reset: line;
+}
+
+.hint-code-snippet code span.line {
+    display: block;
+    position: relative;
+    padding-left: 1.5em;
+    min-height: 1.5em;
+}
+
+.hint-code-snippet code span.line::before {
+    counter-increment: line;
+    content: counter(line);
+    position: absolute;
+    left: 0;
+    color: rgba(138, 142, 172, 0.5);
+    text-align: right;
+    width: 1em;
+    padding-right: 0.5em;
+}
+
+.hint-code-snippet.blurred code {
+    filter: blur(4px);
+    user-select: none;
+}
+
+.code-reveal-controls {
+    padding: 8px 16px 16px;
+    display: flex;
+    justify-content: center;
+}
+
+.code-reveal-btn {
+    background: rgba(139, 92, 246, 0.1);
+    color: white;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.code-reveal-btn:hover {
+    background: rgba(139, 92, 246, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Hide all lines by default when not blurred */
+.hint-code-snippet:not(.blurred) code span.line {
+    display: none;
+    transition: all 0.3s ease;
+}
+
+/* Only show lines that have been explicitly revealed */
+.hint-code-snippet:not(.blurred) code span.line.visible {
+    display: block;
+    animation: revealLine 0.3s ease;
+}
+
+@keyframes revealLine {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hint-code-snippet:not(.blurred) code span.line.highlight {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+/* Clean up any previous blur styling */
+.hint-card.blurred .hint-content:not(.hint-code-snippet) {
+    filter: none;
+    user-select: auto;
+    pointer-events: auto;
+}
+
+/* Remove the previous hint reveal button styling that's no longer needed */
+.hint-reveal-btn {
+    display: none;
 }
   
   

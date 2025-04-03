@@ -40,6 +40,10 @@ const SidePanel: React.FC = () => {
   const [windowSize, setWindowSize] = useState<WindowSize['size']>('medium');
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
+  
+  // Chat state
+  const [messageText, setMessageText] = useState<string>('');
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   // New settings
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
@@ -267,19 +271,32 @@ const SidePanel: React.FC = () => {
         flex: 1;
         display: flex;
         flex-direction: column;
+        height: 100vh;
         overflow: hidden;
-        background-color: #0A0B1E;
-        border: none;
-        margin: 0;
-        padding: 0;
+        padding: 16px;
+        box-sizing: border-box;
+        background-color: rgba(10, 11, 30, 0.4);
       }
       
-      .content {
+      .content-section {
         flex: 1;
-        overflow-y: auto;
-        padding: 12px;
-        width: 100%;
-        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      .section {
+        flex: 1;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      
+      .section.active {
+        display: flex;
+        flex-direction: column;
+        opacity: 1;
       }
       
       .dashboard-welcome {
@@ -1207,10 +1224,107 @@ const SidePanel: React.FC = () => {
       .chat-container {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 48px);
+        height: calc(100vh - 32px); /* Adjust to account for padding */
+        background-color: rgba(10, 11, 30, 0.4);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: none;
         width: 100%;
+        margin: 0 auto;
+      }
+      
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
         margin-bottom: 0;
-        padding-bottom: 0;
+      }
+      
+      .chat-actions {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 8px;
+        background-color: rgba(255, 255, 255, 0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      
+      .chat-input {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+        padding: 0 4px;
+      }
+      
+      .input-wrapper {
+        flex: 1;
+        position: relative;
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 8px 8px 8px 12px;
+        transition: all 0.2s ease;
+      }
+      
+      .chat-input-field {
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 14px;
+        resize: none;
+        outline: none;
+        max-height: 80px;
+        padding-right: 40px;
+        line-height: 1.4;
+      }
+      
+      .input-buttons {
+        position: absolute;
+        right: 8px;
+        bottom: 50%;
+        transform: translateY(50%);
+        display: flex;
+        gap: 6px;
+      }
+      
+      .action-button {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        padding: 0;
+      }
+      
+      .chat-send-button {
+        width: 32px;
+        height: 32px;
+        border-radius: 16px;
+        background-color: #8B5CF6;
+        color: white;
+        margin-bottom: 4px;
+      }
+      
+      .chat-send-button:hover {
+        background-color: #7c3aed;
+        transform: translateY(-1px);
+      }
+      
+      .chat-footer {
+        padding: 4px 8px;
+        font-size: 10px;
+        color: #94a3b8;
+        text-align: center;
       }
       
       .chat-header {
@@ -1251,44 +1365,33 @@ const SidePanel: React.FC = () => {
         border: 1px solid rgba(16, 185, 129, 0.3);
       }
       
-      .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        z-index: 1;
-        position: relative;
-        margin-bottom: 0;
-      }
-      
       .message {
         display: flex;
-        gap: 10px;
+        align-items: flex-start;
+        gap: 8px;
         max-width: 85%;
-        position: relative;
-      }
-      
-      .message.assistant {
-        align-self: flex-start;
+        margin: 2px 0;
+        animation: fadeIn 0.3s ease;
       }
       
       .message.user {
-        align-self: flex-end;
+        margin-left: auto;
         flex-direction: row-reverse;
       }
       
+      .message.assistant {
+        margin-right: auto;
+      }
+      
       .message-avatar {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        overflow: hidden;
       }
       
       .message-avatar img {
@@ -1297,70 +1400,40 @@ const SidePanel: React.FC = () => {
         object-fit: cover;
       }
       
-      .message.assistant .message-avatar {
-        background: transparent;
-      }
-      
-      .message.assistant .message-avatar i {
-        color: white;
-        font-size: 13px;
-      }
-      
-      .message.user .message-avatar {
-        background: linear-gradient(135deg, #8B5CF6, #6d28d9);
-      }
-      
-      .message.user .message-avatar i {
-        color: white;
-        font-size: 13px;
-      }
-      
       .message-content {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 12px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        backdrop-filter: blur(5px);
-      }
-      
-      .message.assistant .message-content {
-        border-top-left-radius: 0;
-        border-left: 2px solid #3b82f6;
+        padding: 8px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+        line-height: 1.4;
+        position: relative;
       }
       
       .message.user .message-content {
-        border-top-right-radius: 0;
-        border-right: 2px solid #8B5CF6;
-        background: rgba(139, 92, 246, 0.08);
+        background-color: #8B5CF6;
+        color: white;
+        border-bottom-right-radius: 4px;
+        margin-right: 4px;
+      }
+      
+      .message.assistant .message-content {
+        background-color: rgba(255, 255, 255, 0.05);
+        color: #e2e8f0;
+        border-bottom-left-radius: 4px;
+        margin-left: 4px;
       }
       
       .message-text {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 13px;
-        line-height: 1.5;
-      }
-      
-      .message-text ol {
-        padding-left: 16px;
-      }
-      
-      .message-text li {
-        margin-bottom: 6px;
-      }
-      
-      .message-text p, .message-text ol, .message-text ul {
-        margin: 0 0 8px 0;
-      }
-      
-      .message-text p:last-child, .message-text ol:last-child, .message-text ul:last-child {
-        margin-bottom: 0;
+        margin: 0;
       }
       
       .message-time {
         font-size: 10px;
-        color: rgba(255, 255, 255, 0.4);
+        color: rgba(255, 255, 255, 0.5);
         margin-top: 4px;
+        display: block;
+      }
+      
+      .message.user .message-time {
         text-align: right;
       }
       
@@ -3175,7 +3248,8 @@ const SidePanel: React.FC = () => {
                 <div className="card-header">
                   <div className="card-header-left">
                   <i className="fas fa-code"></i>
-                  <h3>Current Problem</h3>
+                  <h3>Merge Sorted Linked Lists
+                  </h3>
                 </div>
                   <div className="card-header-right">
                     <div className="card-actions">
@@ -3373,7 +3447,7 @@ const SidePanel: React.FC = () => {
           {/* Hints Section */}
           <div className={`section ${activeSection === 'hints' ? 'active' : ''}`} id="hints">
             <motion.div 
-              className="resources-container"
+              className="hints-container"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
@@ -3389,7 +3463,7 @@ const SidePanel: React.FC = () => {
               </motion.div>
               
               <motion.div 
-                className="resource-categories"
+                className="hint-categories"
                 initial={animationsEnabled ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.5 }}
@@ -3397,38 +3471,38 @@ const SidePanel: React.FC = () => {
                 <motion.button 
                   whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
                   whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn active">All</motion.button>
+                  className="hint-category-btn active">All</motion.button>
                 <motion.button 
                   whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
                   whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn">Basic</motion.button>
+                  className="hint-category-btn">Basic</motion.button>
                 <motion.button 
                   whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
                   whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn">Intermediate</motion.button>
+                  className="hint-category-btn">Intermediate</motion.button>
                 <motion.button 
                   whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
                   whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn">Advanced</motion.button>
+                  className="hint-category-btn">Advanced</motion.button>
               </motion.div>
               
               <motion.div 
-                className="resource-section"
+                className="hint-section"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
               >
                 <motion.h3 
-                  className="resource-section-title"
+                  className="hint-section-title"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3, duration: 0.5 }}
                 >
                   <i className="fas fa-layer-group"></i> Array Techniques
                 </motion.h3>
-                <div className="resource-grid">
+                <div className="hint-grid">
                   <motion.div 
-                    className="resource-card hint-card blurred"
+                    className="hint-card hint-card"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4, duration: 0.5 }}
@@ -3438,58 +3512,116 @@ const SidePanel: React.FC = () => {
                       borderColor: "rgba(139, 92, 246, 0.5)" 
                     }}
                   >
-                    <div className="resource-icon">
+                    <div className="hint-icon">
                       <i className="fas fa-code"></i>
                   </div>
-                    <div className="resource-badge">Basic</div>
+                    <div className="hint-badge">Basic</div>
                     <h3>Two Pointers Technique</h3>
-                    <div className="hint-content blurred-content">
+                  <div className="hint-content">
                     <p>
                       The two pointers technique uses two pointers to solve array problems efficiently. 
                       Typically used in sorted arrays to find pairs with a specific sum or to detect cycles in linked lists.
                     </p>
-                    <div className="hint-code-snippet">
-                      <pre><code>
-{`// Example: Find pair with given sum in sorted array
-function findPair(arr, target) {
-  let left = 0;
-  let right = arr.length - 1;
-  
-  while (left < right) {
-    if (arr[left] + arr[right] === target) {
-      return [left, right];
-    } else if (arr[left] + arr[right] < target) {
-      left++;
-    } else {
-      right--;
-    }
-  }
-  
-  return [-1, -1]; // Pair not found
-}`}
-                      </code></pre>
+                      <div className="hint-code-snippet blurred">
+                        <pre>
+                          <code>
+                            {`// Example: Find pair with given sum in sorted array`.split('\n').map((line, index) => (
+                              <span key={index} className="line">{line}</span>
+                            ))}
+                            {`function findPair(arr, target) {`.split('\n').map((line, index) => (
+                              <span key={index + 1} className="line">{line}</span>
+                            ))}
+                            {`  let left = 0;`.split('\n').map((line, index) => (
+                              <span key={index + 2} className="line">{line}</span>
+                            ))}
+                            {`  let right = arr.length - 1;`.split('\n').map((line, index) => (
+                              <span key={index + 3} className="line">{line}</span>
+                            ))}
+                            {`  `.split('\n').map((line, index) => (
+                              <span key={index + 4} className="line">{line}</span>
+                            ))}
+                            {`  while (left < right) {`.split('\n').map((line, index) => (
+                              <span key={index + 5} className="line">{line}</span>
+                            ))}
+                            {`    if (arr[left] + arr[right] === target) {`.split('\n').map((line, index) => (
+                              <span key={index + 6} className="line">{line}</span>
+                            ))}
+                            {`      return [left, right];`.split('\n').map((line, index) => (
+                              <span key={index + 7} className="line">{line}</span>
+                            ))}
+                            {`    } else if (arr[left] + arr[right] < target) {`.split('\n').map((line, index) => (
+                              <span key={index + 8} className="line">{line}</span>
+                            ))}
+                            {`      left++;`.split('\n').map((line, index) => (
+                              <span key={index + 9} className="line">{line}</span>
+                            ))}
+                            {`    } else {`.split('\n').map((line, index) => (
+                              <span key={index + 10} className="line">{line}</span>
+                            ))}
+                            {`      right--;`.split('\n').map((line, index) => (
+                              <span key={index + 11} className="line">{line}</span>
+                            ))}
+                            {`    }`.split('\n').map((line, index) => (
+                              <span key={index + 12} className="line">{line}</span>
+                            ))}
+                            {`  }`.split('\n').map((line, index) => (
+                              <span key={index + 13} className="line">{line}</span>
+                            ))}
+                            {`  `.split('\n').map((line, index) => (
+                              <span key={index + 14} className="line">{line}</span>
+                            ))}
+                            {`  return [-1, -1]; // Pair not found`.split('\n').map((line, index) => (
+                              <span key={index + 15} className="line">{line}</span>
+                            ))}
+                            {`}`.split('\n').map((line, index) => (
+                              <span key={index + 16} className="line">{line}</span>
+                            ))}
+                          </code>
+                        </pre>
+                        <div className="code-reveal-controls">
+                          <button 
+                            className="code-reveal-btn"
+                            onClick={(e) => {
+                              const codeSnippet = e.currentTarget.closest('.hint-code-snippet');
+                              if (codeSnippet) {
+                                const codeLines = codeSnippet.querySelectorAll('code > span.line');
+                                const visibleLines = codeSnippet.querySelectorAll('code > span.line.visible');
+                                
+                                // If no lines are visible yet or we've revealed all lines, start over
+                                if (visibleLines.length === 0 || visibleLines.length === codeLines.length) {
+                                  // Hide all lines first by removing the visible class
+                                  codeLines.forEach(line => line.classList.remove('visible'));
+                                  
+                                  // Show only the first two lines
+                                  if (codeLines.length > 0) codeLines[0].classList.add('visible');
+                                  if (codeLines.length > 1) codeLines[1].classList.add('visible');
+                                  
+                                  // Remove the blur when we start revealing
+                                  codeSnippet.classList.remove('blurred');
+                                  e.currentTarget.innerHTML = '<i class="fas fa-arrow-down"></i> Reveal Next';
+                                } else {
+                                  // Reveal next two lines
+                                  const nextLineIndex = visibleLines.length;
+                                  if (nextLineIndex < codeLines.length) codeLines[nextLineIndex].classList.add('visible');
+                                  if (nextLineIndex + 1 < codeLines.length) codeLines[nextLineIndex + 1].classList.add('visible');
+                                  
+                                  // If we've revealed all lines, update button text
+                                  if (visibleLines.length + 2 >= codeLines.length) {
+                                    e.currentTarget.innerHTML = '<i class="fas fa-redo"></i> Reset';
+                                  }
+                                }
+                              }
+                            }}
+                          >
+                            <i className="fas fa-eye"></i> Reveal Step-by-Step
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                    <motion.button 
-                      className="resource-action hint-reveal-btn"
-                      onClick={(e) => {
-                        // Toggle the blurred class on the parent card
-                        const card = e.currentTarget.closest('.hint-card');
-                        if (card) {
-                          card.classList.toggle('blurred');
-                        }
-                        // Hide the button after revealing
-                        e.currentTarget.style.display = 'none';
-                      }}
-                      whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.2)" }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <i className="fas fa-eye"></i> Reveal Hint
-                    </motion.button>
                   </motion.div>
                   
                   <motion.div 
-                    className="resource-card hint-card blurred"
+                    className="hint-card"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.5 }}
@@ -3499,81 +3631,151 @@ function findPair(arr, target) {
                       borderColor: "rgba(139, 92, 246, 0.5)" 
                     }}
                   >
-                    <div className="resource-icon">
+                    <div className="hint-icon">
                       <i className="fas fa-code"></i>
-                  </div>
-                    <div className="resource-badge">Intermediate</div>
+                    </div>
+                    <div className="hint-badge">Intermediate</div>
                     <h3>Sliding Window Technique</h3>
-                    <div className="hint-content blurred-content">
-                    <p>
+                    <div className="hint-content">
+                      <p>
                         The sliding window technique is used to perform operations on a specific window size of an array or string.
                         It's particularly useful for problems involving subarrays or substrings.
-                    </p>
-                    <div className="hint-code-snippet">
-                      <pre><code>
-{`// Example: Find max sum subarray of size k
-function maxSumSubarray(arr, k) {
-  let maxSum = 0;
-  let windowSum = 0;
-  let start = 0;
-  
-  for (let end = 0; end < arr.length; end++) {
-    // Add the next element to the window
-    windowSum += arr[end];
-    
-    // If we've hit the window size k
-    if (end >= k - 1) {
-      // Update max sum if needed
-    maxSum = Math.max(maxSum, windowSum);
-      
-      // Remove the leftmost element as we slide
-      windowSum -= arr[start];
-      start++;
-    }
-  }
-  
-  return maxSum;
-}`}
-                      </code></pre>
+                      </p>
+                      <div className="hint-code-snippet blurred">
+                        <pre>
+                          <code>
+                            {`// Example: Find max sum subarray of size k`.split('\n').map((line, index) => (
+                              <span key={index} className="line">{line}</span>
+                            ))}
+                            {`function maxSumSubarray(arr, k) {`.split('\n').map((line, index) => (
+                              <span key={index + 1} className="line">{line}</span>
+                            ))}
+                            {`  let maxSum = 0;`.split('\n').map((line, index) => (
+                              <span key={index + 2} className="line">{line}</span>
+                            ))}
+                            {`  let windowSum = 0;`.split('\n').map((line, index) => (
+                              <span key={index + 3} className="line">{line}</span>
+                            ))}
+                            {`  let start = 0;`.split('\n').map((line, index) => (
+                              <span key={index + 4} className="line">{line}</span>
+                            ))}
+                            {`  `.split('\n').map((line, index) => (
+                              <span key={index + 5} className="line">{line}</span>
+                            ))}
+                            {`  for (let end = 0; end < arr.length; end++) {`.split('\n').map((line, index) => (
+                              <span key={index + 6} className="line">{line}</span>
+                            ))}
+                            {`    // Add the next element to the window`.split('\n').map((line, index) => (
+                              <span key={index + 7} className="line">{line}</span>
+                            ))}
+                            {`    windowSum += arr[end];`.split('\n').map((line, index) => (
+                              <span key={index + 8} className="line">{line}</span>
+                            ))}
+                            {`    `.split('\n').map((line, index) => (
+                              <span key={index + 9} className="line">{line}</span>
+                            ))}
+                            {`    // If we've hit the window size k`.split('\n').map((line, index) => (
+                              <span key={index + 10} className="line">{line}</span>
+                            ))}
+                            {`    if (end >= k - 1) {`.split('\n').map((line, index) => (
+                              <span key={index + 11} className="line">{line}</span>
+                            ))}
+                            {`      // Update max sum if needed`.split('\n').map((line, index) => (
+                              <span key={index + 12} className="line">{line}</span>
+                            ))}
+                            {`      maxSum = Math.max(maxSum, windowSum);`.split('\n').map((line, index) => (
+                              <span key={index + 13} className="line">{line}</span>
+                            ))}
+                            {`      `.split('\n').map((line, index) => (
+                              <span key={index + 14} className="line">{line}</span>
+                            ))}
+                            {`      // Remove the leftmost element as we slide`.split('\n').map((line, index) => (
+                              <span key={index + 15} className="line">{line}</span>
+                            ))}
+                            {`      windowSum -= arr[start];`.split('\n').map((line, index) => (
+                              <span key={index + 16} className="line">{line}</span>
+                            ))}
+                            {`      start++;`.split('\n').map((line, index) => (
+                              <span key={index + 17} className="line">{line}</span>
+                            ))}
+                            {`    }`.split('\n').map((line, index) => (
+                              <span key={index + 18} className="line">{line}</span>
+                            ))}
+                            {`  }`.split('\n').map((line, index) => (
+                              <span key={index + 19} className="line">{line}</span>
+                            ))}
+                            {`  `.split('\n').map((line, index) => (
+                              <span key={index + 20} className="line">{line}</span>
+                            ))}
+                            {`  return maxSum;`.split('\n').map((line, index) => (
+                              <span key={index + 21} className="line">{line}</span>
+                            ))}
+                            {`}`.split('\n').map((line, index) => (
+                              <span key={index + 22} className="line">{line}</span>
+                            ))}
+                          </code>
+                        </pre>
+                        <div className="code-reveal-controls">
+                          <button 
+                            className="code-reveal-btn"
+                            onClick={(e) => {
+                              const codeSnippet = e.currentTarget.closest('.hint-code-snippet');
+                              if (codeSnippet) {
+                                const codeLines = codeSnippet.querySelectorAll('code > span.line');
+                                const visibleLines = codeSnippet.querySelectorAll('code > span.line.visible');
+                                
+                                // If no lines are visible yet or we've revealed all lines, start over
+                                if (visibleLines.length === 0 || visibleLines.length === codeLines.length) {
+                                  // Hide all lines first by removing the visible class
+                                  codeLines.forEach(line => line.classList.remove('visible'));
+                                  
+                                  // Show only the first two lines
+                                  if (codeLines.length > 0) codeLines[0].classList.add('visible');
+                                  if (codeLines.length > 1) codeLines[1].classList.add('visible');
+                                  
+                                  // Remove the blur when we start revealing
+                                  codeSnippet.classList.remove('blurred');
+                                  e.currentTarget.innerHTML = '<i class="fas fa-arrow-down"></i> Reveal Next';
+                                } else {
+                                  // Reveal next two lines
+                                  const nextLineIndex = visibleLines.length;
+                                  if (nextLineIndex < codeLines.length) codeLines[nextLineIndex].classList.add('visible');
+                                  if (nextLineIndex + 1 < codeLines.length) codeLines[nextLineIndex + 1].classList.add('visible');
+                                  
+                                  // If we've revealed all lines, update button text
+                                  if (visibleLines.length + 2 >= codeLines.length) {
+                                    e.currentTarget.innerHTML = '<i class="fas fa-redo"></i> Reset';
+                                  }
+                                }
+                              }
+                            }}
+                          >
+                            <i className="fas fa-eye"></i> Reveal Step-by-Step
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                    <motion.button 
-                      className="resource-action hint-reveal-btn"
-                      onClick={(e) => {
-                        // Toggle the blurred class on the parent card
-                        const card = e.currentTarget.closest('.hint-card');
-                        if (card) {
-                          card.classList.toggle('blurred');
-                        }
-                        // Hide the button after revealing
-                        e.currentTarget.style.display = 'none';
-                      }}
-                      whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.2)" }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <i className="fas fa-eye"></i> Reveal Hint
-                    </motion.button>
                   </motion.div>
                 </div>
               </motion.div>
               
               <motion.div 
-                className="resource-section"
+                className="hint-section"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
               >
                 <motion.h3 
-                  className="resource-section-title"
+                  className="hint-section-title"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.7, duration: 0.5 }}
                 >
                   <i className="fas fa-project-diagram"></i> Graph Algorithms
                 </motion.h3>
-                <div className="resource-grid">
+                <div className="hint-grid">
                   <motion.div 
-                    className="resource-card hint-card blurred"
+                    className="hint-card blurred"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8, duration: 0.5 }}
@@ -3583,53 +3785,109 @@ function maxSumSubarray(arr, k) {
                       borderColor: "rgba(139, 92, 246, 0.5)" 
                     }}
                   >
-                    <div className="resource-icon">
+                    <div className="hint-icon">
                       <i className="fas fa-code"></i>
-              </div>
-                    <div className="resource-badge">Advanced</div>
+                  </div>
+                    <div className="hint-badge">Advanced</div>
                     <h3>Depth-First Search (DFS)</h3>
-                    <div className="hint-content blurred-content">
+                    <div className="hint-content">
                       <p>
                         Depth-First Search explores as far as possible along each branch before backtracking.
                         It's useful for problems involving paths, cycles, or topological sorting.
                       </p>
-                      <div className="hint-code-snippet">
-                        <pre><code>
-{`// Example: DFS implementation for a graph
-function dfs(graph, start, visited = new Set()) {
-  // Mark the current node as visited
-  visited.add(start);
-  console.log(start);
-  
-  // Get all adjacent vertices of the node
-  const neighbors = graph[start] || [];
-  
-  // Recur for all adjacent vertices
-  for (const neighbor of neighbors) {
-    if (!visited.has(neighbor)) {
-      dfs(graph, neighbor, visited);
-    }
-  }
-}`}
-                        </code></pre>
-            </div>
+                      <div className="hint-code-snippet blurred">
+                        <pre>
+                          <code>
+                            {`// Example: DFS implementation for a graph`.split('\n').map((line, index) => (
+                              <span key={index} className="line">{line}</span>
+                            ))}
+                            {`function dfs(graph, start, visited = new Set()) {`.split('\n').map((line, index) => (
+                              <span key={index + 1} className="line">{line}</span>
+                            ))}
+                            {`  // Mark the current node as visited`.split('\n').map((line, index) => (
+                              <span key={index + 2} className="line">{line}</span>
+                            ))}
+                            {`  visited.add(start);`.split('\n').map((line, index) => (
+                              <span key={index + 3} className="line">{line}</span>
+                            ))}
+                            {`  console.log(start);`.split('\n').map((line, index) => (
+                              <span key={index + 4} className="line">{line}</span>
+                            ))}
+                            {`  `.split('\n').map((line, index) => (
+                              <span key={index + 5} className="line">{line}</span>
+                            ))}
+                            {`  // Get all adjacent vertices of the node`.split('\n').map((line, index) => (
+                              <span key={index + 6} className="line">{line}</span>
+                            ))}
+                            {`  const neighbors = graph[start] || [];`.split('\n').map((line, index) => (
+                              <span key={index + 7} className="line">{line}</span>
+                            ))}
+                            {`  `.split('\n').map((line, index) => (
+                              <span key={index + 8} className="line">{line}</span>
+                            ))}
+                            {`  // Recur for all adjacent vertices`.split('\n').map((line, index) => (
+                              <span key={index + 9} className="line">{line}</span>
+                            ))}
+                            {`  for (const neighbor of neighbors) {`.split('\n').map((line, index) => (
+                              <span key={index + 10} className="line">{line}</span>
+                            ))}
+                            {`    if (!visited.has(neighbor)) {`.split('\n').map((line, index) => (
+                              <span key={index + 11} className="line">{line}</span>
+                            ))}
+                            {`      dfs(graph, neighbor, visited);`.split('\n').map((line, index) => (
+                              <span key={index + 12} className="line">{line}</span>
+                            ))}
+                            {`    }`.split('\n').map((line, index) => (
+                              <span key={index + 13} className="line">{line}</span>
+                            ))}
+                            {`  }`.split('\n').map((line, index) => (
+                              <span key={index + 14} className="line">{line}</span>
+                            ))}
+                            {`}`.split('\n').map((line, index) => (
+                              <span key={index + 15} className="line">{line}</span>
+                            ))}
+                          </code>
+                        </pre>
+                        <div className="code-reveal-controls">
+                          <button 
+                            className="code-reveal-btn"
+                            onClick={(e) => {
+                              const codeSnippet = e.currentTarget.closest('.hint-code-snippet');
+                              if (codeSnippet) {
+                                const codeLines = codeSnippet.querySelectorAll('code > span.line');
+                                const visibleLines = codeSnippet.querySelectorAll('code > span.line.visible');
+                                
+                                // If no lines are visible yet or we've revealed all lines, start over
+                                if (visibleLines.length === 0 || visibleLines.length === codeLines.length) {
+                                  // Hide all lines first by removing the visible class
+                                  codeLines.forEach(line => line.classList.remove('visible'));
+                                  
+                                  // Show only the first two lines
+                                  if (codeLines.length > 0) codeLines[0].classList.add('visible');
+                                  if (codeLines.length > 1) codeLines[1].classList.add('visible');
+                                  
+                                  // Remove the blur when we start revealing
+                                  codeSnippet.classList.remove('blurred');
+                                  e.currentTarget.innerHTML = '<i class="fas fa-arrow-down"></i> Reveal Next';
+                                } else {
+                                  // Reveal next two lines
+                                  const nextLineIndex = visibleLines.length;
+                                  if (nextLineIndex < codeLines.length) codeLines[nextLineIndex].classList.add('visible');
+                                  if (nextLineIndex + 1 < codeLines.length) codeLines[nextLineIndex + 1].classList.add('visible');
+                                  
+                                  // If we've revealed all lines, update button text
+                                  if (visibleLines.length + 2 >= codeLines.length) {
+                                    e.currentTarget.innerHTML = '<i class="fas fa-redo"></i> Reset';
+                                  }
+                                }
+                              }
+                            }}
+                          >
+                            <i className="fas fa-eye"></i> Reveal Step-by-Step
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <motion.button 
-                      className="resource-action hint-reveal-btn"
-                      onClick={(e) => {
-                        // Toggle the blurred class on the parent card
-                        const card = e.currentTarget.closest('.hint-card');
-                        if (card) {
-                          card.classList.toggle('blurred');
-                        }
-                        // Hide the button after revealing
-                        e.currentTarget.style.display = 'none';
-                      }}
-                      whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.2)" }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <i className="fas fa-eye"></i> Reveal Hint
-                    </motion.button>
                   </motion.div>
                 </div>
               </motion.div>
@@ -4147,16 +4405,34 @@ function calculate() {
                           className="suggestion-chip"
                           whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
                           whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setMessageText("Yes, explain time complexity");
+                            if (chatInputRef.current) {
+                              chatInputRef.current.focus();
+                            }
+                          }}
                         >Yes, explain time complexity</motion.button>
                         <motion.button 
                           className="suggestion-chip"
                           whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
                           whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setMessageText("Show me another example");
+                            if (chatInputRef.current) {
+                              chatInputRef.current.focus();
+                            }
+                          }}
                         >Show me another example</motion.button>
                         <motion.button 
                           className="suggestion-chip"
                           whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
                           whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setMessageText("No thanks");
+                            if (chatInputRef.current) {
+                              chatInputRef.current.focus();
+                            }
+                          }}
                         >No thanks</motion.button>
                       </motion.div>
                     </motion.div>
@@ -4175,6 +4451,16 @@ function calculate() {
                     type="text"
                     className="chat-input" 
                     placeholder="Type your message here..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    ref={chatInputRef}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && messageText.trim()) {
+                        // Handle send message logic here
+                        console.log('Sending message:', messageText);
+                        setMessageText('');
+                      }
+                    }}
                   />
                   <div className="chat-input-buttons">
                     <motion.button 
@@ -4202,6 +4488,13 @@ function calculate() {
                   transition={{ 
                     scale: { duration: 0.3, delay: 1.6 },
                     rotate: { duration: 0.5, delay: 1.6 }
+                  }}
+                  onClick={() => {
+                    if (messageText.trim()) {
+                      // Handle send message logic here
+                      console.log('Sending message:', messageText);
+                      setMessageText('');
+                    }
                   }}
                 >
                     <i className="fas fa-paper-plane"></i>

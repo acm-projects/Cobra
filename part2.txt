@@ -1,0 +1,143 @@
+                  </div>
+                  
+                <div className="setting-item">
+                  <label>Timer Sounds</label>
+                  <div className="sound-options">
+                    <div 
+                      className={`sound-option ${timerSound === 'bell' ? 'selected' : ''}`}
+                      onClick={() => handleTimerSoundChange('bell')}
+                    >
+                      <div className="sound-icon">
+                        <i className="fas fa-bell"></i>
+                  </div>
+                        <input 
+                        type="radio" 
+                        id="bell-sound" 
+                        name="timerSound" 
+                        value="bell" 
+                        checked={timerSound === 'bell'} 
+                        onChange={() => handleTimerSoundChange('bell')}
+                      />
+                      <label htmlFor="bell-sound">Bell</label>
+                      </div>
+                    <div 
+                      className={`sound-option ${timerSound === 'digital' ? 'selected' : ''}`}
+                      onClick={() => handleTimerSoundChange('digital')}
+                    >
+                      <div className="sound-icon">
+                        <i className="fas fa-clock"></i>
+                      </div>
+                        <input 
+                        type="radio" 
+                        id="digital-sound" 
+                        name="timerSound" 
+                        value="digital" 
+                        checked={timerSound === 'digital'} 
+                        onChange={() => handleTimerSoundChange('digital')}
+                      />
+                      <label htmlFor="digital-sound">Digital</label>
+                      </div>
+                    <div 
+                      className={`sound-option ${timerSound === 'gentle' ? 'selected' : ''}`}
+                      onClick={() => handleTimerSoundChange('gentle')}
+                    >
+                      <div className="sound-icon">
+                        <i className="fas fa-music"></i>
+                    </div>
+                      <input 
+                        type="radio" 
+                        id="gentle-sound" 
+                        name="timerSound" 
+                        value="gentle" 
+                        checked={timerSound === 'gentle'} 
+                        onChange={() => handleTimerSoundChange('gentle')}
+                      />
+                      <label htmlFor="gentle-sound">Gentle</label>
+                    </div>
+                    <div 
+                      className={`sound-option ${timerSound === 'alarm' ? 'selected' : ''}`}
+                      onClick={() => handleTimerSoundChange('alarm')}
+                    >
+                      <div className="sound-icon">
+                        <i className="fas fa-volume-up"></i>
+                      </div>
+                      <input 
+                        type="radio" 
+                        id="alarm-sound" 
+                        name="timerSound" 
+                        value="alarm" 
+                        checked={timerSound === 'alarm'} 
+                        onChange={() => handleTimerSoundChange('alarm')}
+                      />
+                      <label htmlFor="alarm-sound">Alarm</label>
+                    </div>
+                  </div>
+                  
+                  <div className="volume-control">
+                    <label>Volume</label>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={timerVolume} 
+                      className="volume-slider"
+                      onChange={(e) => handleTimerVolumeChange(parseInt(e.target.value))}
+                    />
+                    <div className="volume-label-container">
+                      <span className="volume-label">Min</span>
+                      <span className="volume-value">{timerVolume}%</span>
+                      <span className="volume-label">Max</span>
+                    </div>
+                  </div>
+                </div>
+                  </div>
+                  
+              <div className="settings-section">
+                <h3><i className="fas fa-shield-alt"></i> Privacy</h3>
+                <div className="setting-item">
+                  <label>Data Collection</label>
+                  <div className="toggle-switch" onClick={handleDataCollectionToggle}>
+                    <span className="toggle-label">Allow anonymous usage data</span>
+                    <label className="switch">
+                      <input 
+                        type="checkbox" 
+                        checked={dataCollection} 
+                        onChange={handleDataCollectionToggle} 
+                      />
+                      <span className="slider"></span>
+                    </label>
+                    </div>
+                  <p className="setting-description">
+                    Helps us improve Cobra by collecting anonymous usage data. No personal information is gathered.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="settings-section">
+                <h3><i className="fas fa-user"></i> Account</h3>
+                <div className="setting-item">
+                  <button className="btn-primary" onClick={handleSignOut}>
+                    <i className="fas fa-sign-out-alt"></i> Sign Out
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Render the app
+const renderApp = () => {
+  const container = document.getElementById('app');
+  if (container) {
+    ReactDOM.render(<SidePanel />, container);
+  }
+};
+
+// Initialize the app when the DOM is ready
+document.addEventListener('DOMContentLoaded', renderApp);
+
+export default SidePanel; 

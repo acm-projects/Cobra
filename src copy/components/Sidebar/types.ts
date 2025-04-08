@@ -1,0 +1,1 @@
+// This file is no longer needed as we're using the types from src/types/index.ts 

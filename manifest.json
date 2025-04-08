@@ -23,6 +23,7 @@
     "tabs",
     "sidePanel",
     "activeTab",
+    "browsingData",
     "windows"
   ],
   "side_panel": {
@@ -39,6 +40,11 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
+    },
+    {
+      "matches": ["https://leetcode.com/"], 
+      "js": ["leetcodeUserVerification.js"],
+      "run_at": "document_idle"
     }
   ]
 }

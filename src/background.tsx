@@ -58,9 +58,30 @@ chrome.action.onClicked.addListener((tab: chrome.tabs.Tab): void => {
   }
 });
 
+let storedLeetCodeUsername = '';
+let loggedInBool = false;
 // Handle messages
 const messageHandler: MessageHandler = (message, sender, sendResponse): boolean => {
   console.log('Background received message:', message);
+
+  if (!loggedInBool && message.status === "DOM loaded") {
+    (async () => {
+      console.log("logged into leetcode");
+      let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      let response = await chrome.tabs.sendMessage(tab.id!, {action: "getUsername"});
+      chrome.tabs.remove(tab.id!);
+      console.log(response);
+      storedLeetCodeUsername = response;
+    })();
+
+    return true; // Keep message channel open for async sendResponse
+  }
+
+  if(message.type === 'requestUsername'){
+      console.log("popup requested username");
+      sendResponse(storedLeetCodeUsername);
+  }
+  
 
   if (message.type === 'detectPlatform') {
     const platformMessage = message as DetectPlatformMessage;

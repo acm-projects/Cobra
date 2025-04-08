@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
+import { handler } from './awsFunctions.js';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -30,8 +31,14 @@ const SignUp: React.FC = () => {
     try {
       // Use the Auth utility for sign up
       await Auth.signUp(email, password);
+      console.log("send auth");
+      await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
+      console.log("created tab");
       
-      console.log('Sign up successful, navigating to sidepanel');
+      //console.log("requested username");
+      //chrome.runtime.sendMessage({type: "giveUsernameToSidePanel", data: username});
+      //console.log("obtained username: " + username);
+      //console.log('Sign up successful, navigating to sidepanel');
       
       // Close the popup if we're in popup mode
       chrome.windows.getCurrent(async (window) => {

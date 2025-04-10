@@ -1,6 +1,6 @@
 chrome.runtime.sendMessage({status: "DOM loaded"});
-let user = "username: nothing"
-console.log()
+let user = "username: nothing";
+console.log();
 
 chrome.runtime.onMessage.addListener(   
     function(request, sender, sendResponse) {

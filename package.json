@@ -7,6 +7,10 @@
     "watch": "webpack --config webpack.config.js --watch"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.782.0",
+    "@aws-sdk/client-iam": "^3.782.0",
+    "@aws-sdk/lib-dynamodb": "^3.782.0",
+    "aws-amplify": "^6.14.1",
     "framer-motion": "^12.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

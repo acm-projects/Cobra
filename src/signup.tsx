@@ -30,7 +30,9 @@ const SignUp: React.FC = () => {
 
     try {
       // Use the Auth utility for sign up
-      await Auth.signUp(email, password);
+      const signUpResponse = await Auth.signUp(email, password);
+      const userId = signUpResponse.UserSub;
+      chrome.runtime.sendMessage({type: "sendUserId", data: userId});
       console.log("send auth");
       await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
       console.log("created tab");

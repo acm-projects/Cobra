@@ -45,6 +45,11 @@
       "matches": ["https://leetcode.com/"], 
       "js": ["leetcodeUserVerification.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "js": ["contentGrabCodeDraft.js"],
+      "run_at": "document_idle"
     }
   ]
 }

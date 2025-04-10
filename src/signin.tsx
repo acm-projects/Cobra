@@ -1,6 +1,8 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
+import { signUpUser, signInUser } from "./awsFunctions";
+
 
 const SignIn: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -15,7 +17,8 @@ const SignIn: React.FC = () => {
     
     try {
       // Use the Auth utility for sign in
-      await Auth.signIn(email, password);
+      
+      await signInUser(email, password);
       
       console.log('Authentication successful, navigating to sidepanel');
       

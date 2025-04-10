@@ -2907,6 +2907,7 @@ const SidePanel: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await Auth.signOut();
+      console.log("signout successful");
       const window = await chrome.windows.getCurrent();
       if (window.id) {
         chrome.runtime.sendMessage({

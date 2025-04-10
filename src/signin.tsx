@@ -21,7 +21,7 @@ const SignIn: React.FC = () => {
     
     try {
       // Use the Auth utility for sign in
-      await signInUser(email, password); // USERNAME
+      await signInUser(username, password); 
       
       console.log('Authentication successful, showing LeetCode loader');
       

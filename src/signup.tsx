@@ -4,6 +4,7 @@ import { Auth } from './utils/auth';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState<string>('');
+  const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -29,7 +30,7 @@ const SignUp: React.FC = () => {
 
     try {
       // Use the Auth utility for sign up
-      await Auth.signUp(email, password);
+      await Auth.signUp(username, email, password);
       
       console.log('Sign up successful, navigating to sidepanel');
       
@@ -38,7 +39,7 @@ const SignUp: React.FC = () => {
         if (window.type === 'popup' && window.id) {
           chrome.windows.remove(window.id);
         }
-        
+
         // Open the sidepanel
         chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
           if (tabs[0]?.id) {
@@ -81,6 +82,18 @@ const SignUp: React.FC = () => {
         
         <form id="signup-form" className="signin-form" onSubmit={handleSubmit}>
           <div className="form-group">
+            <i className="fas fa-user"></i>
+            <input
+              type="text"
+              id="username"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
             <i className="fas fa-envelope"></i>
             <input
               type="email"
@@ -121,7 +134,7 @@ const SignUp: React.FC = () => {
               {errorMessage}
             </div>
           )}
-          
+
           <div className="button-group">
             <button
               type="submit"

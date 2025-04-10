@@ -3401,7 +3401,7 @@ const SidePanel: React.FC = () => {
       {/* Profile Popup Menu - Moved outside the sidebar for better positioning */}
       {showProfileMenu && (
         <div className="profile-popup">
-          <div className="profile-header">bilbo</div>
+          <div className="profile-header">srihanmedi</div>
           <div 
             className="profile-menu-item"
             onClick={() => {
@@ -4443,7 +4443,7 @@ function calculate() {
                       repeatDelay: 5 
                     }}
                   ></motion.i> 
-                  Cobra AI Assistant
+                  Cobra A
                   <motion.span 
                     className="status-badge online"
                     animate={{ 

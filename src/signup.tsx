@@ -5,6 +5,7 @@ import { handler } from './awsFunctions.js';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState<string>('');
+  const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -30,7 +31,7 @@ const SignUp: React.FC = () => {
 
     try {
       // Use the Auth utility for sign up
-      const signUpResponse = await Auth.signUp(email, password);
+      const signUpResponse = await Auth.signUp(email, password); // USERNAME
       const userId = signUpResponse.UserSub;
       chrome.runtime.sendMessage({type: "sendUserId", data: userId});
       console.log("send auth");
@@ -47,7 +48,7 @@ const SignUp: React.FC = () => {
         if (window.type === 'popup' && window.id) {
           chrome.windows.remove(window.id);
         }
-        
+
         // Open the sidepanel
         chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
           if (tabs[0]?.id) {
@@ -90,6 +91,18 @@ const SignUp: React.FC = () => {
         
         <form id="signup-form" className="signin-form" onSubmit={handleSubmit}>
           <div className="form-group">
+            <i className="fas fa-user"></i>
+            <input
+              type="text"
+              id="username"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
             <i className="fas fa-envelope"></i>
             <input
               type="email"
@@ -130,7 +143,7 @@ const SignUp: React.FC = () => {
               {errorMessage}
             </div>
           )}
-          
+
           <div className="button-group">
             <button
               type="submit"

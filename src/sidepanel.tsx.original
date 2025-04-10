@@ -29,12 +29,6 @@ interface ChromeSidePanel extends chrome.sidePanel.SidePanel {
   close(): Promise<void>;
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if(message.type === "giveUsernameToSidePanel"){
-      console.log("LeetCode username: " + message.data);
-    }
-  });
-
 // Main App Component
 const SidePanel: React.FC = () => {
   // Authentication state
@@ -65,8 +59,8 @@ const SidePanel: React.FC = () => {
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [timerValue, setTimerValue] = useState<number>(0);
   const [laps, setLaps] = useState<number[]>([]);
-  const [countdownMinutes, setCountdownMinutes] = useState<number>(0);
-  const [countdownSeconds, setCountdownSeconds] = useState<number>(5);
+  const [countdownMinutes, setCountdownMinutes] = useState<number>(25);
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(0);
   
   // Refs
   const timerIntervalRef = useRef<number | null>(null);
@@ -430,13 +424,6 @@ const SidePanel: React.FC = () => {
         color: #94a3b8;
         cursor: pointer;
         margin: 10px 0;
-        position: relative;
-        left: 0;
-        transition: all 0.3s ease;
-      }
-      
-      .nav-sidebar.expanded .sidebar-toggle {
-        left: 75px; /* This will position it more to the center when expanded */
       }
       
       .sidebar-toggle:hover {
@@ -1573,9 +1560,9 @@ const SidePanel: React.FC = () => {
       .sidebar-profile img {
         width: 40px;
         height: 40px;
-        border-radius: 0;
+        border-radius: 50%;
         object-fit: cover;
-        border: none;
+        border: 2px solid rgba(255, 255, 255, 0.2);
       }
       
       /* Stopwatch section styles */
@@ -2956,14 +2943,10 @@ const SidePanel: React.FC = () => {
         }
         // Use the global window object to close
         self.close();
-      } else if (newSize === 'medium') {
-        // Always try to open sidepanel first before closing current window
-        const windows = await chrome.windows.getAll();
-        const mainWindow = windows.find(w => w.type === 'normal');
-
-        if (mainWindow?.id) {
-          await chrome.sidePanel.open({ windowId: mainWindow.id });
-          // Use the global window object to close current window
+      } else if (newSize === 'medium' && currentWindow.id) {
+        if (chrome.sidePanel) {
+          await chrome.sidePanel.open({ windowId: currentWindow.id });
+          // Use the global window object to close
           self.close();
         }
       } else if (newSize === 'expanded') {
@@ -3050,7 +3033,7 @@ const SidePanel: React.FC = () => {
       console.error('Error playing sound preview:', error);
     });
   };
-  
+
   // Handle timer volume change
   const handleTimerVolumeChange = (volume: number) => {
     setTimerVolume(volume);
@@ -3103,7 +3086,6 @@ const SidePanel: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await Auth.signOut();
-      console.log("signout successful");
       const window = await chrome.windows.getCurrent();
       if (window.id) {
         chrome.runtime.sendMessage({
@@ -3279,12 +3261,12 @@ const SidePanel: React.FC = () => {
   
   const formatTime = (timeMs: number): string => {
     if (timerType === 'stopwatch') {
-      // Remove milliseconds display to prevent overlap
+      const ms = Math.floor((timeMs % 1000) / 10);
       const seconds = Math.floor((timeMs / 1000) % 60);
       const minutes = Math.floor((timeMs / 1000 / 60) % 60);
       const hours = Math.floor(timeMs / 1000 / 60 / 60);
       
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
     } else {
       // Countdown timer
       const seconds = Math.floor((timeMs / 1000) % 60);
@@ -3419,7 +3401,7 @@ const SidePanel: React.FC = () => {
       {/* Profile Popup Menu - Moved outside the sidebar for better positioning */}
       {showProfileMenu && (
         <div className="profile-popup">
-          <div className="profile-header">srihanmedi</div>
+          <div className="profile-header">bilbo</div>
           <div 
             className="profile-menu-item"
             onClick={() => {
@@ -4461,7 +4443,7 @@ function calculate() {
                       repeatDelay: 5 
                     }}
                   ></motion.i> 
-                  Cobra AI
+                  Cobra AI Assistant
                   <motion.span 
                     className="status-badge online"
                     animate={{ 
@@ -4572,16 +4554,16 @@ function calculate() {
                       <div className="message-code-block">
                         <div className="message-code-header">
                           <div className="message-code-language">
-                    <i className="fas fa-code"></i>
-                            <span></span>
+                            <i className="fas fa-code"></i>
+                            <span>JavaScript</span>
                     </div>
                           <div className="message-code-actions">
                             <button className="message-code-action">
                               <i className="fas fa-copy"></i>
                               <span>Copy</span>
-                  </button>
-                </div>
-              </div>
+                            </button>
+                  </div>
+                        </div>
                         <div className="message-code-content">
                           <pre>{`function binarySearch(arr, target) {
   let left = 0;
@@ -4603,11 +4585,11 @@ function calculate() {
   
   return -1; // Target not found
 }`}</pre>
-            </div>
-          </div>
-
+                </div>
+              </div>
+              
                       <p>Would you like me to explain the time complexity of this algorithm?</p>
-                  </div>
+                    </div>
                     <div className="message-time">10:33 AM</div>
                       <motion.div 
                         className="suggestion-chips"
@@ -4652,8 +4634,8 @@ function calculate() {
                     </motion.div>
                   </motion.div>
                 </AnimatePresence>
-                </div>
-                
+                  </div>
+              
               <motion.div 
                 className="chat-input-container"
                 initial={{ opacity: 0, y: 20 }}
@@ -4661,7 +4643,7 @@ function calculate() {
                 transition={{ duration: 0.5, delay: 1.5 }}
               >
                 <div className="chat-input-wrapper">
-                      <input 
+                  <input 
                     type="text"
                     className="chat-input" 
                     placeholder="Type your message here..."
@@ -4691,8 +4673,8 @@ function calculate() {
                     >
                     <i className="fas fa-code"></i>
                     </motion.button>
-                    </div>
-                    </div>
+                </div>
+              </div>
                 <motion.button 
                   className="chat-send-button"
                   whileHover={{ scale: 1.1, boxShadow: "0 5px 15px rgba(139, 92, 246, 0.4)" }}
@@ -4716,7 +4698,7 @@ function calculate() {
               </motion.div>
                 </div>
               </div>
-              
+
           {/* Stopwatch Section */}
           <div className={`section ${activeSection === 'stopwatch' ? 'active' : ''}`} id="stopwatch">
             <div className="stopwatch-container">
@@ -4734,25 +4716,25 @@ function calculate() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
               >
-                  <div className="timer-type-selector">
+                <div className="timer-type-selector">
                   <motion.button 
-                      className={`timer-type-btn ${timerType === 'stopwatch' ? 'active' : ''}`}
-                      onClick={() => handleTimerTypeChange('stopwatch')}
+                    className={`timer-type-btn ${timerType === 'stopwatch' ? 'active' : ''}`}
+                    onClick={() => handleTimerTypeChange('stopwatch')}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    >
-                      Stopwatch
+                  >
+                    Stopwatch
                   </motion.button>
                   <motion.button 
-                      className={`timer-type-btn ${timerType === 'countdown' ? 'active' : ''}`}
-                      onClick={() => handleTimerTypeChange('countdown')}
+                    className={`timer-type-btn ${timerType === 'countdown' ? 'active' : ''}`}
+                    onClick={() => handleTimerTypeChange('countdown')}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    >
-                      Countdown
+                  >
+                    Countdown
                   </motion.button>
-                  </div>
-                  
+                </div>
+                
                 <div className="animated-timer-display">
                   <motion.div 
                     className="timer-circle-container"
@@ -4846,37 +4828,37 @@ function calculate() {
                       </foreignObject>
                     </svg>
                   </motion.div>
-                  </div>
-                  
-                  {timerType === 'countdown' && (
+                </div>
+                
+                {timerType === 'countdown' && (
                   <motion.div 
                     className="countdown-controls"
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4 }}
                   >
-                      <div className="countdown-input">
-                        <label>Minutes</label>
-                        <input 
-                          type="number" 
-                          min="0" 
-                          max="59" 
-                          value={countdownMinutes}
-                          onChange={(e) => updateCountdownTime(parseInt(e.target.value) || 0, countdownSeconds)}
-                          disabled={isTimerRunning}
-                        />
-                      </div>
-                      <div className="countdown-input">
-                        <label>Seconds</label>
-                        <input 
-                          type="number" 
-                          min="0" 
-                          max="59" 
-                          value={countdownSeconds}
-                          onChange={(e) => updateCountdownTime(countdownMinutes, parseInt(e.target.value) || 0)}
-                          disabled={isTimerRunning}
-                        />
-                      </div>
+                    <div className="countdown-input">
+                      <label>Minutes</label>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        max="59" 
+                        value={countdownMinutes}
+                        onChange={(e) => updateCountdownTime(parseInt(e.target.value) || 0, countdownSeconds)}
+                        disabled={isTimerRunning}
+                      />
+                    </div>
+                    <div className="countdown-input">
+                      <label>Seconds</label>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        max="59" 
+                        value={countdownSeconds}
+                        onChange={(e) => updateCountdownTime(countdownMinutes, parseInt(e.target.value) || 0)}
+                        disabled={isTimerRunning}
+                      />
+                    </div>
                   </motion.div>
                 )}
                 
@@ -4886,7 +4868,7 @@ function calculate() {
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5 }}
                 >
-                    {!isTimerRunning ? (
+                  {!isTimerRunning ? (
                     <motion.button 
                       className="timer-btn start"
                       onClick={startTimer}
@@ -4896,7 +4878,7 @@ function calculate() {
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 10 }}
                     >
-                        <i className="fas fa-play"></i> Start
+                      <i className="fas fa-play"></i> Start
                     </motion.button>
                   ) : (
                     <motion.button 
@@ -4908,7 +4890,7 @@ function calculate() {
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 10 }}
                     >
-                        <i className="fas fa-pause"></i> Pause
+                      <i className="fas fa-pause"></i> Pause
                     </motion.button>
                   )}
                   <motion.button 
@@ -4920,9 +4902,9 @@ function calculate() {
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 300, damping: 10 }}
                   >
-                      <i className="fas fa-redo"></i> Reset
+                    <i className="fas fa-redo"></i> Reset
                   </motion.button>
-                    {timerType === 'stopwatch' && (
+                  {timerType === 'stopwatch' && (
                     <motion.button 
                       className="timer-btn lap"
                       onClick={addLap}
@@ -4933,20 +4915,20 @@ function calculate() {
                       animate={{ scale: 1, opacity: isTimerRunning ? 1 : 0.7 }}
                       transition={{ type: "spring", stiffness: 300, damping: 10 }}
                     >
-                        <i className="fas fa-flag"></i> Lap
+                      <i className="fas fa-flag"></i> Lap
                     </motion.button>
-                    )}
+                  )}
                 </motion.div>
-                  
-                  {timerType === 'stopwatch' && laps.length > 0 && (
+                
+                {timerType === 'stopwatch' && laps.length > 0 && (
                   <motion.div 
                     className="laps-container"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                      <h4>Laps</h4>
-                      <ul className="laps-list">
+                    <h4>Laps</h4>
+                    <ul className="laps-list">
                       <AnimatePresence>
                         {laps.map((lap, index) => (
                           <motion.li 
@@ -4961,13 +4943,13 @@ function calculate() {
                           </motion.li>
                         ))}
                       </AnimatePresence>
-                      </ul>
+                    </ul>
                   </motion.div>
-                  )}
+                )}
               </motion.div>
-                </div>
-              </div>
-              
+            </div>
+          </div>
+
           {/* Settings Section */}
           <div className={`section ${activeSection === 'settings' ? 'active' : ''}`} id="settings">
             <div className="settings-container">
@@ -4978,8 +4960,8 @@ function calculate() {
                   <div className="theme-toggle" onClick={handleThemeToggle}>
                     <i className={`fas fa-${theme === 'dark' ? 'sun' : 'moon'}`}></i>
                     {theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                  </div>
                 </div>
-              </div>
                 
                 <div className="setting-item">
                   <label>Font Size</label>
@@ -4990,7 +4972,7 @@ function calculate() {
                     >
                       <div className="size-preview">
                         <i className="fas fa-font icon-smaller"></i>
-            </div>
+                      </div>
                       <input 
                         type="radio" 
                         id="small" 
@@ -5000,14 +4982,14 @@ function calculate() {
                         onChange={() => handleFontSizeChange('small')}
                       />
                       <label htmlFor="small">Small</label>
-          </div>
+                    </div>
                     <div 
                       className={`radio-option ${fontSize === 'medium' ? 'selected' : ''}`}
                       onClick={() => handleFontSizeChange('medium')}
                     >
                       <div className="size-preview">
                         <i className="fas fa-font"></i>
-        </div>
+                      </div>
                       <input 
                         type="radio" 
                         id="medium-font" 
@@ -5088,6 +5070,7 @@ function calculate() {
                     </div>
                   </div>
                 </div>
+                
               </div>
               
               <div className="settings-section">
@@ -5147,10 +5130,13 @@ function calculate() {
                       <label htmlFor="hints-view">Hints</label>
                     </div>
                   </div>
-                </div>
-                
+                  </div>
+                  
                 <div className="setting-item">
-                  <label>Timer Sound</label>
+                  </div>
+                  
+                <div className="setting-item">
+                  <label>Timer Sounds</label>
                   <div className="sound-options">
                     <div 
                       className={`sound-option ${timerSound === 'bell' ? 'selected' : ''}`}
@@ -5239,13 +5225,12 @@ function calculate() {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+                  </div>
+                  
+              <div className="settings-section">
+                <h3><i className="fas fa-shield-alt"></i> Privacy</h3>
+                <div className="setting-item">
+                  <label>Data Collection</label>
 };
 
 // Render the app

@@ -1,7 +1,6 @@
 import { NavigateMessage, SectionType } from '../types';
 
 /**
- * Navigate to another HTML page
  * @param path Path to navigate to
  */
 export const navigateToPage = async (path: string): Promise<void> => {
@@ -20,7 +19,6 @@ export const navigateToPage = async (path: string): Promise<void> => {
 };
 
 /**
- * Close other windows except the current one
  * @param exceptId Window ID to exclude from closing
  */
 export const closeOtherWindows = async (exceptId: number | null = null): Promise<void> => {

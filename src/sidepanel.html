@@ -1389,7 +1389,9 @@
     .errors-container {
       padding: 16px;
       overflow-y: auto;
-      max-height: calc(100vh - 120px);
+      height: calc(100vh - 128px); /* 64px header + 64px footer */
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .error-filters {
@@ -1504,6 +1506,12 @@
       font-family: 'Fira Code', 'Consolas', monospace;
       font-size: 13px;
       line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      .errors-container {
+        height: calc(100vh - 112px); /* 56px header + 56px footer */
+      }
     }
   </style>
 </head>

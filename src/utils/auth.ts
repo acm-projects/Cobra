@@ -25,17 +25,17 @@ export class Auth {
 
   /**
    * Sign up a new user
+   * @param {string} username - The user's username
    * @param {string} email - The user's email
    * @param {string} password - The user's password
    * @returns {Promise<boolean>} Whether the sign up was successful
    */
-  static signUp(email: string, password: string): Promise<any> {
-    return new Promise(async(resolve, reject) => {
+  static signUp(username: string, email: string, password: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
       try {
         const response = await signUpUser("testUser", password, email);
         resolve(response);
-        
-      } catch (error) {
+        } catch (error) {
         console.error('Error in signUp:', error);
         reject(error);
       }
@@ -44,14 +44,14 @@ export class Auth {
 
   /**
    * Sign in the user
-   * @param {string} email - The user's email
+   * @param {string} username - The user's username
    * @param {string} password - The user's password
    * @returns {Promise<boolean>} Whether the sign in was successful
    */
-  static signIn(email: string, password: string): Promise<boolean> {
-    return new Promise(async(resolve, reject) => {
+  static signIn(username: string, password: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
       try {
-        const response = await signInUser(email, password);
+        const response = await signInUser(email, password); // USERNAME
         console.log("sign in successful. response: " + response);
         resolve(true);
       } catch (error) {

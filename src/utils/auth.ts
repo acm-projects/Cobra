@@ -23,11 +23,12 @@ export class Auth {
 
   /**
    * Sign up a new user
+   * @param {string} username - The user's username
    * @param {string} email - The user's email
    * @param {string} password - The user's password
    * @returns {Promise<boolean>} Whether the sign up was successful
    */
-  static signUp(email: string, password: string): Promise<boolean> {
+  static signUp(username: string, email: string, password: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
         // In a real implementation, we would:
@@ -35,9 +36,10 @@ export class Auth {
         // 2. Create a new user record
         // 3. Store the user's credentials securely
         
-        // Demo: Just store the email and mark as authenticated
+        // Demo: Just store the username, email and mark as authenticated
         chrome.storage.local.set({ 
           isAuthenticated: true,
+          username: username,
           userEmail: email 
         }, () => {
           if (chrome.runtime.lastError) {
@@ -56,17 +58,17 @@ export class Auth {
 
   /**
    * Sign in the user
-   * @param {string} email - The user's email
+   * @param {string} username - The user's username
    * @param {string} password - The user's password
    * @returns {Promise<boolean>} Whether the sign in was successful
    */
-  static signIn(email: string, password: string): Promise<boolean> {
+  static signIn(username: string, password: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
-        // Demo: accept any email/password for now
+        // Demo: accept any username/password for now
         chrome.storage.local.set({ 
           isAuthenticated: true,
-          userEmail: email 
+          username: username
         }, () => {
           if (chrome.runtime.lastError) {
             console.error('Error setting authentication state:', chrome.runtime.lastError);
@@ -89,7 +91,7 @@ export class Auth {
   static signOut(): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
-        chrome.storage.local.remove(['isAuthenticated', 'userEmail'], () => {
+        chrome.storage.local.remove(['isAuthenticated', 'username', 'userEmail'], () => {
           if (chrome.runtime.lastError) {
             console.error('Error removing authentication state:', chrome.runtime.lastError);
             reject(chrome.runtime.lastError);

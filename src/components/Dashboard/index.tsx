@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import CurrentProblem from './CurrentProblem';
 import ProblemStats from './ProblemStats';
 import RecentActivity from './RecentActivity';
+import LeetCodeLoader from '../Loading/LeetCodeLoader';
 import { ProblemInfo } from '../../types';
 import { ActivityItem } from './RecentActivity';
 
 const Dashboard: React.FC = () => {
+  // State for LeetCode loader
+  const [isLoadingStats, setIsLoadingStats] = useState<boolean>(true);
+  const [isLeetCodeLoggedIn, setIsLeetCodeLoggedIn] = useState<boolean>(false);
+  const [showLoader, setShowLoader] = useState<boolean>(true);
+
   // Mock data for the dashboard components
   // In a real implementation, this would come from APIs or context
   const [currentProblem, setCurrentProblem] = useState<ProblemInfo | undefined>({
@@ -53,6 +59,54 @@ const Dashboard: React.FC = () => {
     }
   ]);
 
+  // Check LeetCode login status and fetch statistics
+  useEffect(() => {
+    const checkLeetCodeStatus = async () => {
+      try {
+        // Simulate checking if user is logged into LeetCode
+        // In a real implementation, this would make an API call to check login status
+        setTimeout(() => {
+          // For demo purposes, we'll simulate being logged in after 2 seconds
+          setIsLeetCodeLoggedIn(true);
+          
+          // After detecting login, simulate fetching statistics
+          setTimeout(() => {
+            // This is where you would fetch actual LeetCode stats
+            setIsLoadingStats(false);
+            
+            // After loading is complete, hide the loader after a short delay
+            setTimeout(() => {
+              setShowLoader(false);
+            }, 1000);
+          }, 2000);
+        }, 2000);
+      } catch (error) {
+        console.error('Error checking LeetCode status:', error);
+        setIsLoadingStats(false);
+      }
+    };
+    
+    checkLeetCodeStatus();
+  }, []);
+
+  // Force show loader again (for testing or refreshing)
+  const refreshLeetCodeStats = () => {
+    setShowLoader(true);
+    setIsLoadingStats(true);
+    setIsLeetCodeLoggedIn(false);
+    
+    // Re-run the check and loading sequence
+    setTimeout(() => {
+      setIsLeetCodeLoggedIn(true);
+      setTimeout(() => {
+        setIsLoadingStats(false);
+        setTimeout(() => {
+          setShowLoader(false);
+        }, 1000);
+      }, 2000);
+    }, 2000);
+  };
+
   // Handler functions
   const handleGetHints = () => {
     // Navigate to hints section or show hints modal
@@ -67,6 +121,8 @@ const Dashboard: React.FC = () => {
   const handleRefreshProblem = () => {
     // Refresh problem data
     console.log('Refreshing problem data');
+    // Optionally refresh LeetCode stats as well
+    refreshLeetCodeStats();
   };
 
   const handleOpenExternal = () => {
@@ -93,12 +149,22 @@ const Dashboard: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      {/* LeetCode Loader */}
+      <AnimatePresence>
+        {showLoader && (
+          <LeetCodeLoader
+            isLoggedIn={isLeetCodeLoggedIn}
+            isLoading={isLoadingStats}
+          />
+        )}
+      </AnimatePresence>
+      
       <div className="dashboard-header">
         <h2>Dashboard</h2>
         <div className="dashboard-actions">
-          <button className="dashboard-action-button" onClick={clearProblem}>
+          <button className="dashboard-action-button" onClick={refreshLeetCodeStats}>
             <i className="fas fa-sync-alt"></i>
-            <span>Refresh</span>
+            <span>Refresh LeetCode Stats</span>
           </button>
         </div>
       </div>

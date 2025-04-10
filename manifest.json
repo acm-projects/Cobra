@@ -23,7 +23,8 @@
     "tabs",
     "sidePanel",
     "activeTab",
-    "windows"
+    "windows",
+    "notifications"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"

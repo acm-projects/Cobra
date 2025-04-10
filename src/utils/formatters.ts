@@ -8,12 +8,12 @@ import { TimerType } from '../types';
  */
 export const formatTime = (timeMs: number, timerType: TimerType): string => {
   if (timerType === 'stopwatch') {
-    const ms = Math.floor((timeMs % 1000) / 10);
+    // Remove milliseconds display to prevent overlap
     const seconds = Math.floor((timeMs / 1000) % 60);
     const minutes = Math.floor((timeMs / 1000 / 60) % 60);
     const hours = Math.floor(timeMs / 1000 / 60 / 60);
     
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   } else {
     // Countdown timer
     const seconds = Math.floor((timeMs / 1000) % 60);

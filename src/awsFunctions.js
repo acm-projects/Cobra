@@ -66,7 +66,7 @@ export const signInUser = async(username, password) => {
       return signInResponse;
 }
 
-export const signUpUser = async(uusername, ppassword, eemail) => {
+export const signUpUser = async(uusername, eemail, ppassword) => {
   const signUpResponse = await signUp({
     "username": uusername, 
     "password": ppassword, 

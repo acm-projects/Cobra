@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Auth } from './utils/auth';
 import LeetCodeLoader from './components/Loading/LeetCodeLoader';
+import { signUpUser, signInUser } from "./awsFunctions";
 
 const SignIn: React.FC = () => {
   const [username, setUsername] = useState<string>('');
@@ -20,7 +21,7 @@ const SignIn: React.FC = () => {
     
     try {
       // Use the Auth utility for sign in
-      await Auth.signIn(username, password);
+      await signInUser(email, password); // USERNAME
       
       console.log('Authentication successful, showing LeetCode loader');
       

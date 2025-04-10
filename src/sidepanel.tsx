@@ -29,6 +29,12 @@ interface ChromeSidePanel extends chrome.sidePanel.SidePanel {
   close(): Promise<void>;
 }
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if(message.type === "giveUsernameToSidePanel"){
+      console.log("LeetCode username: " + message.data);
+    }
+  });
+
 // Main App Component
 const SidePanel: React.FC = () => {
   // Authentication state
@@ -3097,6 +3103,7 @@ const SidePanel: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await Auth.signOut();
+      console.log("signout successful");
       const window = await chrome.windows.getCurrent();
       if (window.id) {
         chrome.runtime.sendMessage({

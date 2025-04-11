@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-import { signUpUser, signInUser, signOutUser } from "../awsFunctions";
+import { signUpUser, signInUser, signOutUser, verifyEmail } from "../awsFunctions";
 
-=======
-/**
- * Authentication utility class
- */
->>>>>>> 7f7870a (hello)
 export class Auth {
   /**
    * Check if the user is authenticated
@@ -89,22 +83,18 @@ export class Auth {
    * @param code The 6-digit verification code
    * @returns Promise that resolves to true if verification was successful
    */
-  static async verifyEmail(email: string, code: string): Promise<boolean> {
+  static async verifyEmail(username: string, code: string): Promise<boolean> {
     try {
-      // In a real app, this would make an API call to verify the code
-      // For now, we'll simulate a verification process
-      console.log(`Verifying email ${email} with code ${code}`);
+      console.log(`Verifying user ${username} with code ${code}`);
       
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(async() => verifyEmail(username, code));
       
-      // For demo purposes, any code is valid
-      // In production, this would validate against a backend
       const success = true;
       
       if (success) {
         // Save verification status
-        localStorage.setItem('userEmail', email);
+        localStorage.setItem('username', username);
         localStorage.setItem('isVerified', 'true');
       }
       

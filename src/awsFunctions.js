@@ -1,9 +1,9 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-//import { CognitoIdentityProviderClient, SignUpCommand } from '@aws-sdk/client-cognito-identity-provider';
+//import { CognitoIdentityProviderClient, ConfirmSignUpCommand } from '@aws-sdk/client-cognito-identity-provider';
 
 import {signIn, signOut, signUp, confirmSignUp, fetchAuthSession } from "aws-amplify/auth";
-import { Amplify, Authentication } from 'aws-amplify';
+import { Amplify } from 'aws-amplify';
 
 const dynamoClient = new DynamoDBClient(
   {
@@ -26,6 +26,15 @@ let currentUserId = "";
 
 export const signOutUser = async() => {
   signOut();
+}
+
+export const verifyEmail = async(username, confirmationCode) => {
+  try {
+    await confirmSignUp(username, confirmationCode);
+    console.log("successfully verified email");
+  } catch (error){
+    console.error(error);
+  }
 }
 
 export const saveDraftToDynamo = async(problemSlug, codeDraft) => {

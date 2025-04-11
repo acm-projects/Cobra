@@ -49,17 +49,10 @@ const SignUp: React.FC = () => {
       await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
       console.log("created tab");
       
-<<<<<<< HEAD
-      //console.log("requested username");
-      //chrome.runtime.sendMessage({type: "giveUsernameToSidePanel", data: username});
-      //console.log("obtained username: " + username);
-      //console.log('Sign up successful, navigating to sidepanel');
-=======
       console.log('Sign up successful, redirecting to verification page');
->>>>>>> 7f7870a (hello)
       
       // Store email for verification page
-      localStorage.setItem('pendingVerificationEmail', email);
+      localStorage.setItem('pendingVerificationEmail', username);
       
       // Redirect to verification page
       window.location.href = 'verify.html';

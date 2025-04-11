@@ -1,11 +1,8 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
-<<<<<<< HEAD
 import LeetCodeLoader from './components/Loading/LeetCodeLoader';
 import { signUpUser, signInUser } from "./awsFunctions";
-=======
->>>>>>> 7f7870a (hello)
 
 const SignIn: React.FC = () => {
   const [username, setUsername] = useState<string>('');

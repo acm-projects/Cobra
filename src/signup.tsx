@@ -1,7 +1,6 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
-import { handler } from './awsFunctions.js';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -31,27 +30,38 @@ const SignUp: React.FC = () => {
 
     try {
       // Use the Auth utility for sign up
-      const signUpResponse = await Auth.signUp(username, email, password); 
-      //const userId = signUpResponse;
-      //chrome.runtime.sendMessage({type: "sendUserId", data: userId});
-      console.log("send auth");
-      await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
-      console.log("created tab");
+      await Auth.signUp(username, email, password);
       
-<<<<<<< HEAD
-      //console.log("requested username");
-      //chrome.runtime.sendMessage({type: "giveUsernameToSidePanel", data: username});
-      //console.log("obtained username: " + username);
-      //console.log('Sign up successful, navigating to sidepanel');
-=======
-      console.log('Sign up successful, redirecting to verification page');
->>>>>>> 7f7870a (hello)
+      console.log('Sign up successful, redirecting to verification in sidepanel');
       
       // Store email for verification page
       localStorage.setItem('pendingVerificationEmail', email);
       
-      // Redirect to verification page
-      window.location.href = 'verify.html';
+      // Set a flag to show verification in sidepanel
+      localStorage.setItem('showVerificationInSidepanel', 'true');
+      
+      // Open the sidepanel instead of redirecting to verify.html
+      if (chrome && chrome.tabs && chrome.sidePanel) {
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+          if (tabs[0]?.id) {
+            chrome.sidePanel.open({tabId: tabs[0].id}).then(() => {
+              chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
+              // Close this popup window
+              window.close();
+            }).catch(err => {
+              // Fallback if sidepanel API fails
+              console.error('Failed to open sidepanel:', err);
+              window.location.href = 'verify.html';
+            });
+          } else {
+            // Fallback if no active tab
+            window.location.href = 'verify.html';
+          }
+        });
+      } else {
+        // Fallback for non-extension contexts or if chrome API is unavailable
+        window.location.href = 'verify.html';
+      }
     } catch (error) {
       console.error('Error during sign up:', error);
       setErrorMessage('An error occurred during sign up. Please try again.');

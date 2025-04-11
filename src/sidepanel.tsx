@@ -4,6 +4,9 @@ import { Auth } from './utils/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import './hints.css';
 
+// Import the VerificationPage component directly
+import VerificationPage from './components/VerificationPage';
+
 // Type definitions
 interface NavigateMessage {
   type: 'navigate';
@@ -29,16 +32,13 @@ interface ChromeSidePanel extends chrome.sidePanel.SidePanel {
   close(): Promise<void>;
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if(message.type === "giveUsernameToSidePanel"){
-      console.log("LeetCode username: " + message.data);
-    }
-  });
-
 // Main App Component
 const SidePanel: React.FC = () => {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  
+  // Verification state
+  const [showVerification, setShowVerification] = useState<boolean>(false);
   
   // Loading states after verification
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -93,6 +93,13 @@ const SidePanel: React.FC = () => {
       try {
         const isAuthenticated = await Auth.isAuthenticated();
         setIsAuthenticated(isAuthenticated);
+        
+        // Check if we need to show the verification page
+        const showVerification = localStorage.getItem('showVerificationInSidepanel') === 'true';
+        if (showVerification) {
+          setShowVerification(true);
+          return; // Skip other checks if verification is needed
+        }
         
         if (!isAuthenticated) {
           // If not authenticated, navigate to signin
@@ -3268,7 +3275,6 @@ const SidePanel: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await Auth.signOut();
-      console.log("signout successful");
       const window = await chrome.windows.getCurrent();
       if (window.id) {
         chrome.runtime.sendMessage({
@@ -3470,6 +3476,34 @@ const SidePanel: React.FC = () => {
   const handleProfileClick = () => {
     setShowProfileMenu(!showProfileMenu);
   };
+  
+  // Handle completion of verification
+  const handleVerificationComplete = () => {
+    setShowVerification(false);
+    setIsLoading(true);
+    setShowLeetCodeLoader(true);
+    
+    // Simulate checking LeetCode login
+    setTimeout(() => {
+      setIsLeetCodeLoggedIn(true);
+      
+      // Simulate fetching statistics
+      setTimeout(() => {
+        setIsLeetCodeLoading(false);
+        
+        // After a brief delay, hide the loader
+        setTimeout(() => {
+          setShowLeetCodeLoader(false);
+          setIsLoading(false);
+        }, 1000);
+      }, 2000);
+    }, 2000);
+  };
+  
+  // Check if verification page should be shown
+  if (showVerification) {
+    return <VerificationPage onVerificationComplete={handleVerificationComplete} />;
+  }
   
   // Render the sidepanel UI
   return (

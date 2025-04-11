@@ -1,7 +1,4 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
-import { Auth } from './utils/auth';
-import { writeLeetCodeUsername, saveDraftToDynamo } from './awsFunctions.js';
 
 // Background service worker for Cobra extension
 // Type definitions for Chrome API
@@ -61,70 +58,9 @@ chrome.action.onClicked.addListener((tab: chrome.tabs.Tab): void => {
   }
 });
 
-let slug = "";
-chrome.tabs.onUpdated.addListener(async(tabId, tab) => {
-  if(tab.url && tab.url.includes("leetcode.com/problems/")){
-    const urlSecondHalf = tab.url.split("/problems/")[1];
-    slug = urlSecondHalf.split("/")[0].trim();
-    console.log(slug);
-  } else {
-    console.log("something went wrong");
-    return;
-  }
-});   
-
-
-let storedLeetCodeUsername = '';
-let loggedInBool = false;
 // Handle messages
 const messageHandler: MessageHandler = (message, sender, sendResponse): boolean => {
   console.log('Background received message:', message);
-
-  if (!loggedInBool && message.status === "DOM loaded") {
-    (async () => {
-      console.log("logged into leetcode");
-      let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-      let response = await chrome.tabs.sendMessage(tab.id!, {action: "getUsername"});
-      chrome.tabs.remove(tab.id!);
-      console.log(response);
-      storedLeetCodeUsername = response;
-    })();
-
-    return true; // Keep message channel open for async sendResponse
-  }
-
-  if(message.type === 'requestUsername'){
-      console.log("popup requested username");
-      sendResponse(storedLeetCodeUsername);
-  }
-
-  if(message.type === 'sendDraft'){ 
-    console.log("new draft recieved: " + message.data);
-    try {
-      let code = message.data;
-      const saveDraftPromise = new Promise((resolve, reject)=>{
-        try{
-          console.log(slug);
-          saveDraftToDynamo(slug, code);
-          console.log("drafted saved successfully to dynamodb");
-          resolve(true);
-        } catch (error) {
-          console.error(error);
-          reject(false);
-        }
-    });
-    console.log(saveDraftPromise);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-  
-  if(message.type === "sendUserId"){ 
-    //async() =>{
-    //  const id = message.data;
-    //  await writeLeetCodeUsername(id, storedLeetCodeUsername);
-    //}
-  }
 
   if (message.type === 'detectPlatform') {
     const platformMessage = message as DetectPlatformMessage;

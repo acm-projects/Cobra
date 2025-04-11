@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 import { signUpUser, signInUser, signOutUser } from "../awsFunctions";
 
+=======
+/**
+ * Authentication utility class
+ */
+>>>>>>> 7f7870a (hello)
 export class Auth {
   /**
    * Check if the user is authenticated
@@ -75,5 +81,74 @@ export class Auth {
         reject(false);
       }
     });
+  }
+
+  /**
+   * Verify an email with the provided verification code
+   * @param email The email to verify
+   * @param code The 6-digit verification code
+   * @returns Promise that resolves to true if verification was successful
+   */
+  static async verifyEmail(email: string, code: string): Promise<boolean> {
+    try {
+      // In a real app, this would make an API call to verify the code
+      // For now, we'll simulate a verification process
+      console.log(`Verifying email ${email} with code ${code}`);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // For demo purposes, any code is valid
+      // In production, this would validate against a backend
+      const success = true;
+      
+      if (success) {
+        // Save verification status
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('isVerified', 'true');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Email verification error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Resend a verification code to the specified email
+   * @param email The email to send the verification code to
+   * @returns Promise that resolves when the code is sent
+   */
+  static async resendVerificationCode(email: string): Promise<void> {
+    try {
+      // In a real app, this would make an API call to resend the code
+      console.log(`Resending verification code to ${email}`);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In production, this would trigger a new code being sent from the backend
+      console.log('Verification code resent successfully');
+    } catch (error) {
+      console.error('Failed to resend verification code:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a user is verified
+   * @returns boolean indicating if the user is verified
+   */
+  static isUserVerified(): boolean {
+    return localStorage.getItem('isVerified') === 'true';
+  }
+
+  /**
+   * Get the current user's email
+   * @returns The user's email or null if not logged in
+   */
+  static getUserEmail(): string | null {
+    return localStorage.getItem('userEmail');
   }
 } 

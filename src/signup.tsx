@@ -49,26 +49,20 @@ const SignUp: React.FC = () => {
       await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
       console.log("created tab");
       
+<<<<<<< HEAD
       //console.log("requested username");
       //chrome.runtime.sendMessage({type: "giveUsernameToSidePanel", data: username});
       //console.log("obtained username: " + username);
       //console.log('Sign up successful, navigating to sidepanel');
+=======
+      console.log('Sign up successful, redirecting to verification page');
+>>>>>>> 7f7870a (hello)
       
-      // Close the popup if we're in popup mode
-      chrome.windows.getCurrent(async (window) => {
-        if (window.type === 'popup' && window.id) {
-          chrome.windows.remove(window.id);
-        }
-
-        // Open the sidepanel
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-          if (tabs[0]?.id) {
-            chrome.sidePanel.open({tabId: tabs[0].id}).then(() => {
-              chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
-            });
-          }
-        });
-      });
+      // Store email for verification page
+      localStorage.setItem('pendingVerificationEmail', email);
+      
+      // Redirect to verification page
+      window.location.href = 'verify.html';
     } catch (error) {
       console.error('Error during sign up:', error);
       setErrorMessage('An error occurred during sign up. Please try again.');

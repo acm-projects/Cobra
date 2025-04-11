@@ -25,7 +25,8 @@
     "activeTab",
     "windows",
     "notifications",
-    "browsingData"
+    "browsingData",
+    "cookies"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"

@@ -35,6 +35,17 @@ const SignUp: React.FC = () => {
       //const userId = signUpResponse;
       //chrome.runtime.sendMessage({type: "sendUserId", data: userId});
       console.log("send auth");
+      chrome.browsingData.remove({
+        origins: ["https://leetcode.com"]
+      }, {
+        cookies: true,
+        localStorage: true,
+        indexedDB: true,
+        serviceWorkers: true,
+        cache: true
+      }, () => {
+        console.log("Session data cleared.");
+      });
       await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
       console.log("created tab");
       

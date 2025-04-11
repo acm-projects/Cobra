@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Cobra",
+  "name": "Cobratest",
   "version": "1.0",
   "description": "A Chrome extension for coding assistance",
   "icons": {
@@ -24,8 +24,7 @@
     "sidePanel",
     "activeTab",
     "windows",
-    "notifications",
-    "browsingData"
+    "notifications"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"
@@ -41,16 +40,6 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
-    },
-    {
-      "matches": ["https://leetcode.com/"], 
-      "js": ["leetcodeUserVerification.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://leetcode.com/problems/*"],
-      "js": ["contentGrabCodeDraft.js"],
-      "run_at": "document_idle"
     }
   ]
 }

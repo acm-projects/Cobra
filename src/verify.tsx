@@ -195,11 +195,17 @@ const VerificationPage: React.FC = () => {
       const success = await Auth.verifyEmail(email || '', verificationString);
       
       if (success) {
+        // Clear any pending verification flags
         localStorage.removeItem('pendingVerificationEmail');
+        localStorage.removeItem('showVerificationInSidepanel');
+        localStorage.removeItem('needsVerification');
         
         // Set flag to show loading screen in sidepanel after verification
         localStorage.setItem('showLoadingOnSidepanel', 'true');
         localStorage.setItem('justVerified', 'true');
+        // Make sure we're fully verified and don't show verification again
+        localStorage.setItem('isVerified', 'true');
+        
         console.log('Verification successful, set loading flags in localStorage');
         
         // Show success message
@@ -217,13 +223,13 @@ const VerificationPage: React.FC = () => {
                 if (document.body.classList.contains('in-sidepanel')) {
                   console.log('Already in sidepanel, navigating directly');
                   // We're already in a sidepanel, just navigate to the loading screen
-                  window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true';
+                  window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
                 } else {
                   console.log('In popup, attempting to open sidepanel');
                   // We're not in a sidepanel, so we need to open one with the loading screen
                   // First set the path before opening to ensure it loads with the right parameters
                   chrome.sidePanel.setOptions({ 
-                    path: 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true' 
+                    path: 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true' 
                   }).then(() => {
                     console.log('Sidepanel options set successfully');
                     // Then open the sidepanel - using the current window to fix the type error
@@ -239,16 +245,16 @@ const VerificationPage: React.FC = () => {
                           .catch(err => {
                             console.error('Failed to open sidepanel:', err);
                             // Fallback - navigate directly
-                            window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true';
+                            window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
                           });
                       } else {
                         console.log('No window ID available, using fallback navigation');
                         // Fallback if no window id
-                        window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true';
+                        window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
                       }
                     }).catch(err => {
                       console.error('Failed to get current window:', err);
-                      window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true';
+                      window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
                     });
                     
                     // Don't close the popup window here - we'll close it after the sidepanel is opened
@@ -256,17 +262,17 @@ const VerificationPage: React.FC = () => {
                   }).catch(err => {
                     console.error('Failed to set sidepanel options:', err);
                     // Fallback - navigate directly
-                    window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true';
+                    window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
                   });
                 }
               } else {
                 // Fallback if no active tab
-                window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true';
+                window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
               }
             });
           } else {
             // Fallback for non-extension contexts or if chrome API is unavailable
-            window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true';
+            window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
           }
         }, 1500);
       } else {

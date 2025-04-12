@@ -4,6 +4,9 @@ import { Auth } from './utils/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import './hints.css';
 
+// Import the VerificationPage component directly
+import VerificationPage from './components/VerificationPage';
+
 // Type definitions
 interface NavigateMessage {
   type: 'navigate';
@@ -34,7 +37,10 @@ const SidePanel: React.FC = () => {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   
-  // Loading states
+  // Verification state
+  const [showVerification, setShowVerification] = useState<boolean>(false);
+  
+  // Loading states after verification
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showLeetCodeLoader, setShowLeetCodeLoader] = useState<boolean>(false);
   const [isLeetCodeLoggedIn, setIsLeetCodeLoggedIn] = useState<boolean>(false);
@@ -88,6 +94,29 @@ const SidePanel: React.FC = () => {
         const isAuthenticated = await Auth.isAuthenticated();
         setIsAuthenticated(isAuthenticated);
         
+        // Check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const verifiedParam = urlParams.get('verified') === 'true';
+        
+        // If verified via URL parameter, make sure it's set in localStorage
+        if (verifiedParam) {
+          localStorage.setItem('isVerified', 'true');
+          localStorage.removeItem('needsVerification');
+          localStorage.removeItem('showVerificationInSidepanel');
+        }
+        
+        // Check if verification is needed (but skip if we have the verified param)
+        const needsVerification = !verifiedParam && 
+                                 (localStorage.getItem('needsVerification') === 'true' || 
+                                  localStorage.getItem('showVerificationInSidepanel') === 'true');
+                                  
+        // If verification is needed, show the verification page
+        if (needsVerification) {
+          console.log('User needs verification, showing verification page');
+          setShowVerification(true);
+          return; // Skip other checks if verification is needed
+        }
+        
         if (!isAuthenticated) {
           // If not authenticated, navigate to signin
           const window = await chrome.windows.getCurrent();
@@ -99,8 +128,7 @@ const SidePanel: React.FC = () => {
             } as NavigateMessage);
           }
         } else {
-          // Parse URL parameters first for loading flag
-          const urlParams = new URLSearchParams(window.location.search);
+          // Parse URL parameters for loading flag
           const loadingParam = urlParams.get('loading');
           const justVerifiedParam = urlParams.get('justVerified');
           
@@ -111,10 +139,12 @@ const SidePanel: React.FC = () => {
                               localStorage.getItem('justVerified') === 'true';
                               
           // Clear URL parameters if they exist
-          if (loadingParam || justVerifiedParam) {
+          if (loadingParam || justVerifiedParam || verifiedParam) {
             const url = new URL(window.location.href);
             url.searchParams.delete('loading');
             url.searchParams.delete('justVerified');
+            url.searchParams.delete('verified');
+            url.searchParams.delete('inSidepanel');
             window.history.replaceState({}, document.title, url.toString());
           }
           
@@ -3486,6 +3516,34 @@ const SidePanel: React.FC = () => {
   const handleProfileClick = () => {
     setShowProfileMenu(!showProfileMenu);
   };
+  
+  // Handle completion of verification
+  const handleVerificationComplete = () => {
+    setShowVerification(false);
+    setIsLoading(true);
+    setShowLeetCodeLoader(true);
+    
+    // Simulate checking LeetCode login
+    setTimeout(() => {
+      setIsLeetCodeLoggedIn(true);
+      
+      // Simulate fetching statistics
+      setTimeout(() => {
+        setIsLeetCodeLoading(false);
+        
+        // After a brief delay, hide the loader
+        setTimeout(() => {
+          setShowLeetCodeLoader(false);
+          setIsLoading(false);
+        }, 1000);
+      }, 2000);
+    }, 2000);
+  };
+  
+  // Check if verification page should be shown
+  if (showVerification) {
+    return <VerificationPage onVerificationComplete={handleVerificationComplete} />;
+  }
   
   // Render the sidepanel UI
   return (

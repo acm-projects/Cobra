@@ -37,6 +37,10 @@ const SignUp: React.FC = () => {
       // Store email for verification page
       localStorage.setItem('pendingVerificationEmail', email);
       
+      // Mark that verification is needed, but don't set duplicate flags
+      localStorage.removeItem('isVerified');
+      localStorage.setItem('needsVerification', 'true');
+      
       // Open verification in sidepanel
       if (chrome && chrome.tabs && chrome.sidePanel) {
         try {

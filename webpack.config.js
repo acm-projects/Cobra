@@ -10,7 +10,8 @@ module.exports = {
     content: './src/content.ts',
     signin: './src/signin.tsx',
     signup: './src/signup.tsx',
-    sidepanel: './src/sidepanel.tsx'
+    sidepanel: './src/sidepanel.tsx',
+    verify: './src/verify.tsx'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -64,6 +65,10 @@ module.exports = {
         { 
           from: 'src/sidepanel.html', 
           to: 'sidepanel.html' 
+        },
+        { 
+          from: 'src/verify.html', 
+          to: 'verify.html' 
         },
         { from: 'images', to: 'images' },
         { from: 'sounds', to: 'sounds' },

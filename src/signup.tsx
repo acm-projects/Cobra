@@ -1,7 +1,6 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
-import { handler } from './awsFunctions.js';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -31,33 +30,47 @@ const SignUp: React.FC = () => {
 
     try {
       // Use the Auth utility for sign up
-      const signUpResponse = await Auth.signUp(username, email, password); 
-      //const userId = signUpResponse;
-      //chrome.runtime.sendMessage({type: "sendUserId", data: userId});
-      console.log("send auth");
-      await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
-      console.log("created tab");
+      await Auth.signUp(username, email, password);
       
-      //console.log("requested username");
-      //chrome.runtime.sendMessage({type: "giveUsernameToSidePanel", data: username});
-      //console.log("obtained username: " + username);
-      //console.log('Sign up successful, navigating to sidepanel');
+      console.log('Sign up successful, redirecting to verification page in sidepanel');
       
-      // Close the popup if we're in popup mode
-      chrome.windows.getCurrent(async (window) => {
-        if (window.type === 'popup' && window.id) {
-          chrome.windows.remove(window.id);
-        }
-
-        // Open the sidepanel
-        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-          if (tabs[0]?.id) {
-            chrome.sidePanel.open({tabId: tabs[0].id}).then(() => {
-              chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
+      // Store email for verification page
+      localStorage.setItem('pendingVerificationEmail', email);
+      
+      // Open verification in sidepanel
+      if (chrome && chrome.tabs && chrome.sidePanel) {
+        try {
+          // Get the current active tab
+          const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+          
+          if (tabs.length > 0 && tabs[0].id) {
+            // We have an active tab, open the sidepanel on it
+            await chrome.sidePanel.open({tabId: tabs[0].id});
+            
+            // Set the sidepanel to the verification page
+            await chrome.sidePanel.setOptions({
+              path: 'verify.html'
             });
+            
+            // If we're in a popup, close it
+            const currentWindow = await chrome.windows.getCurrent();
+            if (currentWindow.type === 'popup' && currentWindow.id) {
+              console.log('Closing popup window');
+              await chrome.windows.remove(currentWindow.id);
+            }
+          } else {
+            // Fallback if no active tab
+            window.location.href = 'verify.html';
           }
-        });
-      });
+        } catch (error) {
+          console.error('Error opening sidepanel:', error);
+          // Fallback to redirect
+          window.location.href = 'verify.html';
+        }
+      } else {
+        // Fallback for browsers without chrome.sidePanel API
+        window.location.href = 'verify.html';
+      }
     } catch (error) {
       console.error('Error during sign up:', error);
       setErrorMessage('An error occurred during sign up. Please try again.');

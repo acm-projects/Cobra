@@ -29,16 +29,16 @@ interface ChromeSidePanel extends chrome.sidePanel.SidePanel {
   close(): Promise<void>;
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if(message.type === "giveUsernameToSidePanel"){
-      console.log("LeetCode username: " + message.data);
-    }
-  });
-
 // Main App Component
 const SidePanel: React.FC = () => {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showLeetCodeLoader, setShowLeetCodeLoader] = useState<boolean>(false);
+  const [isLeetCodeLoggedIn, setIsLeetCodeLoggedIn] = useState<boolean>(false);
+  const [isLeetCodeLoading, setIsLeetCodeLoading] = useState<boolean>(true);
   
   // UI state
   const [activeSection, setActiveSection] = useState<string>('home');
@@ -97,6 +97,56 @@ const SidePanel: React.FC = () => {
               windowId: window.id,
               path: 'signin.html'
             } as NavigateMessage);
+          }
+        } else {
+          // Parse URL parameters first for loading flag
+          const urlParams = new URLSearchParams(window.location.search);
+          const loadingParam = urlParams.get('loading');
+          const justVerifiedParam = urlParams.get('justVerified');
+          
+          // Also check localStorage as fallback
+          const showLoading = loadingParam === 'true' || 
+                              justVerifiedParam === 'true' || 
+                              localStorage.getItem('showLoadingOnSidepanel') === 'true' ||
+                              localStorage.getItem('justVerified') === 'true';
+                              
+          // Clear URL parameters if they exist
+          if (loadingParam || justVerifiedParam) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('loading');
+            url.searchParams.delete('justVerified');
+            window.history.replaceState({}, document.title, url.toString());
+          }
+          
+          if (showLoading) {
+            console.log('Showing loading screen in sidepanel');
+            
+            // Clear localStorage flags
+            localStorage.removeItem('showLoadingOnSidepanel');
+            localStorage.removeItem('justVerified');
+            
+            // Show loading process
+            setIsLoading(true);
+            setShowLeetCodeLoader(true);
+            
+            // Simulate checking LeetCode login
+            setTimeout(() => {
+              setIsLeetCodeLoggedIn(true);
+              console.log('LeetCode login simulation complete');
+              
+              // Simulate fetching statistics
+              setTimeout(() => {
+                setIsLeetCodeLoading(false);
+                console.log('LeetCode statistics fetched');
+                
+                // After a brief delay, hide the loader
+                setTimeout(() => {
+                  setShowLeetCodeLoader(false);
+                  setIsLoading(false);
+                  console.log('Loading screen complete');
+                }, 1000);
+              }, 2000);
+            }, 2000);
           }
         }
       } catch (error) {
@@ -181,6 +231,138 @@ const SidePanel: React.FC = () => {
         max-width: 100%;
         margin: 0;
         padding: 0;
+        position: relative;
+      }
+      
+      .container.loading .main-content {
+        filter: blur(4px);
+        pointer-events: none;
+      }
+      
+      .container.loading .nav-sidebar {
+        filter: blur(4px);
+        pointer-events: none;
+      }
+      
+      /* LeetCode Loader Styles */
+      .leetcode-loader-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(10, 11, 30, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(5px);
+      }
+      
+      .leetcode-loader-container {
+        width: 100%;
+        max-width: 460px;
+        padding: 0 20px;
+        box-sizing: border-box;
+      }
+      
+      .leetcode-loader-card {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      }
+      
+      .loader-header {
+        display: flex;
+        align-items: center;
+        padding: 16px 24px;
+        background-color: rgba(139, 92, 246, 0.1);
+        border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+      }
+      
+      .loader-header i {
+        color: #8B5CF6;
+        font-size: 18px;
+        margin-right: 12px;
+      }
+      
+      .loader-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+      }
+      
+      .loader-content {
+        padding: 32px 24px;
+        text-align: center;
+      }
+      
+      .spinner-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24px;
+      }
+      
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 3px solid rgba(139, 92, 246, 0.2);
+        border-top-color: #8B5CF6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      
+      .loading-message {
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 8px;
+      }
+      
+      .loader-disclaimer {
+        font-size: 14px;
+        color: #94a3b8;
+        line-height: 1.5;
+        margin-bottom: 8px;
+      }
+      
+      .completed-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #10b981;
+      }
+      
+      .completed-message i {
+        font-size: 48px;
+        margin-bottom: 16px;
+      }
+      
+      .completed-message p {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      
+      .loader-footer {
+        padding: 16px 24px;
+        background-color: rgba(0, 0, 0, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      
+      .privacy-note {
+        font-size: 12px;
+        color: #94a3b8;
+        text-align: center;
+        margin: 0;
       }
       
       .nav-sidebar {
@@ -3103,7 +3285,6 @@ const SidePanel: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await Auth.signOut();
-      console.log("signout successful");
       const window = await chrome.windows.getCurrent();
       if (window.id) {
         chrome.runtime.sendMessage({
@@ -3308,7 +3489,64 @@ const SidePanel: React.FC = () => {
   
   // Render the sidepanel UI
   return (
-    <div className="container">
+    <div className={`container ${isLoading ? 'loading' : ''}`}>
+      {/* LeetCode Loader */}
+      <AnimatePresence>
+        {showLeetCodeLoader && (
+          <motion.div 
+            className="leetcode-loader-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="leetcode-loader-container">
+              <motion.div 
+                className="leetcode-loader-card"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="loader-header">
+                  <i className="fas fa-code"></i>
+                  <h3>LeetCode Statistics</h3>
+                </div>
+                
+                <div className="loader-content">
+                  {isLeetCodeLoading ? (
+                    <>
+                      <div className="spinner-container">
+                        <div className="spinner"></div>
+                      </div>
+                      <p className="loading-message">
+                        {isLeetCodeLoggedIn 
+                          ? "Fetching your LeetCode statistics..." 
+                          : "Waiting for you to sign in to LeetCode..."}
+                      </p>
+                      <p className="loader-disclaimer">
+                        {isLeetCodeLoggedIn 
+                          ? "We're securely retrieving your problem-solving statistics from LeetCode." 
+                          : "Please log in to your LeetCode account to access your statistics."}
+                      </p>
+                    </>
+                  ) : (
+                    <div className="completed-message">
+                      <i className="fas fa-check-circle"></i>
+                      <p>Statistics loaded successfully!</p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="loader-footer">
+                  <p className="privacy-note">
+                    Your data is only used to enhance your coding experience and is never shared with third parties.
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       {/* Navigation Sidebar */}
       <nav className={`nav-sidebar ${sidebarExpanded ? 'expanded' : ''}`}>
         <div className="sidebar-logo">

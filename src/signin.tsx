@@ -1,18 +1,12 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Auth } from './utils/auth';
-import LeetCodeLoader from './components/Loading/LeetCodeLoader';
-import { signUpUser, signInUser } from "./awsFunctions";
 
 const SignIn: React.FC = () => {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [showLeetCodeLoader, setShowLeetCodeLoader] = useState<boolean>(false);
-  const [isLeetCodeLoggedIn, setIsLeetCodeLoggedIn] = useState<boolean>(false);
-  const [isLeetCodeLoading, setIsLeetCodeLoading] = useState<boolean>(true);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -21,52 +15,34 @@ const SignIn: React.FC = () => {
     
     try {
       // Use the Auth utility for sign in
-      await signInUser(username, password); 
+      await Auth.signIn(username, password);
       
-      console.log('Authentication successful, showing LeetCode loader');
+      console.log('Authentication successful, redirecting to sidepanel');
       
-      // Show LeetCode loader
-      setShowLeetCodeLoader(true);
-      
-      // Simulate checking LeetCode login
-      setTimeout(() => {
-        setIsLeetCodeLoggedIn(true);
+      // Navigate directly to the sidepanel without showing the loading screen
+      const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+      if (tabs.length > 0 && tabs[0].id) {
+        // We have an active tab, open the sidepanel on it
+        console.log('Opening sidepanel on tab:', tabs[0].id);
+        await chrome.sidePanel.open({tabId: tabs[0].id});
         
-        // Simulate fetching statistics
-        setTimeout(() => {
-          setIsLeetCodeLoading(false);
-          
-          // After a short delay, navigate to the sidepanel
-          setTimeout(async () => {
-            console.log('LeetCode stats loaded, navigating to sidepanel');
-            
-            // Simplified approach for getting to the sidepanel after signin
-            const tabs = await chrome.tabs.query({active: true, currentWindow: true});
-            if (tabs.length > 0 && tabs[0].id) {
-              // We have an active tab, open the sidepanel on it
-              console.log('Opening sidepanel on tab:', tabs[0].id);
-              await chrome.sidePanel.open({tabId: tabs[0].id});
-              
-              // Explicitly set the sidepanel path to sidepanel.html
-              console.log('Setting sidepanel path to sidepanel.html');
-              await chrome.sidePanel.setOptions({
-                path: 'sidepanel.html'
-              });
-              
-              // If we're in a popup, close it
-              const currentWindow = await chrome.windows.getCurrent();
-              if (currentWindow.type === 'popup' && currentWindow.id) {
-                console.log('Closing popup window');
-                await chrome.windows.remove(currentWindow.id);
-              }
-            } else {
-              // Fallback: redirect to the sidepanel.html
-              console.log('No active tab found, redirecting to sidepanel.html');
-              window.location.href = 'sidepanel.html';
-            }
-          }, 1000);
-        }, 2000);
-      }, 2000);
+        // Explicitly set the sidepanel path to sidepanel.html
+        console.log('Setting sidepanel path to sidepanel.html');
+        await chrome.sidePanel.setOptions({
+          path: 'sidepanel.html'
+        });
+        
+        // If we're in a popup, close it
+        const currentWindow = await chrome.windows.getCurrent();
+        if (currentWindow.type === 'popup' && currentWindow.id) {
+          console.log('Closing popup window');
+          await chrome.windows.remove(currentWindow.id);
+        }
+      } else {
+        // Fallback: redirect to the sidepanel.html
+        console.log('No active tab found, redirecting to sidepanel.html');
+        window.location.href = 'sidepanel.html';
+      }
     } catch (error) {
       console.error('Error during sign in:', error);
       setErrorMessage('An error occurred. Please try again.');
@@ -81,16 +57,6 @@ const SignIn: React.FC = () => {
 
   return (
     <div className="signin-page">
-      {/* LeetCode Loader */}
-      <AnimatePresence>
-        {showLeetCodeLoader && (
-          <LeetCodeLoader
-            isLoggedIn={isLeetCodeLoggedIn}
-            isLoading={isLeetCodeLoading}
-          />
-        )}
-      </AnimatePresence>
-      
       <div className="bg-decoration">
         <div className="bg-circle"></div>
         <div className="bg-circle"></div>

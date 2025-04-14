@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - Cobra</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    :root[data-theme="dark"] {
+      --bg-gradient-from: #0A0B1E;
+      --bg-gradient-to: #1a1b3d;
+      --container-bg: rgba(255, 255, 255, 0.05);
+      --container-border: rgba(255, 255, 255, 0.1);
+      --text-primary: white;
+      --text-secondary: #94a3b8;
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --input-border: rgba(255, 255, 255, 0.1);
+      --button-bg: #8B5CF6;
+      --button-hover: #7c4dff;
+      --error-bg: rgba(239, 68, 68, 0.1);
+      --error-border: rgba(239, 68, 68, 0.2);
+      --error-text: #ef4444;
+      --accent-color: #8B5CF6;
+    }
+
+    :root[data-theme="light"] {
+      --bg-gradient-from: #f0f2f5;
+      --bg-gradient-to: #ffffff;
+      --container-bg: white;
+      --container-border: #e5e7eb;
+      --text-primary: #1f2937;
+      --text-secondary: #4b5563;
+      --input-bg: #f9fafb;
+      --input-border: #d1d5db;
+      --button-bg: #8B5CF6;
+      --button-hover: #7c4dff;
+      --error-bg: #fee2e2;
+      --error-border: #fecaca;
+      --error-text: #dc2626;
+      --accent-color: #8B5CF6;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-width: 300px;
+      min-height: 500px;
+      height: 100vh;
+      background: linear-gradient(135deg, var(--bg-gradient-from) 0%, var(--bg-gradient-to) 100%);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    .signin-page {
+      min-height: 100vh;
+      height: auto;
+      width: 450px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      position: relative;
+      margin: 0 auto;
+      padding: 30px 0;
+    }
+    
+    /* Background decoration */
+    .bg-decoration {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: -1;
+    }
+    
+    .bg-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: linear-gradient(45deg, var(--accent-color), transparent);
+      opacity: 0.07;
+    }
+    
+    .bg-circle:nth-child(1) {
+      width: 300px;
+      height: 300px;
+      top: -100px;
+      right: -50px;
+    }
+    
+    .bg-circle:nth-child(2) {
+      width: 400px;
+      height: 400px;
+      bottom: -150px;
+      left: -150px;
+    }
+    
+    .bg-circle:nth-child(3) {
+      width: 200px;
+      height: 200px;
+      top: 30%;
+      left: 10%;
+    }
+
+    .signin-container {
+      width: 100%;
+      max-width: 400px;
+      background: var(--container-bg);
+      border: 1px solid var(--container-border);
+      border-radius: 16px;
+      padding: 40px 30px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(8px);
+      box-sizing: border-box;
+      position: relative;
+      overflow: visible;
+      margin: 20px 0;
+    }
+    
+    /* Container decoration */
+    .container-decoration {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.7), rgba(96, 165, 250, 0.7), rgba(134, 239, 172, 0.7));
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      opacity: 0.8;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      width: 260px;
+      height: auto;
+      margin-bottom: 24px;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    }
+
+    .welcome-text {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.5;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .signin-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group {
+      position: relative;
+    }
+
+    .form-group i {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent-color);
+      font-size: 16px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 14px 14px 45px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 15px;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--button-bg);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    }
+
+    .form-group input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .button-group {
+      display: flex;
+      margin-top: 20px;
+    }
+
+    .signin-button {
+      width: 100%;
+      background: var(--button-bg);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .signin-button:hover {
+      background: var(--button-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+    }
+
+    #error-message {
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: var(--error-text);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      text-align: center;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .login-link a {
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    @media (max-width: 440px) {
+      .signin-page {
+        width: 100%;
+        padding: 0 20px;
+      }
+      
+      .signin-container {
+        padding: 30px 20px;
+        max-width: 100%;
+      }
+
+      .logo {
+        width: 220px;
+      }
+    }
+
+    @media (max-height: 600px) {
+      .signin-container {
+        padding: 25px 20px;
+      }
+      
+      .logo {
+        width: 200px;
+        margin-bottom: 15px;
+      }
+      
+      .welcome-text {
+        margin-bottom: 16px;
+      }
+      
+      .form-group input {
+        padding: 12px 12px 12px 40px;
+      }
+      
+      .signin-button {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body class="auth-page">
+  <div id="root"></div>
+  <!-- The signin.js will be generated from signin.tsx by webpack -->
+  <script src="signin.js"></script>
+</body>
+</html> 

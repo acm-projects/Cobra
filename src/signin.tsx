@@ -40,6 +40,8 @@ const SignIn: React.FC = () => {
           console.log('Closing popup window');
           await chrome.windows.remove(currentWindow.id);
         }
+
+        chrome.runtime.sendMessage({type: "recordUsername", data: username});
       } else {
         // Fallback: redirect to the sidepanel.html
         console.log('No active tab found, redirecting to sidepanel.html');

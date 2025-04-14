@@ -3369,6 +3369,14 @@ const SidePanel: React.FC = () => {
     }
   };
   
+  let username = "";
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
+    if(message.type === "recordUsername"){
+      username = message.data;
+      console.log("username: " + username);
+    }
+  });
+
   const playTimerEndSound = () => {
     // Skip playing sound if notifications are disabled
     if (!notificationsEnabled) return;
@@ -3641,7 +3649,7 @@ const SidePanel: React.FC = () => {
       {/* Profile Popup Menu - Moved outside the sidebar for better positioning */}
       {showProfileMenu && (
         <div className="profile-popup">
-          <div className="profile-header">srihanmedi</div>
+          <div className="profile-header">{username}</div>
           <div 
             className="profile-menu-item"
             onClick={() => {

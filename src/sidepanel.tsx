@@ -4,6 +4,9 @@ import { Auth } from './utils/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import './hints.css';
 
+// Import the VerificationPage component directly
+import VerificationPage from './components/VerificationPage';
+
 // Type definitions
 interface NavigateMessage {
   type: 'navigate';
@@ -29,16 +32,13 @@ interface ChromeSidePanel extends chrome.sidePanel.SidePanel {
   close(): Promise<void>;
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if(message.type === "giveUsernameToSidePanel"){
-      console.log("LeetCode username: " + message.data);
-    }
-  });
-
 // Main App Component
 const SidePanel: React.FC = () => {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  
+  // Verification state
+  const [showVerification, setShowVerification] = useState<boolean>(false);
   
   // Loading states after verification
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -94,6 +94,29 @@ const SidePanel: React.FC = () => {
         const isAuthenticated = await Auth.isAuthenticated();
         setIsAuthenticated(isAuthenticated);
         
+        // Check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const verifiedParam = urlParams.get('verified') === 'true';
+        
+        // If verified via URL parameter, make sure it's set in localStorage
+        if (verifiedParam) {
+          localStorage.setItem('isVerified', 'true');
+          localStorage.removeItem('needsVerification');
+          localStorage.removeItem('showVerificationInSidepanel');
+        }
+        
+        // Check if verification is needed (but skip if we have the verified param)
+        const needsVerification = !verifiedParam && 
+                                 (localStorage.getItem('needsVerification') === 'true' || 
+                                  localStorage.getItem('showVerificationInSidepanel') === 'true');
+                                  
+        // If verification is needed, show the verification page
+        if (needsVerification) {
+          console.log('User needs verification, showing verification page');
+          setShowVerification(true);
+          return; // Skip other checks if verification is needed
+        }
+        
         if (!isAuthenticated) {
           // If not authenticated, navigate to signin
           const window = await chrome.windows.getCurrent();
@@ -105,11 +128,32 @@ const SidePanel: React.FC = () => {
             } as NavigateMessage);
           }
         } else {
-          // Check if we need to show the loading screen (only after verification)
-          const showLoading = localStorage.getItem('showLoadingOnSidepanel') === 'true';
+          // Parse URL parameters for loading flag
+          const loadingParam = urlParams.get('loading');
+          const justVerifiedParam = urlParams.get('justVerified');
+          
+          // Also check localStorage as fallback
+          const showLoading = loadingParam === 'true' || 
+                              justVerifiedParam === 'true' || 
+                              localStorage.getItem('showLoadingOnSidepanel') === 'true' ||
+                              localStorage.getItem('justVerified') === 'true';
+                              
+          // Clear URL parameters if they exist
+          if (loadingParam || justVerifiedParam || verifiedParam) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('loading');
+            url.searchParams.delete('justVerified');
+            url.searchParams.delete('verified');
+            url.searchParams.delete('inSidepanel');
+            window.history.replaceState({}, document.title, url.toString());
+          }
+          
           if (showLoading) {
-            // Clear the flag
+            console.log('Showing loading screen in sidepanel');
+            
+            // Clear localStorage flags
             localStorage.removeItem('showLoadingOnSidepanel');
+            localStorage.removeItem('justVerified');
             
             // Show loading process
             setIsLoading(true);
@@ -118,15 +162,18 @@ const SidePanel: React.FC = () => {
             // Simulate checking LeetCode login
             setTimeout(() => {
               setIsLeetCodeLoggedIn(true);
+              console.log('LeetCode login simulation complete');
               
               // Simulate fetching statistics
               setTimeout(() => {
                 setIsLeetCodeLoading(false);
+                console.log('LeetCode statistics fetched');
                 
                 // After a brief delay, hide the loader
                 setTimeout(() => {
                   setShowLeetCodeLoader(false);
                   setIsLoading(false);
+                  console.log('Loading screen complete');
                 }, 1000);
               }, 2000);
             }, 2000);
@@ -3268,7 +3315,6 @@ const SidePanel: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await Auth.signOut();
-      console.log("signout successful");
       const window = await chrome.windows.getCurrent();
       if (window.id) {
         chrome.runtime.sendMessage({
@@ -3470,6 +3516,34 @@ const SidePanel: React.FC = () => {
   const handleProfileClick = () => {
     setShowProfileMenu(!showProfileMenu);
   };
+  
+  // Handle completion of verification
+  const handleVerificationComplete = () => {
+    setShowVerification(false);
+    setIsLoading(true);
+    setShowLeetCodeLoader(true);
+    
+    // Simulate checking LeetCode login
+    setTimeout(() => {
+      setIsLeetCodeLoggedIn(true);
+      
+      // Simulate fetching statistics
+      setTimeout(() => {
+        setIsLeetCodeLoading(false);
+        
+        // After a brief delay, hide the loader
+        setTimeout(() => {
+          setShowLeetCodeLoader(false);
+          setIsLoading(false);
+        }, 1000);
+      }, 2000);
+    }, 2000);
+  };
+  
+  // Check if verification page should be shown
+  if (showVerification) {
+    return <VerificationPage onVerificationComplete={handleVerificationComplete} />;
+  }
   
   // Render the sidepanel UI
   return (

@@ -1,11 +1,6 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
-<<<<<<< HEAD
-import LeetCodeLoader from './components/Loading/LeetCodeLoader';
-import { signUpUser, signInUser } from "./awsFunctions";
-=======
->>>>>>> 7f7870a (hello)
 
 const SignIn: React.FC = () => {
   const [username, setUsername] = useState<string>('');
@@ -20,7 +15,7 @@ const SignIn: React.FC = () => {
     
     try {
       // Use the Auth utility for sign in
-      await signInUser(username, password); 
+      await Auth.signIn(username, password);
       
       console.log('Authentication successful, redirecting to sidepanel');
       

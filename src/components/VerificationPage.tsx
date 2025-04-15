@@ -133,10 +133,11 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ onVerificationCompl
     try {
       setIsVerifying(true);
       setError('');
+      console.log("verifying")
       const success = await Auth.verifyEmail(email || '', verificationString);
       
       if (success) {
-
+        console.log("success");
         // Clear verification flags
         localStorage.removeItem('pendingVerificationEmail');
         localStorage.removeItem('showVerificationInSidepanel');

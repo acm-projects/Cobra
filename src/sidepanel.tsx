@@ -1,18 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
-import ReactDOM from 'react-dom';
-import { Auth } from './utils/auth';
-import { motion, AnimatePresence } from 'framer-motion';
-import './hints.css';
+import React, { useEffect, useState, useRef } from "react";
+import ReactDOM from "react-dom";
+import { Auth } from "./utils/auth";
+import { motion, AnimatePresence } from "framer-motion";
+import "./hints.css";
+import VerificationPage from "./components/VerificationPage";
 
 // Type definitions
 interface NavigateMessage {
-  type: 'navigate';
+  type: "navigate";
   windowId?: number;
   path: string;
 }
 
 interface WindowSize {
-  size: 'compact' | 'medium' | 'expanded';
+  size: "compact" | "medium" | "expanded";
   width?: number;
   height?: number;
 }
@@ -30,123 +31,158 @@ interface ChromeSidePanel extends chrome.sidePanel.SidePanel {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if(message.type === "giveUsernameToSidePanel"){
-      console.log("LeetCode username: " + message.data);
-    }
-  });
+  if (message.type === "giveUsernameToSidePanel") {
+    console.log("LeetCode username: " + message.data);
+  }
+});
 
 // Main App Component
 const SidePanel: React.FC = () => {
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  
+
+  // Verification State
+  const [showVerification, setShowVerification] = useState<boolean>(false);
+
   // Loading states after verification
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showLeetCodeLoader, setShowLeetCodeLoader] = useState<boolean>(false);
   const [isLeetCodeLoggedIn, setIsLeetCodeLoggedIn] = useState<boolean>(false);
   const [isLeetCodeLoading, setIsLeetCodeLoading] = useState<boolean>(true);
-  
+
   // UI state
-  const [activeSection, setActiveSection] = useState<string>('home');
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [windowSize, setWindowSize] = useState<WindowSize['size']>('medium');
+  const [activeSection, setActiveSection] = useState<string>("home");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [windowSize, setWindowSize] = useState<WindowSize["size"]>("medium");
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
-  
+
   // Chat state
-  const [messageText, setMessageText] = useState<string>('');
+  const [messageText, setMessageText] = useState<string>("");
   const chatInputRef = useRef<HTMLInputElement>(null);
 
   // New settings
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
-  const [defaultView, setDefaultView] = useState<string>('home');
+  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
+    "medium"
+  );
+  const [defaultView, setDefaultView] = useState<string>("home");
   const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
+  const [notificationsEnabled, setNotificationsEnabled] =
+    useState<boolean>(true);
   const [dataCollection, setDataCollection] = useState<boolean>(true);
-  const [timerSound, setTimerSound] = useState<string>('bell');
+  const [timerSound, setTimerSound] = useState<string>("bell");
   const [timerVolume, setTimerVolume] = useState<number>(80);
-  
+
   // Timer state
-  const [timerType, setTimerType] = useState<'stopwatch' | 'countdown'>('stopwatch');
+  const [timerType, setTimerType] = useState<"stopwatch" | "countdown">(
+    "stopwatch"
+  );
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [timerValue, setTimerValue] = useState<number>(0);
   const [laps, setLaps] = useState<number[]>([]);
   const [countdownMinutes, setCountdownMinutes] = useState<number>(0);
   const [countdownSeconds, setCountdownSeconds] = useState<number>(5);
-  
+
   // Refs
   const timerIntervalRef = useRef<number | null>(null);
   const timerStartTimeRef = useRef<number>(0);
   const timerPausedValueRef = useRef<number>(0);
-  
+
   // Check authentication on component mount
   useEffect(() => {
     // Load Font Awesome if not already loaded
     if (!document.querySelector('link[href*="font-awesome"]')) {
-      const fontAwesomeLink = document.createElement('link');
-      fontAwesomeLink.rel = 'stylesheet';
-      fontAwesomeLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
+      const fontAwesomeLink = document.createElement("link");
+      fontAwesomeLink.rel = "stylesheet";
+      fontAwesomeLink.href =
+        "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css";
       document.head.appendChild(fontAwesomeLink);
     }
-    
+
     const checkAuth = async () => {
       try {
         const isAuthenticated = await Auth.isAuthenticated();
         setIsAuthenticated(isAuthenticated);
-        
+
         // Check URL parameters first
         const urlParams = new URLSearchParams(window.location.search);
-        const verifiedParam = urlParams.get('verified') === 'true';
-        
+        const verifiedParam = urlParams.get("verified") === "true";
+
         // If verified via URL parameter, make sure it's set in localStorage
         if (verifiedParam) {
-          localStorage.setItem('isVerified', 'true');
-          localStorage.removeItem('needsVerification');
-          localStorage.removeItem('showVerificationInSidepanel');
+          localStorage.setItem("isVerified", "true");
+          localStorage.removeItem("needsVerification");
+          localStorage.removeItem("showVerificationInSidepanel");
         }
-        
+
         // Check if verification is needed (but skip if we have the verified param)
-        const needsVerification = !verifiedParam && 
-                                 (localStorage.getItem('needsVerification') === 'true' || 
-                                  localStorage.getItem('showVerificationInSidepanel') === 'true');
-                                  
+        const needsVerification =
+          !verifiedParam &&
+          (localStorage.getItem("needsVerification") === "true" ||
+            localStorage.getItem("showVerificationInSidepanel") === "true");
+
         // If verification is needed, show the verification page
         if (needsVerification) {
-          console.log('User needs verification, showing verification page');
-            
+          console.log("User needs verification, showing verification page");
           setShowVerification(true);
           return; // Skip other checks if verification is needed
         }
-        
+
         if (!isAuthenticated) {
           // If not authenticated, navigate to signin
           const window = await chrome.windows.getCurrent();
           if (window.id) {
             chrome.runtime.sendMessage({
-              type: 'navigate',
+              type: "navigate",
               windowId: window.id,
-              path: 'signin.html'
+              path: "signin.html",
             } as NavigateMessage);
           }
         } else {
           // Check if we need to show the loading screen (only after verification)
-          const showLoading = localStorage.getItem('showLoadingOnSidepanel') === 'true';
+          // Parse URL parameters for loading flag
+          const loadingParam = urlParams.get("loading");
+          const justVerifiedParam = urlParams.get("justVerified");
+
+          // Also check localStorage as fallback
+          const showLoading =
+            loadingParam === "true" ||
+            justVerifiedParam === "true" ||
+            localStorage.getItem("showLoadingOnSidepanel") === "true" ||
+            localStorage.getItem("showLoadingOnSidepanel") === "true" ||
+            localStorage.getItem("justVerified") === "true";
+
+          // Clear URL parameters if they exist
+          if (loadingParam || justVerifiedParam || verifiedParam) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("loading");
+            url.searchParams.delete("justVerified");
+            url.searchParams.delete("verified");
+            url.searchParams.delete("inSidepanel");
+            window.history.replaceState({}, document.title, url.toString());
+          }
+
           if (showLoading) {
+            console.log("Showing loading screen in sidepanel");
+
             // Clear the flag
-            localStorage.removeItem('showLoadingOnSidepanel');
-            
+            // Clear localStorage flags
+            localStorage.removeItem("showLoadingOnSidepanel");
+            localStorage.removeItem("showLoadingOnSidepanel");
+            localStorage.removeItem("justVerified");
+
             // Show loading process
             setIsLoading(true);
             setShowLeetCodeLoader(true);
-            
+
             // Simulate checking LeetCode login
             setTimeout(() => {
               setIsLeetCodeLoggedIn(true);
-              
+
               // Simulate fetching statistics
               setTimeout(() => {
                 setIsLeetCodeLoading(false);
-                
+
                 // After a brief delay, hide the loader
                 setTimeout(() => {
                   setShowLeetCodeLoader(false);
@@ -157,68 +193,85 @@ const SidePanel: React.FC = () => {
           }
         }
       } catch (error) {
-        console.error('Error checking auth:', error);
+        console.error("Error checking auth:", error);
       }
     };
-    
+
     checkAuth();
-    
+
     // Load saved preferences
-    const savedSize = localStorage.getItem('windowSize') as WindowSize['size'] || 'medium';
+    const savedSize =
+      (localStorage.getItem("windowSize") as WindowSize["size"]) || "medium";
     setWindowSize(savedSize);
-    
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' || 'dark';
+
+    const savedTheme =
+      (localStorage.getItem("theme") as "light" | "dark") || "dark";
     setTheme(savedTheme);
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    
-    const savedView = localStorage.getItem('defaultView') || 'home';
+    document.documentElement.setAttribute("data-theme", savedTheme);
+
+    const savedView = localStorage.getItem("defaultView") || "home";
     setDefaultView(savedView);
     setActiveSection(savedView);
-    
+
     // Load font size preference
-    const savedFontSize = localStorage.getItem('fontSize') as 'small' | 'medium' | 'large' || 'medium';
+    const savedFontSize =
+      (localStorage.getItem("fontSize") as "small" | "medium" | "large") ||
+      "medium";
     setFontSize(savedFontSize);
-    document.documentElement.style.fontSize = 
-      savedFontSize === 'small' ? '14px' : 
-      savedFontSize === 'large' ? '18px' : '16px';
-    
+    document.documentElement.style.fontSize =
+      savedFontSize === "small"
+        ? "14px"
+        : savedFontSize === "large"
+        ? "18px"
+        : "16px";
+
     // Load animation preference
-    const animationsState = localStorage.getItem('animationsEnabled') !== 'false';
+    const animationsState =
+      localStorage.getItem("animationsEnabled") !== "false";
     setAnimationsEnabled(animationsState);
-    document.documentElement.setAttribute('data-animations', animationsState.toString());
-    
+    document.documentElement.setAttribute(
+      "data-animations",
+      animationsState.toString()
+    );
+
     // Load notification preference
-    const notificationsState = localStorage.getItem('notificationsEnabled') !== 'false';
+    const notificationsState =
+      localStorage.getItem("notificationsEnabled") !== "false";
     setNotificationsEnabled(notificationsState);
-    
+
     // Load data collection preference
-    const dataCollectionState = localStorage.getItem('dataCollection') !== 'false';
+    const dataCollectionState =
+      localStorage.getItem("dataCollection") !== "false";
     setDataCollection(dataCollectionState);
-    
+
     // Load timer sound preference
-    const savedTimerSound = localStorage.getItem('timerSound') || 'bell';
+    const savedTimerSound = localStorage.getItem("timerSound") || "bell";
     setTimerSound(savedTimerSound);
-    
+
     // Load timer volume preference
-    const savedTimerVolume = parseInt(localStorage.getItem('timerVolume') || '80');
+    const savedTimerVolume = parseInt(
+      localStorage.getItem("timerVolume") || "80"
+    );
     setTimerVolume(savedTimerVolume);
-    
+
     // Preload audio files for timer sounds
-    const sounds = ['bell', 'digital', 'gentle', 'alarm'];
-    sounds.forEach(sound => {
-      const audio = new Audio(chrome.runtime.getURL(`sounds/timer-${sound}.mp3`));
-      audio.preload = 'auto';
+    const sounds = ["bell", "digital", "gentle", "alarm"];
+    sounds.forEach((sound) => {
+      const audio = new Audio(
+        chrome.runtime.getURL(`sounds/timer-${sound}.mp3`)
+      );
+      audio.preload = "auto";
       // Just triggering the load without playing
       audio.load();
       console.log(`Preloaded sound: ${sound}`);
     });
-    
+
     // Load sidebar expanded state
-    const sidebarState = localStorage.getItem('sidebarExpanded') === 'true';
+    const sidebarState = localStorage.getItem("sidebarExpanded") === "true";
     setSidebarExpanded(sidebarState);
-    
+
     // Apply necessary styles for proper section display
-    const styleElement = document.createElement('style');
+    const styleElement = document.createElement("style");
     styleElement.textContent = `
       body {
         width: 100%;
@@ -3022,70 +3075,74 @@ const SidePanel: React.FC = () => {
       }
     `;
     document.head.appendChild(styleElement);
-    
   }, []);
-  
+
   // Helper function to close other windows
   const closeOtherWindows = async (exceptId: number | null = null) => {
     try {
       const windows = await chrome.windows.getAll();
       for (const window of windows) {
-        if (window.id !== exceptId && window.id && window.type === 'popup') {
+        if (window.id !== exceptId && window.id && window.type === "popup") {
           await chrome.windows.remove(window.id);
         }
       }
-      
+
       // Close sidePanel if available
-      if (chrome.sidePanel && 'close' in chrome.sidePanel) {
+      if (chrome.sidePanel && "close" in chrome.sidePanel) {
         await (chrome.sidePanel as unknown as ChromeSidePanel).close();
       }
     } catch (error) {
-      console.error('Error closing windows:', error);
+      console.error("Error closing windows:", error);
     }
   };
-  
+
   // Handle navigation
   const handleNavigation = (sectionId: string) => {
-    console.log('Navigation requested to section:', sectionId);
-    console.log('Previous active section:', activeSection);
+    console.log("Navigation requested to section:", sectionId);
+    console.log("Previous active section:", activeSection);
     setActiveSection(sectionId);
-    console.log('New active section set to:', sectionId);
-    localStorage.setItem('defaultView', sectionId);
-    
+    console.log("New active section set to:", sectionId);
+    localStorage.setItem("defaultView", sectionId);
+
     // Log all section elements and their active status
     setTimeout(() => {
-      const sections = document.querySelectorAll('.section');
-      console.log('Found', sections.length, 'section elements');
-      sections.forEach(section => {
-        console.log('Section ID:', section.id, 'Is active:', section.classList.contains('active'));
+      const sections = document.querySelectorAll(".section");
+      console.log("Found", sections.length, "section elements");
+      sections.forEach((section) => {
+        console.log(
+          "Section ID:",
+          section.id,
+          "Is active:",
+          section.classList.contains("active")
+        );
       });
     }, 100);
   };
-  
+
   // Handle view toggle
   const handleViewToggle = async () => {
     try {
       const window = await chrome.windows.getCurrent();
-      
+
       // Close other windows first
       await closeOtherWindows(window.id);
-      
+
       // Check if we're in a popup
-      if (window.type === 'popup') {
-        if (windowSize === 'medium') {
+      if (window.type === "popup") {
+        if (windowSize === "medium") {
           // Open side panel
           if (chrome.sidePanel && window.id) {
             await chrome.sidePanel.open({ windowId: window.id });
             // Use the global window object to close
             self.close();
           }
-        } else if (windowSize === 'expanded') {
+        } else if (windowSize === "expanded") {
           // Open new expanded window
           chrome.windows.create({
-            url: chrome.runtime.getURL('sidepanel.html'),
-            type: 'popup',
+            url: chrome.runtime.getURL("sidepanel.html"),
+            type: "popup",
             width: 800,
-            height: 900
+            height: 900,
           });
           // Use the global window object to close
           self.close();
@@ -3093,27 +3150,27 @@ const SidePanel: React.FC = () => {
         // If compact, do nothing as we're already in popup
       } else {
         // We're in sidepanel or expanded window
-        if (windowSize === 'compact') {
+        if (windowSize === "compact") {
           chrome.action.openPopup();
-          if (chrome.sidePanel && 'close' in chrome.sidePanel) {
+          if (chrome.sidePanel && "close" in chrome.sidePanel) {
             await (chrome.sidePanel as unknown as ChromeSidePanel).close();
           }
           // Use the global window object to close
           self.close();
-        } else if (windowSize === 'medium') {
+        } else if (windowSize === "medium") {
           if (chrome.sidePanel && window.id) {
             await chrome.sidePanel.open({ windowId: window.id });
             // Use the global window object to close
             self.close();
           }
-        } else if (windowSize === 'expanded') {
+        } else if (windowSize === "expanded") {
           chrome.windows.create({
-            url: chrome.runtime.getURL('sidepanel.html'),
-            type: 'popup',
+            url: chrome.runtime.getURL("sidepanel.html"),
+            type: "popup",
             width: 800,
-            height: 900
+            height: 900,
           });
-          if (chrome.sidePanel && 'close' in chrome.sidePanel) {
+          if (chrome.sidePanel && "close" in chrome.sidePanel) {
             await (chrome.sidePanel as unknown as ChromeSidePanel).close();
           }
           // Use the global window object to close
@@ -3121,173 +3178,179 @@ const SidePanel: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error toggling view:', error);
+      console.error("Error toggling view:", error);
     }
   };
-  
+
   // Handle window size change
-  const handleWindowSizeChange = async (newSize: WindowSize['size']) => {
+  const handleWindowSizeChange = async (newSize: WindowSize["size"]) => {
     try {
       setWindowSize(newSize);
-      localStorage.setItem('windowSize', newSize);
-      
+      localStorage.setItem("windowSize", newSize);
+
       // Get current window
       const currentWindow = await chrome.windows.getCurrent();
-      
+
       // Close other windows first
       await closeOtherWindows(currentWindow.id);
-      
+
       // Apply the new size
-      if (newSize === 'compact') {
+      if (newSize === "compact") {
         chrome.action.openPopup();
-        if (chrome.sidePanel && 'close' in chrome.sidePanel) {
+        if (chrome.sidePanel && "close" in chrome.sidePanel) {
           await (chrome.sidePanel as unknown as ChromeSidePanel).close();
         }
         // Use the global window object to close
         self.close();
-      } else if (newSize === 'medium') {
+      } else if (newSize === "medium") {
         // Always try to open sidepanel first before closing current window
         const windows = await chrome.windows.getAll();
-        const mainWindow = windows.find(w => w.type === 'normal');
+        const mainWindow = windows.find((w) => w.type === "normal");
 
         if (mainWindow?.id) {
           await chrome.sidePanel.open({ windowId: mainWindow.id });
           // Use the global window object to close current window
           self.close();
         }
-      } else if (newSize === 'expanded') {
+      } else if (newSize === "expanded") {
         chrome.windows.create({
-          url: chrome.runtime.getURL('sidepanel.html'),
-          type: 'popup',
+          url: chrome.runtime.getURL("sidepanel.html"),
+          type: "popup",
           width: 800,
-          height: 900
+          height: 900,
         });
-        if (chrome.sidePanel && 'close' in chrome.sidePanel) {
+        if (chrome.sidePanel && "close" in chrome.sidePanel) {
           await (chrome.sidePanel as unknown as ChromeSidePanel).close();
         }
         // Use the global window object to close
         self.close();
       }
     } catch (error) {
-      console.error('Error changing window size:', error);
+      console.error("Error changing window size:", error);
     }
   };
-  
+
   // Handle theme toggle
   const handleThemeToggle = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute("data-theme", newTheme);
+    localStorage.setItem("theme", newTheme);
   };
-  
+
   // Handle font size change
-  const handleFontSizeChange = (size: 'small' | 'medium' | 'large') => {
+  const handleFontSizeChange = (size: "small" | "medium" | "large") => {
     setFontSize(size);
-    localStorage.setItem('fontSize', size);
-    document.documentElement.style.fontSize = 
-      size === 'small' ? '14px' : 
-      size === 'large' ? '18px' : '16px';
+    localStorage.setItem("fontSize", size);
+    document.documentElement.style.fontSize =
+      size === "small" ? "14px" : size === "large" ? "18px" : "16px";
   };
-  
+
   // Handle default view change
   const handleDefaultViewChange = (view: string) => {
     setDefaultView(view);
-    localStorage.setItem('defaultView', view);
+    localStorage.setItem("defaultView", view);
   };
-  
+
   // Handle animations toggle
   const handleAnimationsToggle = () => {
     const newState = !animationsEnabled;
     setAnimationsEnabled(newState);
-    localStorage.setItem('animationsEnabled', newState.toString());
-    document.documentElement.setAttribute('data-animations', newState.toString());
+    localStorage.setItem("animationsEnabled", newState.toString());
+    document.documentElement.setAttribute(
+      "data-animations",
+      newState.toString()
+    );
   };
-  
+
   // Handle notifications toggle
   const handleNotificationsToggle = () => {
     const newState = !notificationsEnabled;
     setNotificationsEnabled(newState);
-    localStorage.setItem('notificationsEnabled', newState.toString());
+    localStorage.setItem("notificationsEnabled", newState.toString());
   };
-  
+
   // Handle data collection toggle
   const handleDataCollectionToggle = () => {
     const newState = !dataCollection;
     setDataCollection(newState);
-    localStorage.setItem('dataCollection', newState.toString());
+    localStorage.setItem("dataCollection", newState.toString());
   };
-  
+
   // Handle timer sound change
   const handleTimerSoundChange = (sound: string) => {
     setTimerSound(sound);
-    localStorage.setItem('timerSound', sound);
-    
+    localStorage.setItem("timerSound", sound);
+
     // Play a preview of the selected sound at reduced volume
     const soundMap: Record<string, string> = {
-      'bell': 'sounds/timer-bell.mp3',
-      'digital': 'sounds/timer-digital.mp3',
-      'gentle': 'sounds/timer-gentle.mp3',
-      'alarm': 'sounds/timer-alarm.mp3'
+      bell: "sounds/timer-bell.mp3",
+      digital: "sounds/timer-digital.mp3",
+      gentle: "sounds/timer-gentle.mp3",
+      alarm: "sounds/timer-alarm.mp3",
     };
-    
-    const soundFile = soundMap[sound] || soundMap['bell'];
+
+    const soundFile = soundMap[sound] || soundMap["bell"];
     const audio = new Audio(chrome.runtime.getURL(soundFile));
     audio.volume = 0.3; // Reduced volume for preview
-    
-    audio.play().catch(error => {
-      console.error('Error playing sound preview:', error);
+
+    audio.play().catch((error) => {
+      console.error("Error playing sound preview:", error);
     });
   };
-  
+
   // Handle timer volume change
   const handleTimerVolumeChange = (volume: number) => {
     setTimerVolume(volume);
-    localStorage.setItem('timerVolume', volume.toString());
+    localStorage.setItem("timerVolume", volume.toString());
   };
-  
+
   // Request notification permissions
   const requestNotificationPermission = () => {
     if (!("Notification" in window)) {
       alert("This browser does not support desktop notifications");
       return;
     }
-    
+
     Notification.requestPermission().then((permission) => {
       if (permission === "granted") {
         // Enable notifications if permission granted
         setNotificationsEnabled(true);
-        localStorage.setItem('notificationsEnabled', 'true');
-        
+        localStorage.setItem("notificationsEnabled", "true");
+
         // Show a test notification
         const notification = new Notification("Notification Test", {
           body: "Notifications are now enabled!",
-          icon: chrome.runtime.getURL('images/icon.png')
+          icon: chrome.runtime.getURL("images/icon.png"),
         });
-        
+
         // Play test sound
-        const soundFile = localStorage.getItem('timerSound') || 'bell';
+        const soundFile = localStorage.getItem("timerSound") || "bell";
         const soundMap: Record<string, string> = {
-          'bell': 'sounds/timer-bell.mp3',
-          'digital': 'sounds/timer-digital.mp3',
-          'gentle': 'sounds/timer-gentle.mp3',
-          'alarm': 'sounds/timer-alarm.mp3'
+          bell: "sounds/timer-bell.mp3",
+          digital: "sounds/timer-digital.mp3",
+          gentle: "sounds/timer-gentle.mp3",
+          alarm: "sounds/timer-alarm.mp3",
         };
-        
-        const audio = new Audio(chrome.runtime.getURL(soundMap[soundFile] || soundMap['bell']));
+
+        const audio = new Audio(
+          chrome.runtime.getURL(soundMap[soundFile] || soundMap["bell"])
+        );
         audio.volume = timerVolume / 100;
-        audio.play().catch(error => {
-          console.error('Error playing notification test sound:', error);
+        audio.play().catch((error) => {
+          console.error("Error playing notification test sound:", error);
         });
       } else {
         // If permission denied, disable notifications
         setNotificationsEnabled(false);
-        localStorage.setItem('notificationsEnabled', 'false');
-        alert("Notification permission denied. You won't receive notifications when the timer ends.");
+        localStorage.setItem("notificationsEnabled", "false");
+        alert(
+          "Notification permission denied. You won't receive notifications when the timer ends."
+        );
       }
     });
   };
-  
+
   // Handle sign out
   const handleSignOut = async () => {
     try {
@@ -3296,32 +3359,34 @@ const SidePanel: React.FC = () => {
       const window = await chrome.windows.getCurrent();
       if (window.id) {
         chrome.runtime.sendMessage({
-          type: 'navigate',
+          type: "navigate",
           windowId: window.id,
-          path: 'signin.html'
+          path: "signin.html",
         } as NavigateMessage);
       }
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
-  
+
   // Timer functions
   const startTimer = () => {
     if (isTimerRunning) return;
-    
+
     const now = Date.now();
-    
-    if (timerType === 'stopwatch') {
+
+    if (timerType === "stopwatch") {
       timerStartTimeRef.current = now - timerPausedValueRef.current;
-      
+
       timerIntervalRef.current = window.setInterval(() => {
         const elapsed = Date.now() - timerStartTimeRef.current;
         setTimerValue(elapsed);
       }, 10);
-    } else { // countdown
-      const totalMilliseconds = (countdownMinutes * 60 + countdownSeconds) * 1000;
-      
+    } else {
+      // countdown
+      const totalMilliseconds =
+        (countdownMinutes * 60 + countdownSeconds) * 1000;
+
       if (timerValue <= 0) {
         // Starting a new countdown
         timerStartTimeRef.current = now;
@@ -3330,11 +3395,11 @@ const SidePanel: React.FC = () => {
         // Resuming a paused countdown
         timerStartTimeRef.current = now - (totalMilliseconds - timerValue);
       }
-      
+
       timerIntervalRef.current = window.setInterval(() => {
         const elapsed = Date.now() - timerStartTimeRef.current;
         const remaining = totalMilliseconds - elapsed;
-        
+
         if (remaining <= 0) {
           pauseTimer();
           playTimerEndSound();
@@ -3344,58 +3409,58 @@ const SidePanel: React.FC = () => {
         }
       }, 10);
     }
-    
+
     setIsTimerRunning(true);
   };
-  
+
   const pauseTimer = () => {
     if (!isTimerRunning) return;
-    
+
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
     }
-    
+
     timerPausedValueRef.current = timerValue;
     setIsTimerRunning(false);
   };
-  
+
   const resetTimer = () => {
     pauseTimer();
     setTimerValue(0);
     timerPausedValueRef.current = 0;
     setLaps([]);
   };
-  
+
   const addLap = () => {
-    if (!isTimerRunning || timerType !== 'stopwatch') return;
-    
-    setLaps(prevLaps => [...prevLaps, timerValue]);
+    if (!isTimerRunning || timerType !== "stopwatch") return;
+
+    setLaps((prevLaps) => [...prevLaps, timerValue]);
   };
-  
-  const handleTimerTypeChange = (type: 'stopwatch' | 'countdown') => {
+
+  const handleTimerTypeChange = (type: "stopwatch" | "countdown") => {
     if (isTimerRunning) {
       pauseTimer();
     }
-    
+
     setTimerType(type);
     resetTimer();
   };
-  
+
   const updateCountdownTime = (minutes: number, seconds: number) => {
     setCountdownMinutes(minutes);
     setCountdownSeconds(seconds);
-    
-    if (!isTimerRunning && timerType === 'countdown') {
+
+    if (!isTimerRunning && timerType === "countdown") {
       const totalMilliseconds = (minutes * 60 + seconds) * 1000;
       setTimerValue(totalMilliseconds);
       timerPausedValueRef.current = totalMilliseconds;
     }
   };
-  
+
   let username = "";
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
-    if(message.type === "recordUsername"){
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === "recordUsername") {
       username = message.data;
       console.log("username: " + username);
     }
@@ -3404,119 +3469,157 @@ const SidePanel: React.FC = () => {
   const playTimerEndSound = () => {
     // Skip playing sound if notifications are disabled
     if (!notificationsEnabled) return;
-    
+
     // Get the selected timer sound from localStorage or use the default
-    const selectedSound = localStorage.getItem('timerSound') || 'bell';
+    const selectedSound = localStorage.getItem("timerSound") || "bell";
     const soundMap: Record<string, string> = {
-      'bell': 'sounds/timer-bell.mp3',
-      'digital': 'sounds/timer-digital.mp3',
-      'gentle': 'sounds/timer-gentle.mp3',
-      'alarm': 'sounds/timer-alarm.mp3'
+      bell: "sounds/timer-bell.mp3",
+      digital: "sounds/timer-digital.mp3",
+      gentle: "sounds/timer-gentle.mp3",
+      alarm: "sounds/timer-alarm.mp3",
     };
-    
+
     // Create the audio instance with the selected sound
-    const soundFile = soundMap[selectedSound] || soundMap['bell'];
+    const soundFile = soundMap[selectedSound] || soundMap["bell"];
     console.log("Playing timer end sound:", soundFile);
-    
+
     // Create new audio object
     const audio = new Audio(chrome.runtime.getURL(soundFile));
-    
+
     // Set volume based on user settings or default to 80%
-    const volume = parseInt(localStorage.getItem('timerVolume') || '80') / 100;
+    const volume = parseInt(localStorage.getItem("timerVolume") || "80") / 100;
     audio.volume = volume;
     console.log("Audio volume:", volume);
-    
+
     // Make sure audio loads before playing
     audio.oncanplaythrough = () => {
       // Play the sound
-      audio.play().then(() => {
-        console.log("Sound played successfully");
-      }).catch(error => {
-      console.error('Error playing timer sound:', error);
-        
-        // Try playing with user interaction if failed
-        const playWithInteraction = () => {
-          alert("Timer finished! Click OK to hear the notification sound.");
-          audio.play().catch(err => {
-            console.error("Even after interaction, sound failed:", err);
-          });
-        };
-        
-        // Only show alert if needed
-        if (error.name === "NotAllowedError") {
-          playWithInteraction();
-        }
-      });
+      audio
+        .play()
+        .then(() => {
+          console.log("Sound played successfully");
+        })
+        .catch((error) => {
+          console.error("Error playing timer sound:", error);
+
+          // Try playing with user interaction if failed
+          const playWithInteraction = () => {
+            alert("Timer finished! Click OK to hear the notification sound.");
+            audio.play().catch((err) => {
+              console.error("Even after interaction, sound failed:", err);
+            });
+          };
+
+          // Only show alert if needed
+          if (error.name === "NotAllowedError") {
+            playWithInteraction();
+          }
+        });
     };
-    
+
     audio.onerror = (e) => {
       console.error("Audio error:", e);
     };
-    
+
     // If notifications are enabled, show a browser notification
     if (notificationsEnabled) {
-      if (Notification.permission === 'granted') {
-        new Notification('Timer Complete', {
-          body: 'Your countdown timer has finished!',
-          icon: chrome.runtime.getURL('images/icon.png')
+      if (Notification.permission === "granted") {
+        new Notification("Timer Complete", {
+          body: "Your countdown timer has finished!",
+          icon: chrome.runtime.getURL("images/icon.png"),
         });
-      } else if (Notification.permission !== 'denied') {
+      } else if (Notification.permission !== "denied") {
         // Request permission if not already denied
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            new Notification('Timer Complete', {
-              body: 'Your countdown timer has finished!',
-              icon: chrome.runtime.getURL('images/icon.png')
+        Notification.requestPermission().then((permission) => {
+          if (permission === "granted") {
+            new Notification("Timer Complete", {
+              body: "Your countdown timer has finished!",
+              icon: chrome.runtime.getURL("images/icon.png"),
             });
           }
         });
       }
     }
   };
-  
+
   const formatTime = (timeMs: number): string => {
-    if (timerType === 'stopwatch') {
+    if (timerType === "stopwatch") {
       // Remove milliseconds display to prevent overlap
       const seconds = Math.floor((timeMs / 1000) % 60);
       const minutes = Math.floor((timeMs / 1000 / 60) % 60);
       const hours = Math.floor(timeMs / 1000 / 60 / 60);
-      
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+      return `${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
     } else {
       // Countdown timer
       const seconds = Math.floor((timeMs / 1000) % 60);
       const minutes = Math.floor((timeMs / 1000 / 60) % 60);
-      
-      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+      return `${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
     }
   };
-  
+
   // Handle sidebar toggle
   const handleSidebarToggle = () => {
     const newState = !sidebarExpanded;
     setSidebarExpanded(newState);
-    localStorage.setItem('sidebarExpanded', newState.toString());
+    localStorage.setItem("sidebarExpanded", newState.toString());
   };
-  
+
   // Toggle profile menu
   const handleProfileClick = () => {
     setShowProfileMenu(!showProfileMenu);
   };
-  
+
+  // Handle completion of verification
+  const handleVerificationComplete = () => {
+    setShowVerification(false);
+    setIsLoading(true);
+    setShowLeetCodeLoader(true);
+
+    // Simulate checking LeetCode login
+    setTimeout(() => {
+      setIsLeetCodeLoggedIn(true);
+
+      // Simulate fetching statistics
+      setTimeout(() => {
+        setIsLeetCodeLoading(false);
+
+        // After a brief delay, hide the loader
+        setTimeout(() => {
+          setShowLeetCodeLoader(false);
+          setIsLoading(false);
+        }, 1000);
+      }, 2000);
+    }, 2000);
+  };
+
+  // Check if verification page should be shown
+  if (showVerification) {
+    console.log("COMPLETED VERIFICATION (allegedly)");
+    return (
+      <VerificationPage onVerificationComplete={handleVerificationComplete} />
+    );
+  }
+
   // Render the sidepanel UI
   return (
-    <div className={`container ${isLoading ? 'loading' : ''}`}>
+    <div className={`container ${isLoading ? "loading" : ""}`}>
       {/* LeetCode Loader */}
       <AnimatePresence>
         {showLeetCodeLoader && (
-          <motion.div 
+          <motion.div
             className="leetcode-loader-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <div className="leetcode-loader-container">
-              <motion.div 
+              <motion.div
                 className="leetcode-loader-card"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -3526,7 +3629,7 @@ const SidePanel: React.FC = () => {
                   <i className="fas fa-code"></i>
                   <h3>LeetCode Statistics</h3>
                 </div>
-                
+
                 <div className="loader-content">
                   {isLeetCodeLoading ? (
                     <>
@@ -3534,13 +3637,13 @@ const SidePanel: React.FC = () => {
                         <div className="spinner"></div>
                       </div>
                       <p className="loading-message">
-                        {isLeetCodeLoggedIn 
-                          ? "Fetching your LeetCode statistics..." 
+                        {isLeetCodeLoggedIn
+                          ? "Fetching your LeetCode statistics..."
                           : "Waiting for you to sign in to LeetCode..."}
                       </p>
                       <p className="loader-disclaimer">
-                        {isLeetCodeLoggedIn 
-                          ? "We're securely retrieving your problem-solving statistics from LeetCode." 
+                        {isLeetCodeLoggedIn
+                          ? "We're securely retrieving your problem-solving statistics from LeetCode."
                           : "Please log in to your LeetCode account to access your statistics."}
                       </p>
                     </>
@@ -3551,10 +3654,11 @@ const SidePanel: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="loader-footer">
                   <p className="privacy-note">
-                    Your data is only used to enhance your coding experience and is never shared with third parties.
+                    Your data is only used to enhance your coding experience and
+                    is never shared with third parties.
                   </p>
                 </div>
               </motion.div>
@@ -3562,70 +3666,78 @@ const SidePanel: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Navigation Sidebar */}
-      <nav className={`nav-sidebar ${sidebarExpanded ? 'expanded' : ''}`}>
+      <nav className={`nav-sidebar ${sidebarExpanded ? "expanded" : ""}`}>
         <div className="sidebar-logo">
-          <img 
-            className="icon-logo" 
-            src={chrome.runtime.getURL('images/icon.png')} 
-            alt="Cobra Icon" 
+          <img
+            className="icon-logo"
+            src={chrome.runtime.getURL("images/icon.png")}
+            alt="Cobra Icon"
           />
-          <img 
-            className="full-logo" 
-            src={chrome.runtime.getURL('images/cobrawhite_enhanced.png')} 
-            alt="Cobra Logo" 
+          <img
+            className="full-logo"
+            src={chrome.runtime.getURL("images/cobrawhite_enhanced.png")}
+            alt="Cobra Logo"
           />
         </div>
-        
+
         <div className="sidebar-toggle" onClick={handleSidebarToggle}>
-          <i className={`fas fa-${sidebarExpanded ? 'chevron-left' : 'chevron-right'}`}></i>
+          <i
+            className={`fas fa-${
+              sidebarExpanded ? "chevron-left" : "chevron-right"
+            }`}
+          ></i>
         </div>
-        
+
         {/* Main Navigation Items */}
         <div className="nav-items-main">
-        <div 
-          className={`nav-item ${activeSection === 'home' ? 'active' : ''}`} 
-          onClick={() => handleNavigation('home')}
-        >
-          <i className="fas fa-home"></i>
-          {sidebarExpanded && <span className="nav-label">Home</span>}
-        </div>
-        <div 
-          className={`nav-item ${activeSection === 'hints' ? 'active' : ''}`} 
-          onClick={() => handleNavigation('hints')}
-        >
-          <i className="fas fa-lightbulb"></i>
-          {sidebarExpanded && <span className="nav-label">Hints</span>}
-        </div>
-        <div 
-          className={`nav-item ${activeSection === 'resources' ? 'active' : ''}`} 
-          onClick={() => handleNavigation('resources')}
-        >
-          <i className="fas fa-book"></i>
-          {sidebarExpanded && <span className="nav-label">Resources</span>}
-        </div>
-        <div 
-          className={`nav-item ${activeSection === 'errors' ? 'active' : ''}`} 
-          onClick={() => handleNavigation('errors')}
-        >
-          <i className="fas fa-bug"></i>
-          {sidebarExpanded && <span className="nav-label">Errors</span>}
-        </div>
-          <div 
-            className={`nav-item ${activeSection === 'stopwatch' ? 'active' : ''}`} 
-            onClick={() => handleNavigation('stopwatch')}
+          <div
+            className={`nav-item ${activeSection === "home" ? "active" : ""}`}
+            onClick={() => handleNavigation("home")}
+          >
+            <i className="fas fa-home"></i>
+            {sidebarExpanded && <span className="nav-label">Home</span>}
+          </div>
+          <div
+            className={`nav-item ${activeSection === "hints" ? "active" : ""}`}
+            onClick={() => handleNavigation("hints")}
+          >
+            <i className="fas fa-lightbulb"></i>
+            {sidebarExpanded && <span className="nav-label">Hints</span>}
+          </div>
+          <div
+            className={`nav-item ${
+              activeSection === "resources" ? "active" : ""
+            }`}
+            onClick={() => handleNavigation("resources")}
+          >
+            <i className="fas fa-book"></i>
+            {sidebarExpanded && <span className="nav-label">Resources</span>}
+          </div>
+          <div
+            className={`nav-item ${activeSection === "errors" ? "active" : ""}`}
+            onClick={() => handleNavigation("errors")}
+          >
+            <i className="fas fa-bug"></i>
+            {sidebarExpanded && <span className="nav-label">Errors</span>}
+          </div>
+          <div
+            className={`nav-item ${
+              activeSection === "stopwatch" ? "active" : ""
+            }`}
+            onClick={() => handleNavigation("stopwatch")}
           >
             <i className="fas fa-stopwatch"></i>
             {sidebarExpanded && <span className="nav-label">Stopwatch</span>}
-        </div>
-        <div 
-          className={`nav-item ${activeSection === 'chat' ? 'active' : ''}`} 
-          onClick={() => handleNavigation('chat')}
-        >
-          <i className="fas fa-comments"></i>
-          {sidebarExpanded && <span className="nav-label">Chat</span>}
-        </div>
+          </div>
+          <div
+            className={`nav-item ${activeSection === "chat" ? "active" : ""}`}
+            onClick={() => handleNavigation("chat")}
+          >
+            <i className="fas fa-comments"></i>
+            {sidebarExpanded && <span className="nav-label">Chat</span>}
+          </div>
         </div>
 
         {/* Past Chats Section - only visible when sidebar is expanded */}
@@ -3653,19 +3765,24 @@ const SidePanel: React.FC = () => {
 
         {/* Bottom Navigation Items */}
         <div className="nav-items-bottom">
-        <div 
-          className={`nav-item ${activeSection === 'settings' ? 'active' : ''}`} 
-          onClick={() => handleNavigation('settings')}
-        >
-          <i className="fas fa-cog"></i>
-          {sidebarExpanded && <span className="nav-label">Settings</span>}
+          <div
+            className={`nav-item ${
+              activeSection === "settings" ? "active" : ""
+            }`}
+            onClick={() => handleNavigation("settings")}
+          >
+            <i className="fas fa-cog"></i>
+            {sidebarExpanded && <span className="nav-label">Settings</span>}
           </div>
-          
+
           {/* Profile image */}
           <div className="sidebar-profile" onClick={handleProfileClick}>
-            <img src={chrome.runtime.getURL('images/cobrapfp.png')} alt="Profile" />
+            <img
+              src={chrome.runtime.getURL("images/cobrapfp.png")}
+              alt="Profile"
+            />
           </div>
-          
+
           {/* Profile Popup Menu */}
         </div>
       </nav>
@@ -3674,10 +3791,10 @@ const SidePanel: React.FC = () => {
       {showProfileMenu && (
         <div className="profile-popup">
           <div className="profile-header">{username}</div>
-          <div 
+          <div
             className="profile-menu-item"
             onClick={() => {
-              handleNavigation('settings');
+              handleNavigation("settings");
               setShowProfileMenu(false);
             }}
           >
@@ -3688,10 +3805,7 @@ const SidePanel: React.FC = () => {
             <i className="fas fa-paper-plane"></i>
             <span>Contact us</span>
           </div>
-          <div 
-            className="profile-menu-item logout"
-            onClick={handleSignOut}
-          >
+          <div className="profile-menu-item logout" onClick={handleSignOut}>
             <i className="fas fa-sign-out-alt"></i>
             <span>Log out</span>
           </div>
@@ -3702,12 +3816,15 @@ const SidePanel: React.FC = () => {
       <div className="main-content">
         <div className="content">
           {/* Home Section */}
-          <div className={`section ${activeSection === 'home' ? 'active' : ''}`} id="home">
+          <div
+            className={`section ${activeSection === "home" ? "active" : ""}`}
+            id="home"
+          >
             <div className="content">
               <h2 className="section-title">Dashboard</h2>
-              
+
               {/* Current Problem Card */}
-              <motion.div 
+              <motion.div
                 className="dashboard-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -3715,10 +3832,9 @@ const SidePanel: React.FC = () => {
               >
                 <div className="card-header">
                   <div className="card-header-left">
-                  <i className="fas fa-code"></i>
-                  <h3>Merge Sorted Linked Lists
-                  </h3>
-                </div>
+                    <i className="fas fa-code"></i>
+                    <h3>Merge Sorted Linked Lists</h3>
+                  </div>
                   <div className="card-header-right">
                     <div className="card-actions">
                       <button className="card-action-button">
@@ -3727,8 +3843,8 @@ const SidePanel: React.FC = () => {
                       <button className="card-action-button">
                         <i className="fas fa-external-link-alt"></i>
                       </button>
-                </div>
-              </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="card-content">
                   <div className="problem-info">
@@ -3736,15 +3852,17 @@ const SidePanel: React.FC = () => {
                       <div className="problem-difficulty">
                         <i className="fas fa-signal"></i>
                         <span>Medium</span>
-                </div>
+                      </div>
                       <div className="problem-time">
                         <i className="fas fa-clock"></i>
                         <span>Started 27 min ago</span>
-                </div>
-              </div>
+                      </div>
+                    </div>
                     <div className="problem-description">
-                      Design a data structure that follows the constraints of a Least Recently Used (LRU) cache. Implement the LRUCache class with get and put operations.
-                </div>
+                      Design a data structure that follows the constraints of a
+                      Least Recently Used (LRU) cache. Implement the LRUCache
+                      class with get and put operations.
+                    </div>
                     <div className="problem-tags">
                       <span className="problem-tag">Hash Table</span>
                       <span className="problem-tag">Linked List</span>
@@ -3766,10 +3884,10 @@ const SidePanel: React.FC = () => {
 
               {/* Quick Actions */}
               <h2 className="section-title">Quick Actions</h2>
-                <div className="tools-grid">
-                <motion.div 
+              <div className="tools-grid">
+                <motion.div
                   className="tool-button hints"
-                  onClick={() => handleNavigation('hints')}
+                  onClick={() => handleNavigation("hints")}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.2 }}
@@ -3780,13 +3898,15 @@ const SidePanel: React.FC = () => {
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Hints</div>
-                    <div className="tool-button-description">Get problem-specific guidance</div>
+                    <div className="tool-button-description">
+                      Get problem-specific guidance
+                    </div>
                   </div>
                 </motion.div>
-                
-                <motion.div 
+
+                <motion.div
                   className="tool-button resources"
-                  onClick={() => handleNavigation('resources')}
+                  onClick={() => handleNavigation("resources")}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.4 }}
@@ -3797,13 +3917,15 @@ const SidePanel: React.FC = () => {
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Resources</div>
-                    <div className="tool-button-description">Learning materials and guides</div>
+                    <div className="tool-button-description">
+                      Learning materials and guides
+                    </div>
                   </div>
                 </motion.div>
-                
-                <motion.div 
+
+                <motion.div
                   className="tool-button errors"
-                  onClick={() => handleNavigation('errors')}
+                  onClick={() => handleNavigation("errors")}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.6 }}
@@ -3814,13 +3936,15 @@ const SidePanel: React.FC = () => {
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Error Help</div>
-                    <div className="tool-button-description">Analyze and fix code errors</div>
+                    <div className="tool-button-description">
+                      Analyze and fix code errors
+                    </div>
                   </div>
                 </motion.div>
-                
-                <motion.div 
+
+                <motion.div
                   className="tool-button chat"
-                  onClick={() => handleNavigation('chat')}
+                  onClick={() => handleNavigation("chat")}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.8 }}
@@ -3831,14 +3955,16 @@ const SidePanel: React.FC = () => {
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">AI Chat</div>
-                    <div className="tool-button-description">Get personalized assistance</div>
-                </div>
+                    <div className="tool-button-description">
+                      Get personalized assistance
+                    </div>
+                  </div>
                 </motion.div>
               </div>
 
               {/* Recent Activity */}
               <h2 className="section-title">Recent Activity</h2>
-              <motion.div 
+              <motion.div
                 className="dashboard-card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -3846,7 +3972,7 @@ const SidePanel: React.FC = () => {
               >
                 <div className="card-header">
                   <div className="card-header-left">
-                  <i className="fas fa-history"></i>
+                    <i className="fas fa-history"></i>
                     <h3>Previously Attempted</h3>
                   </div>
                   <div className="card-header-right">
@@ -3859,30 +3985,36 @@ const SidePanel: React.FC = () => {
                 </div>
                 <div className="card-content">
                   <div className="recent-problems">
-                  <div className="problem-item">
+                    <div className="problem-item">
                       <div className="problem-item-left">
                         <div className="problem-icon">
                           <i className="fas fa-code"></i>
                         </div>
                         <div className="problem-details">
-                    <div className="problem-title">Two Sum</div>
-                          <div className="problem-subtitle">Array, Hash Table</div>
-                  </div>
-                  </div>
+                          <div className="problem-title">Two Sum</div>
+                          <div className="problem-subtitle">
+                            Array, Hash Table
+                          </div>
+                        </div>
+                      </div>
                       <div className="problem-status success">
                         <i className="fas fa-check-circle"></i>
                         <span>Solved</span>
                       </div>
                     </div>
-                    
-                  <div className="problem-item">
+
+                    <div className="problem-item">
                       <div className="problem-item-left">
                         <div className="problem-icon">
                           <i className="fas fa-code"></i>
-                  </div>
+                        </div>
                         <div className="problem-details">
-                          <div className="problem-title">Merge Sorted Linked Lists</div>
-                          <div className="problem-subtitle">Linked List, Recursion</div>
+                          <div className="problem-title">
+                            Merge Sorted Linked Lists
+                          </div>
+                          <div className="problem-subtitle">
+                            Linked List, Recursion
+                          </div>
                         </div>
                       </div>
                       <div className="problem-status in-progress">
@@ -3890,17 +4022,21 @@ const SidePanel: React.FC = () => {
                         <span>In Progress</span>
                       </div>
                     </div>
-                    
-                  <div className="problem-item">
+
+                    <div className="problem-item">
                       <div className="problem-item-left">
                         <div className="problem-icon">
                           <i className="fas fa-code"></i>
-                  </div>
+                        </div>
                         <div className="problem-details">
-                          <div className="problem-title">Binary Tree Maximum Path Sum</div>
-                          <div className="problem-subtitle">DFS, Binary Tree</div>
-                </div>
-              </div>
+                          <div className="problem-title">
+                            Binary Tree Maximum Path Sum
+                          </div>
+                          <div className="problem-subtitle">
+                            DFS, Binary Tree
+                          </div>
+                        </div>
+                      </div>
                       <div className="problem-status failed">
                         <i className="fas fa-times-circle"></i>
                         <span>Failed</span>
@@ -3913,54 +4049,77 @@ const SidePanel: React.FC = () => {
           </div>
 
           {/* Hints Section */}
-          <div className={`section ${activeSection === 'hints' ? 'active' : ''}`} id="hints">
-            <motion.div 
+          <div
+            className={`section ${activeSection === "hints" ? "active" : ""}`}
+            id="hints"
+          >
+            <motion.div
               className="hints-container"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <motion.div 
+              <motion.div
                 className="search-container"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
                 <i className="fas fa-search search-icon"></i>
-                <input type="text" placeholder="Search hints..." className="search-input" />
+                <input
+                  type="text"
+                  placeholder="Search hints..."
+                  className="search-input"
+                />
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="hint-categories"
-                initial={animationsEnabled ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+                initial={
+                  animationsEnabled
+                    ? { opacity: 0, y: 20 }
+                    : { opacity: 1, y: 0 }
+                }
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.5 }}
               >
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="hint-category-btn active">All</motion.button>
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="hint-category-btn">Basic</motion.button>
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="hint-category-btn">Intermediate</motion.button>
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="hint-category-btn">Advanced</motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="hint-category-btn active"
+                >
+                  All
+                </motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="hint-category-btn"
+                >
+                  Basic
+                </motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="hint-category-btn"
+                >
+                  Intermediate
+                </motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="hint-category-btn"
+                >
+                  Advanced
+                </motion.button>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="hint-section"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
               >
-                <motion.h3 
+                <motion.h3
                   className="hint-section-title"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -3969,113 +4128,192 @@ const SidePanel: React.FC = () => {
                   <i className="fas fa-layer-group"></i> Array Techniques
                 </motion.h3>
                 <div className="hint-grid">
-                  <motion.div 
+                  <motion.div
                     className="hint-card hint-card"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4, duration: 0.5 }}
-                    whileHover={{ 
-                      y: -5, 
+                    whileHover={{
+                      y: -5,
                       boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)" 
+                      borderColor: "rgba(139, 92, 246, 0.5)",
                     }}
                   >
                     <div className="hint-icon">
                       <i className="fas fa-code"></i>
-                  </div>
+                    </div>
                     <div className="hint-badge">Basic</div>
                     <h3>Two Pointers Technique</h3>
-                  <div className="hint-content">
-                    <p>
-                      The two pointers technique uses two pointers to solve array problems efficiently. 
-                      Typically used in sorted arrays to find pairs with a specific sum or to detect cycles in linked lists.
-                    </p>
+                    <div className="hint-content">
+                      <p>
+                        The two pointers technique uses two pointers to solve
+                        array problems efficiently. Typically used in sorted
+                        arrays to find pairs with a specific sum or to detect
+                        cycles in linked lists.
+                      </p>
                       <div className="hint-code-snippet blurred">
                         <pre>
                           <code>
-                            {`// Example: Find pair with given sum in sorted array`.split('\n').map((line, index) => (
-                              <span key={index} className="line">{line}</span>
+                            {`// Example: Find pair with given sum in sorted array`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`function findPair(arr, target) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 1} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  let left = 0;`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 2} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  let right = arr.length - 1;`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 3} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  `.split("\n").map((line, index) => (
+                              <span key={index + 4} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`function findPair(arr, target) {`.split('\n').map((line, index) => (
-                              <span key={index + 1} className="line">{line}</span>
+                            {`  while (left < right) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 5} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`    if (arr[left] + arr[right] === target) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 6} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`      return [left, right];`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 7} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`    } else if (arr[left] + arr[right] < target) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 8} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`      left++;`.split("\n").map((line, index) => (
+                              <span key={index + 9} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  let left = 0;`.split('\n').map((line, index) => (
-                              <span key={index + 2} className="line">{line}</span>
+                            {`    } else {`.split("\n").map((line, index) => (
+                              <span key={index + 10} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  let right = arr.length - 1;`.split('\n').map((line, index) => (
-                              <span key={index + 3} className="line">{line}</span>
+                            {`      right--;`.split("\n").map((line, index) => (
+                              <span key={index + 11} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  `.split('\n').map((line, index) => (
-                              <span key={index + 4} className="line">{line}</span>
+                            {`    }`.split("\n").map((line, index) => (
+                              <span key={index + 12} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  while (left < right) {`.split('\n').map((line, index) => (
-                              <span key={index + 5} className="line">{line}</span>
+                            {`  }`.split("\n").map((line, index) => (
+                              <span key={index + 13} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`    if (arr[left] + arr[right] === target) {`.split('\n').map((line, index) => (
-                              <span key={index + 6} className="line">{line}</span>
+                            {`  `.split("\n").map((line, index) => (
+                              <span key={index + 14} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`      return [left, right];`.split('\n').map((line, index) => (
-                              <span key={index + 7} className="line">{line}</span>
-                            ))}
-                            {`    } else if (arr[left] + arr[right] < target) {`.split('\n').map((line, index) => (
-                              <span key={index + 8} className="line">{line}</span>
-                            ))}
-                            {`      left++;`.split('\n').map((line, index) => (
-                              <span key={index + 9} className="line">{line}</span>
-                            ))}
-                            {`    } else {`.split('\n').map((line, index) => (
-                              <span key={index + 10} className="line">{line}</span>
-                            ))}
-                            {`      right--;`.split('\n').map((line, index) => (
-                              <span key={index + 11} className="line">{line}</span>
-                            ))}
-                            {`    }`.split('\n').map((line, index) => (
-                              <span key={index + 12} className="line">{line}</span>
-                            ))}
-                            {`  }`.split('\n').map((line, index) => (
-                              <span key={index + 13} className="line">{line}</span>
-                            ))}
-                            {`  `.split('\n').map((line, index) => (
-                              <span key={index + 14} className="line">{line}</span>
-                            ))}
-                            {`  return [-1, -1]; // Pair not found`.split('\n').map((line, index) => (
-                              <span key={index + 15} className="line">{line}</span>
-                            ))}
-                            {`}`.split('\n').map((line, index) => (
-                              <span key={index + 16} className="line">{line}</span>
+                            {`  return [-1, -1]; // Pair not found`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 15} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`}`.split("\n").map((line, index) => (
+                              <span key={index + 16} className="line">
+                                {line}
+                              </span>
                             ))}
                           </code>
                         </pre>
                         <div className="code-reveal-controls">
-                          <button 
+                          <button
                             className="code-reveal-btn"
                             onClick={(e) => {
-                              const codeSnippet = e.currentTarget.closest('.hint-code-snippet');
+                              const codeSnippet =
+                                e.currentTarget.closest(".hint-code-snippet");
                               if (codeSnippet) {
-                                const codeLines = codeSnippet.querySelectorAll('code > span.line');
-                                const visibleLines = codeSnippet.querySelectorAll('code > span.line.visible');
-                                
+                                const codeLines =
+                                  codeSnippet.querySelectorAll(
+                                    "code > span.line"
+                                  );
+                                const visibleLines =
+                                  codeSnippet.querySelectorAll(
+                                    "code > span.line.visible"
+                                  );
+
                                 // If no lines are visible yet or we've revealed all lines, start over
-                                if (visibleLines.length === 0 || visibleLines.length === codeLines.length) {
+                                if (
+                                  visibleLines.length === 0 ||
+                                  visibleLines.length === codeLines.length
+                                ) {
                                   // Hide all lines first by removing the visible class
-                                  codeLines.forEach(line => line.classList.remove('visible'));
-                                  
+                                  codeLines.forEach((line) =>
+                                    line.classList.remove("visible")
+                                  );
+
                                   // Show only the first two lines
-                                  if (codeLines.length > 0) codeLines[0].classList.add('visible');
-                                  if (codeLines.length > 1) codeLines[1].classList.add('visible');
-                                  
+                                  if (codeLines.length > 0)
+                                    codeLines[0].classList.add("visible");
+                                  if (codeLines.length > 1)
+                                    codeLines[1].classList.add("visible");
+
                                   // Remove the blur when we start revealing
-                                  codeSnippet.classList.remove('blurred');
-                                  e.currentTarget.innerHTML = '<i class="fas fa-arrow-down"></i> Reveal Next';
-    } else {
+                                  codeSnippet.classList.remove("blurred");
+                                  e.currentTarget.innerHTML =
+                                    '<i class="fas fa-arrow-down"></i> Reveal Next';
+                                } else {
                                   // Reveal next two lines
                                   const nextLineIndex = visibleLines.length;
-                                  if (nextLineIndex < codeLines.length) codeLines[nextLineIndex].classList.add('visible');
-                                  if (nextLineIndex + 1 < codeLines.length) codeLines[nextLineIndex + 1].classList.add('visible');
-                                  
+                                  if (nextLineIndex < codeLines.length)
+                                    codeLines[nextLineIndex].classList.add(
+                                      "visible"
+                                    );
+                                  if (nextLineIndex + 1 < codeLines.length)
+                                    codeLines[nextLineIndex + 1].classList.add(
+                                      "visible"
+                                    );
+
                                   // If we've revealed all lines, update button text
-                                  if (visibleLines.length + 2 >= codeLines.length) {
-                                    e.currentTarget.innerHTML = '<i class="fas fa-redo"></i> Reset';
+                                  if (
+                                    visibleLines.length + 2 >=
+                                    codeLines.length
+                                  ) {
+                                    e.currentTarget.innerHTML =
+                                      '<i class="fas fa-redo"></i> Reset';
                                   }
                                 }
                               }
@@ -4083,136 +4321,239 @@ const SidePanel: React.FC = () => {
                           >
                             <i className="fas fa-eye"></i> Reveal Step-by-Step
                           </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="hint-card"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.5 }}
-                    whileHover={{ 
-                      y: -5, 
+                    whileHover={{
+                      y: -5,
                       boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)" 
+                      borderColor: "rgba(139, 92, 246, 0.5)",
                     }}
                   >
                     <div className="hint-icon">
                       <i className="fas fa-code"></i>
-                  </div>
+                    </div>
                     <div className="hint-badge">Intermediate</div>
                     <h3>Sliding Window Technique</h3>
-                  <div className="hint-content">
-                    <p>
-                        The sliding window technique is used to perform operations on a specific window size of an array or string.
-                        It's particularly useful for problems involving subarrays or substrings.
+                    <div className="hint-content">
+                      <p>
+                        The sliding window technique is used to perform
+                        operations on a specific window size of an array or
+                        string. It's particularly useful for problems involving
+                        subarrays or substrings.
                       </p>
                       <div className="hint-code-snippet blurred">
                         <pre>
                           <code>
-                            {`// Example: Find max sum subarray of size k`.split('\n').map((line, index) => (
-                              <span key={index} className="line">{line}</span>
+                            {`// Example: Find max sum subarray of size k`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`function maxSumSubarray(arr, k) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 1} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  let maxSum = 0;`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 2} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  let windowSum = 0;`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 3} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  let start = 0;`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 4} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  `.split("\n").map((line, index) => (
+                              <span key={index + 5} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`function maxSumSubarray(arr, k) {`.split('\n').map((line, index) => (
-                              <span key={index + 1} className="line">{line}</span>
+                            {`  for (let end = 0; end < arr.length; end++) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 6} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`    // Add the next element to the window`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 7} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`    windowSum += arr[end];`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 8} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`    `.split("\n").map((line, index) => (
+                              <span key={index + 9} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  let maxSum = 0;`.split('\n').map((line, index) => (
-                              <span key={index + 2} className="line">{line}</span>
+                            {`    // If we've hit the window size k`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 10} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`    if (end >= k - 1) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 11} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`      // Update max sum if needed`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 12} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`      maxSum = Math.max(maxSum, windowSum);`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 13} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`      `.split("\n").map((line, index) => (
+                              <span key={index + 14} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  let windowSum = 0;`.split('\n').map((line, index) => (
-                              <span key={index + 3} className="line">{line}</span>
+                            {`      // Remove the leftmost element as we slide`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 15} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`      windowSum -= arr[start];`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 16} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`      start++;`.split("\n").map((line, index) => (
+                              <span key={index + 17} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  let start = 0;`.split('\n').map((line, index) => (
-                              <span key={index + 4} className="line">{line}</span>
+                            {`    }`.split("\n").map((line, index) => (
+                              <span key={index + 18} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  `.split('\n').map((line, index) => (
-                              <span key={index + 5} className="line">{line}</span>
+                            {`  }`.split("\n").map((line, index) => (
+                              <span key={index + 19} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  for (let end = 0; end < arr.length; end++) {`.split('\n').map((line, index) => (
-                              <span key={index + 6} className="line">{line}</span>
+                            {`  `.split("\n").map((line, index) => (
+                              <span key={index + 20} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`    // Add the next element to the window`.split('\n').map((line, index) => (
-                              <span key={index + 7} className="line">{line}</span>
-                            ))}
-                            {`    windowSum += arr[end];`.split('\n').map((line, index) => (
-                              <span key={index + 8} className="line">{line}</span>
-                            ))}
-                            {`    `.split('\n').map((line, index) => (
-                              <span key={index + 9} className="line">{line}</span>
-                            ))}
-                            {`    // If we've hit the window size k`.split('\n').map((line, index) => (
-                              <span key={index + 10} className="line">{line}</span>
-                            ))}
-                            {`    if (end >= k - 1) {`.split('\n').map((line, index) => (
-                              <span key={index + 11} className="line">{line}</span>
-                            ))}
-                            {`      // Update max sum if needed`.split('\n').map((line, index) => (
-                              <span key={index + 12} className="line">{line}</span>
-                            ))}
-                            {`      maxSum = Math.max(maxSum, windowSum);`.split('\n').map((line, index) => (
-                              <span key={index + 13} className="line">{line}</span>
-                            ))}
-                            {`      `.split('\n').map((line, index) => (
-                              <span key={index + 14} className="line">{line}</span>
-                            ))}
-                            {`      // Remove the leftmost element as we slide`.split('\n').map((line, index) => (
-                              <span key={index + 15} className="line">{line}</span>
-                            ))}
-                            {`      windowSum -= arr[start];`.split('\n').map((line, index) => (
-                              <span key={index + 16} className="line">{line}</span>
-                            ))}
-                            {`      start++;`.split('\n').map((line, index) => (
-                              <span key={index + 17} className="line">{line}</span>
-                            ))}
-                            {`    }`.split('\n').map((line, index) => (
-                              <span key={index + 18} className="line">{line}</span>
-                            ))}
-                            {`  }`.split('\n').map((line, index) => (
-                              <span key={index + 19} className="line">{line}</span>
-                            ))}
-                            {`  `.split('\n').map((line, index) => (
-                              <span key={index + 20} className="line">{line}</span>
-                            ))}
-                            {`  return maxSum;`.split('\n').map((line, index) => (
-                              <span key={index + 21} className="line">{line}</span>
-                            ))}
-                            {`}`.split('\n').map((line, index) => (
-                              <span key={index + 22} className="line">{line}</span>
+                            {`  return maxSum;`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 21} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`}`.split("\n").map((line, index) => (
+                              <span key={index + 22} className="line">
+                                {line}
+                              </span>
                             ))}
                           </code>
                         </pre>
                         <div className="code-reveal-controls">
-                          <button 
+                          <button
                             className="code-reveal-btn"
                             onClick={(e) => {
-                              const codeSnippet = e.currentTarget.closest('.hint-code-snippet');
+                              const codeSnippet =
+                                e.currentTarget.closest(".hint-code-snippet");
                               if (codeSnippet) {
-                                const codeLines = codeSnippet.querySelectorAll('code > span.line');
-                                const visibleLines = codeSnippet.querySelectorAll('code > span.line.visible');
-                                
+                                const codeLines =
+                                  codeSnippet.querySelectorAll(
+                                    "code > span.line"
+                                  );
+                                const visibleLines =
+                                  codeSnippet.querySelectorAll(
+                                    "code > span.line.visible"
+                                  );
+
                                 // If no lines are visible yet or we've revealed all lines, start over
-                                if (visibleLines.length === 0 || visibleLines.length === codeLines.length) {
+                                if (
+                                  visibleLines.length === 0 ||
+                                  visibleLines.length === codeLines.length
+                                ) {
                                   // Hide all lines first by removing the visible class
-                                  codeLines.forEach(line => line.classList.remove('visible'));
-                                  
+                                  codeLines.forEach((line) =>
+                                    line.classList.remove("visible")
+                                  );
+
                                   // Show only the first two lines
-                                  if (codeLines.length > 0) codeLines[0].classList.add('visible');
-                                  if (codeLines.length > 1) codeLines[1].classList.add('visible');
-                                  
+                                  if (codeLines.length > 0)
+                                    codeLines[0].classList.add("visible");
+                                  if (codeLines.length > 1)
+                                    codeLines[1].classList.add("visible");
+
                                   // Remove the blur when we start revealing
-                                  codeSnippet.classList.remove('blurred');
-                                  e.currentTarget.innerHTML = '<i class="fas fa-arrow-down"></i> Reveal Next';
+                                  codeSnippet.classList.remove("blurred");
+                                  e.currentTarget.innerHTML =
+                                    '<i class="fas fa-arrow-down"></i> Reveal Next';
                                 } else {
                                   // Reveal next two lines
                                   const nextLineIndex = visibleLines.length;
-                                  if (nextLineIndex < codeLines.length) codeLines[nextLineIndex].classList.add('visible');
-                                  if (nextLineIndex + 1 < codeLines.length) codeLines[nextLineIndex + 1].classList.add('visible');
-                                  
+                                  if (nextLineIndex < codeLines.length)
+                                    codeLines[nextLineIndex].classList.add(
+                                      "visible"
+                                    );
+                                  if (nextLineIndex + 1 < codeLines.length)
+                                    codeLines[nextLineIndex + 1].classList.add(
+                                      "visible"
+                                    );
+
                                   // If we've revealed all lines, update button text
-                                  if (visibleLines.length + 2 >= codeLines.length) {
-                                    e.currentTarget.innerHTML = '<i class="fas fa-redo"></i> Reset';
+                                  if (
+                                    visibleLines.length + 2 >=
+                                    codeLines.length
+                                  ) {
+                                    e.currentTarget.innerHTML =
+                                      '<i class="fas fa-redo"></i> Reset';
                                   }
                                 }
                               }
@@ -4226,14 +4567,14 @@ const SidePanel: React.FC = () => {
                   </motion.div>
                 </div>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="hint-section"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
               >
-                <motion.h3 
+                <motion.h3
                   className="hint-section-title"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -4242,15 +4583,15 @@ const SidePanel: React.FC = () => {
                   <i className="fas fa-project-diagram"></i> Graph Algorithms
                 </motion.h3>
                 <div className="hint-grid">
-                  <motion.div 
+                  <motion.div
                     className="hint-card blurred"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8, duration: 0.5 }}
-                    whileHover={{ 
-                      y: -5, 
+                    whileHover={{
+                      y: -5,
                       boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)" 
+                      borderColor: "rgba(139, 92, 246, 0.5)",
                     }}
                   >
                     <div className="hint-icon">
@@ -4260,92 +4601,173 @@ const SidePanel: React.FC = () => {
                     <h3>Depth-First Search (DFS)</h3>
                     <div className="hint-content">
                       <p>
-                        Depth-First Search explores as far as possible along each branch before backtracking.
-                        It's useful for problems involving paths, cycles, or topological sorting.
+                        Depth-First Search explores as far as possible along
+                        each branch before backtracking. It's useful for
+                        problems involving paths, cycles, or topological
+                        sorting.
                       </p>
                       <div className="hint-code-snippet blurred">
                         <pre>
                           <code>
-                            {`// Example: DFS implementation for a graph`.split('\n').map((line, index) => (
-                              <span key={index} className="line">{line}</span>
+                            {`// Example: DFS implementation for a graph`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`function dfs(graph, start, visited = new Set()) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 1} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  // Mark the current node as visited`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 2} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  visited.add(start);`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 3} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  console.log(start);`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 4} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  `.split("\n").map((line, index) => (
+                              <span key={index + 5} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`function dfs(graph, start, visited = new Set()) {`.split('\n').map((line, index) => (
-                              <span key={index + 1} className="line">{line}</span>
+                            {`  // Get all adjacent vertices of the node`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 6} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  const neighbors = graph[start] || [];`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 7} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  `.split("\n").map((line, index) => (
+                              <span key={index + 8} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  // Mark the current node as visited`.split('\n').map((line, index) => (
-                              <span key={index + 2} className="line">{line}</span>
+                            {`  // Recur for all adjacent vertices`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 9} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`  for (const neighbor of neighbors) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 10} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`    if (!visited.has(neighbor)) {`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 11} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`      dfs(graph, neighbor, visited);`
+                              .split("\n")
+                              .map((line, index) => (
+                                <span key={index + 12} className="line">
+                                  {line}
+                                </span>
+                              ))}
+                            {`    }`.split("\n").map((line, index) => (
+                              <span key={index + 13} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  visited.add(start);`.split('\n').map((line, index) => (
-                              <span key={index + 3} className="line">{line}</span>
+                            {`  }`.split("\n").map((line, index) => (
+                              <span key={index + 14} className="line">
+                                {line}
+                              </span>
                             ))}
-                            {`  console.log(start);`.split('\n').map((line, index) => (
-                              <span key={index + 4} className="line">{line}</span>
-                            ))}
-                            {`  `.split('\n').map((line, index) => (
-                              <span key={index + 5} className="line">{line}</span>
-                            ))}
-                            {`  // Get all adjacent vertices of the node`.split('\n').map((line, index) => (
-                              <span key={index + 6} className="line">{line}</span>
-                            ))}
-                            {`  const neighbors = graph[start] || [];`.split('\n').map((line, index) => (
-                              <span key={index + 7} className="line">{line}</span>
-                            ))}
-                            {`  `.split('\n').map((line, index) => (
-                              <span key={index + 8} className="line">{line}</span>
-                            ))}
-                            {`  // Recur for all adjacent vertices`.split('\n').map((line, index) => (
-                              <span key={index + 9} className="line">{line}</span>
-                            ))}
-                            {`  for (const neighbor of neighbors) {`.split('\n').map((line, index) => (
-                              <span key={index + 10} className="line">{line}</span>
-                            ))}
-                            {`    if (!visited.has(neighbor)) {`.split('\n').map((line, index) => (
-                              <span key={index + 11} className="line">{line}</span>
-                            ))}
-                            {`      dfs(graph, neighbor, visited);`.split('\n').map((line, index) => (
-                              <span key={index + 12} className="line">{line}</span>
-                            ))}
-                            {`    }`.split('\n').map((line, index) => (
-                              <span key={index + 13} className="line">{line}</span>
-                            ))}
-                            {`  }`.split('\n').map((line, index) => (
-                              <span key={index + 14} className="line">{line}</span>
-                            ))}
-                            {`}`.split('\n').map((line, index) => (
-                              <span key={index + 15} className="line">{line}</span>
+                            {`}`.split("\n").map((line, index) => (
+                              <span key={index + 15} className="line">
+                                {line}
+                              </span>
                             ))}
                           </code>
                         </pre>
                         <div className="code-reveal-controls">
-                          <button 
+                          <button
                             className="code-reveal-btn"
                             onClick={(e) => {
-                              const codeSnippet = e.currentTarget.closest('.hint-code-snippet');
+                              const codeSnippet =
+                                e.currentTarget.closest(".hint-code-snippet");
                               if (codeSnippet) {
-                                const codeLines = codeSnippet.querySelectorAll('code > span.line');
-                                const visibleLines = codeSnippet.querySelectorAll('code > span.line.visible');
-                                
+                                const codeLines =
+                                  codeSnippet.querySelectorAll(
+                                    "code > span.line"
+                                  );
+                                const visibleLines =
+                                  codeSnippet.querySelectorAll(
+                                    "code > span.line.visible"
+                                  );
+
                                 // If no lines are visible yet or we've revealed all lines, start over
-                                if (visibleLines.length === 0 || visibleLines.length === codeLines.length) {
+                                if (
+                                  visibleLines.length === 0 ||
+                                  visibleLines.length === codeLines.length
+                                ) {
                                   // Hide all lines first by removing the visible class
-                                  codeLines.forEach(line => line.classList.remove('visible'));
-                                  
+                                  codeLines.forEach((line) =>
+                                    line.classList.remove("visible")
+                                  );
+
                                   // Show only the first two lines
-                                  if (codeLines.length > 0) codeLines[0].classList.add('visible');
-                                  if (codeLines.length > 1) codeLines[1].classList.add('visible');
-                                  
+                                  if (codeLines.length > 0)
+                                    codeLines[0].classList.add("visible");
+                                  if (codeLines.length > 1)
+                                    codeLines[1].classList.add("visible");
+
                                   // Remove the blur when we start revealing
-                                  codeSnippet.classList.remove('blurred');
-                                  e.currentTarget.innerHTML = '<i class="fas fa-arrow-down"></i> Reveal Next';
+                                  codeSnippet.classList.remove("blurred");
+                                  e.currentTarget.innerHTML =
+                                    '<i class="fas fa-arrow-down"></i> Reveal Next';
                                 } else {
                                   // Reveal next two lines
                                   const nextLineIndex = visibleLines.length;
-                                  if (nextLineIndex < codeLines.length) codeLines[nextLineIndex].classList.add('visible');
-                                  if (nextLineIndex + 1 < codeLines.length) codeLines[nextLineIndex + 1].classList.add('visible');
-                                  
+                                  if (nextLineIndex < codeLines.length)
+                                    codeLines[nextLineIndex].classList.add(
+                                      "visible"
+                                    );
+                                  if (nextLineIndex + 1 < codeLines.length)
+                                    codeLines[nextLineIndex + 1].classList.add(
+                                      "visible"
+                                    );
+
                                   // If we've revealed all lines, update button text
-                                  if (visibleLines.length + 2 >= codeLines.length) {
-                                    e.currentTarget.innerHTML = '<i class="fas fa-redo"></i> Reset';
+                                  if (
+                                    visibleLines.length + 2 >=
+                                    codeLines.length
+                                  ) {
+                                    e.currentTarget.innerHTML =
+                                      '<i class="fas fa-redo"></i> Reset';
                                   }
                                 }
                               }
@@ -4353,68 +4775,96 @@ const SidePanel: React.FC = () => {
                           >
                             <i className="fas fa-eye"></i> Reveal Step-by-Step
                           </button>
-                  </div>
-                </div>
-              </div>
+                        </div>
+                      </div>
+                    </div>
                   </motion.div>
-            </div>
+                </div>
               </motion.div>
             </motion.div>
           </div>
 
           {/* Resources Section */}
-          <div className={`section ${activeSection === 'resources' ? 'active' : ''}`} id="resources">
-            <motion.div 
+          <div
+            className={`section ${
+              activeSection === "resources" ? "active" : ""
+            }`}
+            id="resources"
+          >
+            <motion.div
               className="resources-container"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <motion.div 
+              <motion.div
                 className="search-container"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
                 <i className="fas fa-search search-icon"></i>
-                <input type="text" placeholder="Search resources..." className="search-input" />
+                <input
+                  type="text"
+                  placeholder="Search resources..."
+                  className="search-input"
+                />
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="resource-categories"
-                initial={animationsEnabled ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+                initial={
+                  animationsEnabled
+                    ? { opacity: 0, y: 20 }
+                    : { opacity: 1, y: 0 }
+                }
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.5 }}
               >
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn active">All</motion.button>
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn">Guides</motion.button>
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn">Videos</motion.button>
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn">Practice</motion.button>
-                <motion.button 
-                  whileHover={animationsEnabled ? { scale: 1.05 } : {}} 
-                  whileTap={animationsEnabled ? { scale: 0.95 } : {}} 
-                  className="resource-category-btn">Tools</motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="resource-category-btn active"
+                >
+                  All
+                </motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="resource-category-btn"
+                >
+                  Guides
+                </motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="resource-category-btn"
+                >
+                  Videos
+                </motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="resource-category-btn"
+                >
+                  Practice
+                </motion.button>
+                <motion.button
+                  whileHover={animationsEnabled ? { scale: 1.05 } : {}}
+                  whileTap={animationsEnabled ? { scale: 0.95 } : {}}
+                  className="resource-category-btn"
+                >
+                  Tools
+                </motion.button>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="resource-section"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
               >
-                <motion.h3 
+                <motion.h3
                   className="resource-section-title"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -4423,15 +4873,15 @@ const SidePanel: React.FC = () => {
                   <i className="fas fa-book"></i> Recommended Resources
                 </motion.h3>
                 <div className="resource-grid">
-                  <motion.div 
+                  <motion.div
                     className="resource-card"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4, duration: 0.5 }}
-                    whileHover={{ 
-                      y: -5, 
+                    whileHover={{
+                      y: -5,
                       boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)" 
+                      borderColor: "rgba(139, 92, 246, 0.5)",
                     }}
                   >
                     <div className="resource-icon">
@@ -4439,7 +4889,10 @@ const SidePanel: React.FC = () => {
                     </div>
                     <div className="resource-badge">Guide</div>
                     <h3>Dynamic Programming Patterns</h3>
-                    <p>Learn the most common patterns in dynamic programming problems and how to approach them systematically.</p>
+                    <p>
+                      Learn the most common patterns in dynamic programming
+                      problems and how to approach them systematically.
+                    </p>
                     <div className="resource-meta">
                       <div className="resource-type">
                         <i className="fas fa-book"></i> Article
@@ -4448,24 +4901,26 @@ const SidePanel: React.FC = () => {
                         <i className="fas fa-chart-line"></i> Intermediate
                       </div>
                     </div>
-                    <motion.button 
+                    <motion.button
                       className="resource-action"
-                      whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                      whileHover={{
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <i className="fas fa-external-link-alt"></i> View Resource
                     </motion.button>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="resource-card"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.5 }}
-                    whileHover={{ 
-                      y: -5, 
+                    whileHover={{
+                      y: -5,
                       boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)" 
+                      borderColor: "rgba(139, 92, 246, 0.5)",
                     }}
                   >
                     <div className="resource-icon">
@@ -4473,7 +4928,10 @@ const SidePanel: React.FC = () => {
                     </div>
                     <div className="resource-badge">Video</div>
                     <h3>Graph Algorithms Explained</h3>
-                    <p>A comprehensive video series on graph algorithms including BFS, DFS, Dijkstra's, and more.</p>
+                    <p>
+                      A comprehensive video series on graph algorithms including
+                      BFS, DFS, Dijkstra's, and more.
+                    </p>
                     <div className="resource-meta">
                       <div className="resource-type">
                         <i className="fas fa-video"></i> Video Series
@@ -4482,24 +4940,26 @@ const SidePanel: React.FC = () => {
                         <i className="fas fa-chart-line"></i> All Levels
                       </div>
                     </div>
-                    <motion.button 
+                    <motion.button
                       className="resource-action"
-                      whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                      whileHover={{
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <i className="fas fa-external-link-alt"></i> Watch Series
                     </motion.button>
                   </motion.div>
-                  </div>
+                </div>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="resource-section"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
               >
-                <motion.h3 
+                <motion.h3
                   className="resource-section-title"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -4508,15 +4968,15 @@ const SidePanel: React.FC = () => {
                   <i className="fas fa-laptop-code"></i> Interactive Learning
                 </motion.h3>
                 <div className="resource-grid">
-                  <motion.div 
+                  <motion.div
                     className="resource-card"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8, duration: 0.5 }}
-                    whileHover={{ 
-                      y: -5, 
+                    whileHover={{
+                      y: -5,
                       boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)" 
+                      borderColor: "rgba(139, 92, 246, 0.5)",
                     }}
                   >
                     <div className="resource-icon">
@@ -4524,7 +4984,10 @@ const SidePanel: React.FC = () => {
                     </div>
                     <div className="resource-badge">Practice</div>
                     <h3>Binary Tree Visualizer</h3>
-                    <p>Interactive tool to visualize binary tree operations and algorithms in real-time.</p>
+                    <p>
+                      Interactive tool to visualize binary tree operations and
+                      algorithms in real-time.
+                    </p>
                     <div className="resource-meta">
                       <div className="resource-type">
                         <i className="fas fa-tools"></i> Tool
@@ -4533,24 +4996,26 @@ const SidePanel: React.FC = () => {
                         <i className="fas fa-chart-line"></i> Beginner
                       </div>
                     </div>
-                    <motion.button 
+                    <motion.button
                       className="resource-action"
-                      whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                      whileHover={{
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <i className="fas fa-play"></i> Launch Tool
                     </motion.button>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="resource-card"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.9, duration: 0.5 }}
-                    whileHover={{ 
-                      y: -5, 
+                    whileHover={{
+                      y: -5,
                       boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)" 
+                      borderColor: "rgba(139, 92, 246, 0.5)",
                     }}
                   >
                     <div className="resource-icon">
@@ -4558,7 +5023,10 @@ const SidePanel: React.FC = () => {
                     </div>
                     <div className="resource-badge">Interactive</div>
                     <h3>Algorithm Playground</h3>
-                    <p>Test and visualize various algorithms with custom inputs and see how they work step by step.</p>
+                    <p>
+                      Test and visualize various algorithms with custom inputs
+                      and see how they work step by step.
+                    </p>
                     <div className="resource-meta">
                       <div className="resource-type">
                         <i className="fas fa-tools"></i> Interactive Demo
@@ -4567,27 +5035,36 @@ const SidePanel: React.FC = () => {
                         <i className="fas fa-chart-line"></i> All Levels
                       </div>
                     </div>
-                    <motion.button 
+                    <motion.button
                       className="resource-action"
-                      whileHover={{ backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                      whileHover={{
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <i className="fas fa-play"></i> Try It Out
                     </motion.button>
                   </motion.div>
-                  </div>
+                </div>
               </motion.div>
             </motion.div>
           </div>
 
           {/* Error Analysis Section */}
-          <div className={`section ${activeSection === 'errors' ? 'active' : ''}`} id="errors">
+          <div
+            className={`section ${activeSection === "errors" ? "active" : ""}`}
+            id="errors"
+          >
             <div className="errors-container">
               <div className="search-container">
                 <i className="fas fa-search search-icon"></i>
-                <input type="text" placeholder="Search errors..." className="search-input" />
+                <input
+                  type="text"
+                  placeholder="Search errors..."
+                  className="search-input"
+                />
               </div>
-              
+
               <div className="error-filters">
                 <button className="error-filter-btn active">All Errors</button>
                 <button className="error-filter-btn">Active</button>
@@ -4596,7 +5073,7 @@ const SidePanel: React.FC = () => {
                 <button className="error-filter-btn">Logic</button>
                 <button className="error-filter-btn">Runtime</button>
               </div>
-              
+
               <div className="error-summary">
                 <div className="error-stat">
                   <span className="error-number">3</span>
@@ -4611,33 +5088,41 @@ const SidePanel: React.FC = () => {
                   <span className="error-label">Resolution Rate</span>
                 </div>
               </div>
-              
+
               <div className="error-list">
                 <div className="error-item">
                   <div className="error-header">
                     <div className="error-header-left">
                       <i className="fas fa-exclamation-circle error-icon"></i>
-                      <div className="error-title">ReferenceError: x is not defined</div>
+                      <div className="error-title">
+                        ReferenceError: x is not defined
+                      </div>
                     </div>
                     <div className="error-severity high">High</div>
                   </div>
                   <div className="error-details">
                     <div className="error-location"></div>
                     <div className="error-description">
-                      <p>Variable 'x' is used but never declared. Check for typos or missing declarations.</p>
+                      <p>
+                        Variable 'x' is used but never declared. Check for typos
+                        or missing declarations.
+                      </p>
                     </div>
                     <div className="error-code">
-                      <pre><code>
-{`function calculate() {
+                      <pre>
+                        <code>
+                          {`function calculate() {
   return x * 10; // x is not defined
 }`}
-                      </code></pre>
+                        </code>
+                      </pre>
                     </div>
                     <div className="error-fix">
                       <h4>Suggested Fix:</h4>
                       <div className="error-fix-code">
-                        <pre><code>
-{`function calculate(x) { // Add parameter
+                        <pre>
+                          <code>
+                            {`function calculate(x) { // Add parameter
   return x * 10;
 }
 
@@ -4647,44 +5132,55 @@ function calculate() {
   const x = 0; // Define x before using it
   return x * 10;
 }`}
-                        </code></pre>
+                          </code>
+                        </pre>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="error-item">
                   <div className="error-header">
                     <div className="error-header-left">
                       <i className="fas fa-exclamation-triangle error-icon"></i>
-                      <div className="error-title">TypeError: Cannot read property 'length' of undefined</div>
+                      <div className="error-title">
+                        TypeError: Cannot read property 'length' of undefined
+                      </div>
                     </div>
                     <div className="error-severity high">High</div>
                   </div>
                   <div className="error-details">
                     <div className="error-location"></div>
                     <div className="error-description">
-                      <p>Trying to access a property of an undefined variable. Ensure the object exists before accessing its properties.</p>
+                      <p>
+                        Trying to access a property of an undefined variable.
+                        Ensure the object exists before accessing its
+                        properties.
+                      </p>
                     </div>
                     <div className="error-code">
-                      <pre><code>
-{`function processData(data) {
+                      <pre>
+                        <code>
+                          {`function processData(data) {
   return data.items.length; // Error if data.items is undefined
 }`}
-                      </code></pre>
+                        </code>
+                      </pre>
                     </div>
                     <div className="error-fix">
                       <h4>Suggested Fix:</h4>
                       <div className="error-fix-code">
-                        <pre><code>
-{`function processData(data) {
+                        <pre>
+                          <code>
+                            {`function processData(data) {
   // Check if data and data.items exist
   if (data && data.items) {
     return data.items.length;
   }
   return 0; // Default return value
 }`}
-                        </code></pre>
+                          </code>
+                        </pre>
                       </div>
                     </div>
                   </div>
@@ -4694,150 +5190,193 @@ function calculate() {
           </div>
 
           {/* Chat Section */}
-          <div className={`section ${activeSection === 'chat' ? 'active' : ''}`} id="chat">
+          <div
+            className={`section ${activeSection === "chat" ? "active" : ""}`}
+            id="chat"
+          >
             <div className="chat-container">
-              <motion.div 
+              <motion.div
                 className="chat-header"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
                 <h3>
-                  <motion.i 
+                  <motion.i
                     className="fas fa-comments"
-                    animate={{ 
+                    animate={{
                       rotate: [0, -10, 10, -5, 5, 0],
-                      scale: [1, 1.1, 1]
+                      scale: [1, 1.1, 1],
                     }}
-                    transition={{ 
-                      duration: 1.5, 
-                      repeat: Infinity, 
-                      repeatDelay: 5 
-                    }}
-                  ></motion.i> 
-                  Cobra AI
-                  <motion.span 
-                    className="status-badge online"
-                    animate={{ 
-                      opacity: [1, 0.7, 1],
-                      scale: [1, 0.95, 1]
-                    }}
-                    transition={{ 
-                      duration: 2, 
+                    transition={{
+                      duration: 1.5,
                       repeat: Infinity,
-                      ease: "easeInOut"
+                      repeatDelay: 5,
                     }}
-                  >Online</motion.span>
+                  ></motion.i>
+                  Cobra AI
+                  <motion.span
+                    className="status-badge online"
+                    animate={{
+                      opacity: [1, 0.7, 1],
+                      scale: [1, 0.95, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    Online
+                  </motion.span>
                 </h3>
               </motion.div>
-              
+
               <div className="chat-messages">
                 <AnimatePresence>
-                  <motion.div 
+                  <motion.div
                     className="message assistant"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: 0.1 }}
                     layout
                   >
-                    <motion.div 
+                    <motion.div
                       className="message-avatar"
                       whileHover={{ scale: 1.1 }}
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 15,
+                      }}
                     >
                       <img src="images/icon.png" alt="Cobra Assistant" />
                     </motion.div>
-                    <motion.div 
+                    <motion.div
                       className="message-content"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: 0.2 }}
                     >
-                    <div className="message-text">
-                      <p>Hello! I'm your coding assistant. How can I help you today?</p>
-                    </div>
-                    <div className="message-time">10:30 AM</div>
+                      <div className="message-text">
+                        <p>
+                          Hello! I'm your coding assistant. How can I help you
+                          today?
+                        </p>
+                      </div>
+                      <div className="message-time">10:30 AM</div>
                     </motion.div>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="message user"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: 0.6 }}
                     layout
                   >
-                    <motion.div 
+                    <motion.div
                       className="message-content"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: 0.7 }}
                     >
-                    <div className="message-text">
-                      <p>I'm having trouble with a binary search algorithm. Can you explain how it works?</p>
-                    </div>
-                    <div className="message-time">10:32 AM</div>
+                      <div className="message-text">
+                        <p>
+                          I'm having trouble with a binary search algorithm. Can
+                          you explain how it works?
+                        </p>
+                      </div>
+                      <div className="message-time">10:32 AM</div>
                     </motion.div>
-                    <motion.div 
+                    <motion.div
                       className="message-avatar"
                       whileHover={{ scale: 1.1 }}
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.8 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 15,
+                        delay: 0.8,
+                      }}
                     >
                       <img src="images/cobrapfp.png" alt="User" />
                     </motion.div>
                   </motion.div>
-                  
-                  <motion.div 
+
+                  <motion.div
                     className="message assistant"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: 1.1 }}
                     layout
                   >
-                    <motion.div 
+                    <motion.div
                       className="message-avatar"
                       whileHover={{ scale: 1.1 }}
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 15, delay: 1.2 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 15,
+                        delay: 1.2,
+                      }}
                     >
-                    <img src="images/icon.png" alt="Cobra Assistant" />
+                      <img src="images/icon.png" alt="Cobra Assistant" />
                     </motion.div>
-                    <motion.div 
+                    <motion.div
                       className="message-content"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: 1.3 }}
                     >
-                    <div className="message-text">
-                      <p>Binary search is an efficient algorithm for finding an item in a sorted array. Here's how it works:</p>
-                      <ol>
-                        <li>Compare the target value to the middle element of the array.</li>
-                        <li>If they match, return the index of the middle element.</li>
-                        <li>If the target is less than the middle element, continue searching in the left half.</li>
-                        <li>If the target is greater, continue searching in the right half.</li>
-                        <li>Repeat until the item is found or the subarray size becomes zero.</li>
-                      </ol>
-                      
-                      <div className="message-code-block">
-                        <div className="message-code-header">
-                          <div className="message-code-language">
-                    <i className="fas fa-code"></i>
-                            <span></span>
-                    </div>
-                          <div className="message-code-actions">
-                            <button className="message-code-action">
-                              <i className="fas fa-copy"></i>
-                              <span>Copy</span>
-                  </button>
-                </div>
-              </div>
-                        <div className="message-code-content">
-                          <pre>{`function binarySearch(arr, target) {
+                      <div className="message-text">
+                        <p>
+                          Binary search is an efficient algorithm for finding an
+                          item in a sorted array. Here's how it works:
+                        </p>
+                        <ol>
+                          <li>
+                            Compare the target value to the middle element of
+                            the array.
+                          </li>
+                          <li>
+                            If they match, return the index of the middle
+                            element.
+                          </li>
+                          <li>
+                            If the target is less than the middle element,
+                            continue searching in the left half.
+                          </li>
+                          <li>
+                            If the target is greater, continue searching in the
+                            right half.
+                          </li>
+                          <li>
+                            Repeat until the item is found or the subarray size
+                            becomes zero.
+                          </li>
+                        </ol>
+
+                        <div className="message-code-block">
+                          <div className="message-code-header">
+                            <div className="message-code-language">
+                              <i className="fas fa-code"></i>
+                              <span></span>
+                            </div>
+                            <div className="message-code-actions">
+                              <button className="message-code-action">
+                                <i className="fas fa-copy"></i>
+                                <span>Copy</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div className="message-code-content">
+                            <pre>{`function binarySearch(arr, target) {
   let left = 0;
   let right = arr.length - 1;
   
@@ -4857,21 +5396,27 @@ function calculate() {
   
   return -1; // Target not found
 }`}</pre>
-            </div>
-          </div>
+                          </div>
+                        </div>
 
-                      <p>Would you like me to explain the time complexity of this algorithm?</p>
-                  </div>
-                    <div className="message-time">10:33 AM</div>
-                      <motion.div 
+                        <p>
+                          Would you like me to explain the time complexity of
+                          this algorithm?
+                        </p>
+                      </div>
+                      <div className="message-time">10:33 AM</div>
+                      <motion.div
                         className="suggestion-chips"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 1.7 }}
                       >
-                        <motion.button 
+                        <motion.button
                           className="suggestion-chip"
-                          whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                          whileHover={{
+                            scale: 1.05,
+                            backgroundColor: "rgba(139, 92, 246, 0.2)",
+                          }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => {
                             setMessageText("Yes, explain time complexity");
@@ -4879,10 +5424,15 @@ function calculate() {
                               chatInputRef.current.focus();
                             }
                           }}
-                        >Yes, explain time complexity</motion.button>
-                        <motion.button 
+                        >
+                          Yes, explain time complexity
+                        </motion.button>
+                        <motion.button
                           className="suggestion-chip"
-                          whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                          whileHover={{
+                            scale: 1.05,
+                            backgroundColor: "rgba(139, 92, 246, 0.2)",
+                          }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => {
                             setMessageText("Show me another example");
@@ -4890,10 +5440,15 @@ function calculate() {
                               chatInputRef.current.focus();
                             }
                           }}
-                        >Show me another example</motion.button>
-                        <motion.button 
+                        >
+                          Show me another example
+                        </motion.button>
+                        <motion.button
                           className="suggestion-chip"
-                          whileHover={{ scale: 1.05, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                          whileHover={{
+                            scale: 1.05,
+                            backgroundColor: "rgba(139, 92, 246, 0.2)",
+                          }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => {
                             setMessageText("No thanks");
@@ -4901,80 +5456,96 @@ function calculate() {
                               chatInputRef.current.focus();
                             }
                           }}
-                        >No thanks</motion.button>
+                        >
+                          No thanks
+                        </motion.button>
                       </motion.div>
                     </motion.div>
                   </motion.div>
                 </AnimatePresence>
-                </div>
-                
-              <motion.div 
+              </div>
+
+              <motion.div
                 className="chat-input-container"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 1.5 }}
               >
                 <div className="chat-input-wrapper">
-                      <input 
+                  <input
                     type="text"
-                    className="chat-input" 
+                    className="chat-input"
                     placeholder="Type your message here..."
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     ref={chatInputRef}
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter' && messageText.trim()) {
+                      if (e.key === "Enter" && messageText.trim()) {
                         // Handle send message logic here
-                        console.log('Sending message:', messageText);
-                        setMessageText('');
+                        console.log("Sending message:", messageText);
+                        setMessageText("");
                       }
                     }}
                   />
                   <div className="chat-input-buttons">
-                    <motion.button 
+                    <motion.button
                       className="chat-input-button"
-                      whileHover={{ scale: 1.1, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                      whileHover={{
+                        scale: 1.1,
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
                       whileTap={{ scale: 0.9 }}
                     >
                       <i className="fas fa-microphone"></i>
                     </motion.button>
-                    <motion.button 
+                    <motion.button
                       className="chat-input-button"
-                      whileHover={{ scale: 1.1, backgroundColor: "rgba(139, 92, 246, 0.2)" }}
+                      whileHover={{
+                        scale: 1.1,
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
                       whileTap={{ scale: 0.9 }}
                     >
-                    <i className="fas fa-code"></i>
+                      <i className="fas fa-code"></i>
                     </motion.button>
-                    </div>
-                    </div>
-                <motion.button 
+                  </div>
+                </div>
+                <motion.button
                   className="chat-send-button"
-                  whileHover={{ scale: 1.1, boxShadow: "0 5px 15px rgba(139, 92, 246, 0.4)" }}
+                  whileHover={{
+                    scale: 1.1,
+                    boxShadow: "0 5px 15px rgba(139, 92, 246, 0.4)",
+                  }}
                   whileTap={{ scale: 0.9 }}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1, rotate: [0, 360] }}
-                  transition={{ 
+                  transition={{
                     scale: { duration: 0.3, delay: 1.6 },
-                    rotate: { duration: 0.5, delay: 1.6 }
+                    rotate: { duration: 0.5, delay: 1.6 },
                   }}
                   onClick={() => {
                     if (messageText.trim()) {
                       // Handle send message logic here
-                      console.log('Sending message:', messageText);
-                      setMessageText('');
+                      console.log("Sending message:", messageText);
+                      setMessageText("");
                     }
                   }}
                 >
-                    <i className="fas fa-paper-plane"></i>
+                  <i className="fas fa-paper-plane"></i>
                 </motion.button>
               </motion.div>
-                </div>
-              </div>
-              
+            </div>
+          </div>
+
           {/* Stopwatch Section */}
-          <div className={`section ${activeSection === 'stopwatch' ? 'active' : ''}`} id="stopwatch">
+          <div
+            className={`section ${
+              activeSection === "stopwatch" ? "active" : ""
+            }`}
+            id="stopwatch"
+          >
             <div className="stopwatch-container">
-              <motion.h2 
+              <motion.h2
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
@@ -4982,33 +5553,37 @@ function calculate() {
                 Stopwatch
               </motion.h2>
 
-              <motion.div 
+              <motion.div
                 className="timer-container"
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
               >
-                  <div className="timer-type-selector">
-                  <motion.button 
-                      className={`timer-type-btn ${timerType === 'stopwatch' ? 'active' : ''}`}
-                      onClick={() => handleTimerTypeChange('stopwatch')}
+                <div className="timer-type-selector">
+                  <motion.button
+                    className={`timer-type-btn ${
+                      timerType === "stopwatch" ? "active" : ""
+                    }`}
+                    onClick={() => handleTimerTypeChange("stopwatch")}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    >
-                      Stopwatch
+                  >
+                    Stopwatch
                   </motion.button>
-                  <motion.button 
-                      className={`timer-type-btn ${timerType === 'countdown' ? 'active' : ''}`}
-                      onClick={() => handleTimerTypeChange('countdown')}
+                  <motion.button
+                    className={`timer-type-btn ${
+                      timerType === "countdown" ? "active" : ""
+                    }`}
+                    onClick={() => handleTimerTypeChange("countdown")}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    >
-                      Countdown
+                  >
+                    Countdown
                   </motion.button>
-                  </div>
-                  
+                </div>
+
                 <div className="animated-timer-display">
-                  <motion.div 
+                  <motion.div
                     className="timer-circle-container"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -5027,7 +5602,7 @@ function calculate() {
                         animate={{ pathLength: 1 }}
                         transition={{ duration: 2, ease: "easeInOut" }}
                       />
-                      
+
                       {/* Progress Circle */}
                       <motion.circle
                         cx="150"
@@ -5039,34 +5614,50 @@ function calculate() {
                         strokeLinecap="round"
                         strokeDasharray="752.4"
                         initial={{ strokeDashoffset: 752.4 }}
-                        animate={{ 
-                          strokeDashoffset: isTimerRunning ? [752.4, 0] : 752.4 * (1 - (timerValue / (timerType === 'countdown' ? ((countdownMinutes * 60 + countdownSeconds) * 1000) : 60000)))
+                        animate={{
+                          strokeDashoffset: isTimerRunning
+                            ? [752.4, 0]
+                            : 752.4 *
+                              (1 -
+                                timerValue /
+                                  (timerType === "countdown"
+                                    ? (countdownMinutes * 60 +
+                                        countdownSeconds) *
+                                      1000
+                                    : 60000)),
                         }}
-                        transition={{ 
-                          duration: isTimerRunning ? (timerType === 'countdown' ? countdownMinutes * 60 + countdownSeconds : 60) : 0.5,
+                        transition={{
+                          duration: isTimerRunning
+                            ? timerType === "countdown"
+                              ? countdownMinutes * 60 + countdownSeconds
+                              : 60
+                            : 0.5,
                           ease: "linear",
-                          repeat: timerType === 'stopwatch' && isTimerRunning ? Infinity : 0
+                          repeat:
+                            timerType === "stopwatch" && isTimerRunning
+                              ? Infinity
+                              : 0,
                         }}
                       />
-                      
+
                       {/* Pulsing overlay */}
                       <motion.circle
                         cx="150"
                         cy="150"
                         r="110"
                         fill="rgba(139, 92, 246, 0.1)"
-                        animate={{ 
+                        animate={{
                           scale: isTimerRunning ? [0.95, 1.05, 0.95] : 1,
-                          opacity: isTimerRunning ? [0.3, 0.1, 0.3] : 0.2
+                          opacity: isTimerRunning ? [0.3, 0.1, 0.3] : 0.2,
                         }}
-                        transition={{ 
-                          duration: 3, 
+                        transition={{
+                          duration: 3,
                           repeat: Infinity,
                           repeatType: "reverse",
-                          ease: "easeInOut"
+                          ease: "easeInOut",
                         }}
                       />
-                      
+
                       {/* Display time in center */}
                       <foreignObject x="50" y="110" width="200" height="80">
                         <motion.div
@@ -5080,92 +5671,113 @@ function calculate() {
                             fontSize: "48px",
                             fontWeight: 700,
                             color: "#fff",
-                            fontFamily: "monospace"
+                            fontFamily: "monospace",
                           }}
                           animate={{
                             scale: [1, 1.02, 1],
-                            opacity: [0.9, 1, 0.9]
+                            opacity: [0.9, 1, 0.9],
                           }}
                           transition={{
                             duration: 2,
                             repeat: Infinity,
                             repeatType: "reverse",
-                            ease: "easeInOut"
+                            ease: "easeInOut",
                           }}
                         >
-                          {formatTime(timerValue).split(':').length > 2 
-                            ? formatTime(timerValue).split(':').slice(1).join(':') 
+                          {formatTime(timerValue).split(":").length > 2
+                            ? formatTime(timerValue)
+                                .split(":")
+                                .slice(1)
+                                .join(":")
                             : formatTime(timerValue)}
                         </motion.div>
                       </foreignObject>
                     </svg>
                   </motion.div>
-                  </div>
-                  
-                  {timerType === 'countdown' && (
-                  <motion.div 
+                </div>
+
+                {timerType === "countdown" && (
+                  <motion.div
                     className="countdown-controls"
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4 }}
                   >
-                      <div className="countdown-input">
-                        <label>Minutes</label>
-                        <input 
-                          type="number" 
-                          min="0" 
-                          max="59" 
-                          value={countdownMinutes}
-                          onChange={(e) => updateCountdownTime(parseInt(e.target.value) || 0, countdownSeconds)}
-                          disabled={isTimerRunning}
-                        />
-                      </div>
-                      <div className="countdown-input">
-                        <label>Seconds</label>
-                        <input 
-                          type="number" 
-                          min="0" 
-                          max="59" 
-                          value={countdownSeconds}
-                          onChange={(e) => updateCountdownTime(countdownMinutes, parseInt(e.target.value) || 0)}
-                          disabled={isTimerRunning}
-                        />
-                      </div>
+                    <div className="countdown-input">
+                      <label>Minutes</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={countdownMinutes}
+                        onChange={(e) =>
+                          updateCountdownTime(
+                            parseInt(e.target.value) || 0,
+                            countdownSeconds
+                          )
+                        }
+                        disabled={isTimerRunning}
+                      />
+                    </div>
+                    <div className="countdown-input">
+                      <label>Seconds</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={countdownSeconds}
+                        onChange={(e) =>
+                          updateCountdownTime(
+                            countdownMinutes,
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        disabled={isTimerRunning}
+                      />
+                    </div>
                   </motion.div>
                 )}
-                
-                <motion.div 
+
+                <motion.div
                   className="timer-controls"
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5 }}
                 >
-                    {!isTimerRunning ? (
-                    <motion.button 
+                  {!isTimerRunning ? (
+                    <motion.button
                       className="timer-btn start"
                       onClick={startTimer}
                       whileHover={{ scale: 1.05, backgroundColor: "#15d893" }}
                       whileTap={{ scale: 0.95 }}
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
                     >
-                        <i className="fas fa-play"></i> Start
+                      <i className="fas fa-play"></i> Start
                     </motion.button>
                   ) : (
-                    <motion.button 
+                    <motion.button
                       className="timer-btn pause"
                       onClick={pauseTimer}
                       whileHover={{ scale: 1.05, backgroundColor: "#ffb84d" }}
                       whileTap={{ scale: 0.95 }}
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
                     >
-                        <i className="fas fa-pause"></i> Pause
+                      <i className="fas fa-pause"></i> Pause
                     </motion.button>
                   )}
-                  <motion.button 
+                  <motion.button
                     className="timer-btn reset"
                     onClick={resetTimer}
                     whileHover={{ scale: 1.05, backgroundColor: "#f43f5e" }}
@@ -5174,317 +5786,373 @@ function calculate() {
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 300, damping: 10 }}
                   >
-                      <i className="fas fa-redo"></i> Reset
+                    <i className="fas fa-redo"></i> Reset
                   </motion.button>
-                    {timerType === 'stopwatch' && (
-                    <motion.button 
+                  {timerType === "stopwatch" && (
+                    <motion.button
                       className="timer-btn lap"
                       onClick={addLap}
                       disabled={!isTimerRunning}
-                      whileHover={{ scale: isTimerRunning ? 1.05 : 1, backgroundColor: isTimerRunning ? "#8B5CF6" : "#4B5563" }}
+                      whileHover={{
+                        scale: isTimerRunning ? 1.05 : 1,
+                        backgroundColor: isTimerRunning ? "#8B5CF6" : "#4B5563",
+                      }}
                       whileTap={{ scale: isTimerRunning ? 0.95 : 1 }}
                       initial={{ scale: 0.9 }}
                       animate={{ scale: 1, opacity: isTimerRunning ? 1 : 0.7 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
                     >
-                        <i className="fas fa-flag"></i> Lap
+                      <i className="fas fa-flag"></i> Lap
                     </motion.button>
-                    )}
+                  )}
                 </motion.div>
-                  
-                  {timerType === 'stopwatch' && laps.length > 0 && (
-                  <motion.div 
+
+                {timerType === "stopwatch" && laps.length > 0 && (
+                  <motion.div
                     className="laps-container"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                      <h4>Laps</h4>
-                      <ul className="laps-list">
+                    <h4>Laps</h4>
+                    <ul className="laps-list">
                       <AnimatePresence>
                         {laps.map((lap, index) => (
-                          <motion.li 
+                          <motion.li
                             key={index}
                             initial={{ x: -20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
                             exit={{ x: 20, opacity: 0 }}
                             transition={{ duration: 0.2 }}
                           >
-                            <span className="lap-number">Lap #{laps.length - index}</span>
+                            <span className="lap-number">
+                              Lap #{laps.length - index}
+                            </span>
                             <span className="lap-time">{formatTime(lap)}</span>
                           </motion.li>
                         ))}
                       </AnimatePresence>
-                      </ul>
+                    </ul>
                   </motion.div>
-                  )}
+                )}
               </motion.div>
-                </div>
-              </div>
-              
+            </div>
+          </div>
+
           {/* Settings Section */}
-          <div className={`section ${activeSection === 'settings' ? 'active' : ''}`} id="settings">
+          <div
+            className={`section ${
+              activeSection === "settings" ? "active" : ""
+            }`}
+            id="settings"
+          >
             <div className="settings-container">
               <div className="settings-section">
-                <h3><i className="fas fa-palette"></i> Appearance</h3>
+                <h3>
+                  <i className="fas fa-palette"></i> Appearance
+                </h3>
                 <div className="setting-item">
                   <label>Theme</label>
                   <div className="theme-toggle" onClick={handleThemeToggle}>
-                    <i className={`fas fa-${theme === 'dark' ? 'sun' : 'moon'}`}></i>
-                    {theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    <i
+                      className={`fas fa-${theme === "dark" ? "sun" : "moon"}`}
+                    ></i>
+                    {theme === "dark"
+                      ? "Switch to Light Mode"
+                      : "Switch to Dark Mode"}
+                  </div>
                 </div>
-              </div>
-                
+
                 <div className="setting-item">
                   <label>Font Size</label>
                   <div className="font-size-options">
-                    <div 
-                      className={`radio-option ${fontSize === 'small' ? 'selected' : ''}`}
-                      onClick={() => handleFontSizeChange('small')}
+                    <div
+                      className={`radio-option ${
+                        fontSize === "small" ? "selected" : ""
+                      }`}
+                      onClick={() => handleFontSizeChange("small")}
                     >
                       <div className="size-preview">
                         <i className="fas fa-font icon-smaller"></i>
-            </div>
-                      <input 
-                        type="radio" 
-                        id="small" 
-                        name="fontSize" 
-                        value="small" 
-                        checked={fontSize === 'small'} 
-                        onChange={() => handleFontSizeChange('small')}
+                      </div>
+                      <input
+                        type="radio"
+                        id="small"
+                        name="fontSize"
+                        value="small"
+                        checked={fontSize === "small"}
+                        onChange={() => handleFontSizeChange("small")}
                       />
                       <label htmlFor="small">Small</label>
-          </div>
-                    <div 
-                      className={`radio-option ${fontSize === 'medium' ? 'selected' : ''}`}
-                      onClick={() => handleFontSizeChange('medium')}
+                    </div>
+                    <div
+                      className={`radio-option ${
+                        fontSize === "medium" ? "selected" : ""
+                      }`}
+                      onClick={() => handleFontSizeChange("medium")}
                     >
                       <div className="size-preview">
                         <i className="fas fa-font"></i>
-        </div>
-                      <input 
-                        type="radio" 
-                        id="medium-font" 
-                        name="fontSize" 
-                        value="medium" 
-                        checked={fontSize === 'medium'} 
-                        onChange={() => handleFontSizeChange('medium')}
+                      </div>
+                      <input
+                        type="radio"
+                        id="medium-font"
+                        name="fontSize"
+                        value="medium"
+                        checked={fontSize === "medium"}
+                        onChange={() => handleFontSizeChange("medium")}
                       />
                       <label htmlFor="medium-font">Medium</label>
                     </div>
-                    <div 
-                      className={`radio-option ${fontSize === 'large' ? 'selected' : ''}`}
-                      onClick={() => handleFontSizeChange('large')}
+                    <div
+                      className={`radio-option ${
+                        fontSize === "large" ? "selected" : ""
+                      }`}
+                      onClick={() => handleFontSizeChange("large")}
                     >
                       <div className="size-preview">
                         <i className="fas fa-font icon-larger"></i>
                       </div>
-                      <input 
-                        type="radio" 
-                        id="large" 
-                        name="fontSize" 
-                        value="large" 
-                        checked={fontSize === 'large'} 
-                        onChange={() => handleFontSizeChange('large')}
+                      <input
+                        type="radio"
+                        id="large"
+                        name="fontSize"
+                        value="large"
+                        checked={fontSize === "large"}
+                        onChange={() => handleFontSizeChange("large")}
                       />
                       <label htmlFor="large">Large</label>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="setting-item">
                   <label>Window Size</label>
                   <div className="window-size-options">
-                    <div className={`radio-option ${windowSize === 'compact' ? 'selected' : ''}`} onClick={() => handleWindowSizeChange('compact')}>
+                    <div
+                      className={`radio-option ${
+                        windowSize === "compact" ? "selected" : ""
+                      }`}
+                      onClick={() => handleWindowSizeChange("compact")}
+                    >
                       <div className="size-preview compact">
                         <i className="fas fa-compress-alt"></i>
                       </div>
-                      <input 
-                        type="radio" 
-                        id="compact" 
-                        name="windowSize" 
-                        value="compact" 
-                        checked={windowSize === 'compact'} 
-                        onChange={() => handleWindowSizeChange('compact')}
+                      <input
+                        type="radio"
+                        id="compact"
+                        name="windowSize"
+                        value="compact"
+                        checked={windowSize === "compact"}
+                        onChange={() => handleWindowSizeChange("compact")}
                       />
                       <label htmlFor="compact">Compact</label>
                     </div>
-                    <div className={`radio-option ${windowSize === 'medium' ? 'selected' : ''}`} onClick={() => handleWindowSizeChange('medium')}>
+                    <div
+                      className={`radio-option ${
+                        windowSize === "medium" ? "selected" : ""
+                      }`}
+                      onClick={() => handleWindowSizeChange("medium")}
+                    >
                       <div className="size-preview medium">
                         <i className="fas fa-expand-alt"></i>
                       </div>
-                      <input 
-                        type="radio" 
-                        id="medium" 
-                        name="windowSize" 
-                        value="medium" 
-                        checked={windowSize === 'medium'} 
-                        onChange={() => handleWindowSizeChange('medium')}
+                      <input
+                        type="radio"
+                        id="medium"
+                        name="windowSize"
+                        value="medium"
+                        checked={windowSize === "medium"}
+                        onChange={() => handleWindowSizeChange("medium")}
                       />
                       <label htmlFor="medium">Medium</label>
                     </div>
-                    <div 
-                      className={`radio-option ${windowSize === 'expanded' ? 'selected' : ''}`}
-                      onClick={() => handleWindowSizeChange('expanded')}
+                    <div
+                      className={`radio-option ${
+                        windowSize === "expanded" ? "selected" : ""
+                      }`}
+                      onClick={() => handleWindowSizeChange("expanded")}
                     >
                       <div className="size-preview">
                         <i className="fas fa-expand"></i>
                       </div>
-                      <input 
-                        type="radio" 
-                        id="expanded" 
-                        name="windowSize" 
-                        value="expanded" 
-                        checked={windowSize === 'expanded'} 
-                        onChange={() => handleWindowSizeChange('expanded')}
+                      <input
+                        type="radio"
+                        id="expanded"
+                        name="windowSize"
+                        value="expanded"
+                        checked={windowSize === "expanded"}
+                        onChange={() => handleWindowSizeChange("expanded")}
                       />
                       <label htmlFor="expanded">Expanded</label>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="settings-section">
-                <h3><i className="fas fa-home"></i> Preferences</h3>
+                <h3>
+                  <i className="fas fa-home"></i> Preferences
+                </h3>
                 <div className="setting-item">
                   <label>Default View</label>
                   <div className="view-options">
-                    <div 
-                      className={`radio-option ${defaultView === 'home' ? 'selected' : ''}`}
-                      onClick={() => handleDefaultViewChange('home')}
+                    <div
+                      className={`radio-option ${
+                        defaultView === "home" ? "selected" : ""
+                      }`}
+                      onClick={() => handleDefaultViewChange("home")}
                     >
                       <div className="size-preview">
                         <i className="fas fa-home"></i>
                       </div>
-                      <input 
-                        type="radio" 
-                        id="home-view" 
-                        name="defaultView" 
-                        value="home" 
-                        checked={defaultView === 'home'} 
-                        onChange={() => handleDefaultViewChange('home')}
+                      <input
+                        type="radio"
+                        id="home-view"
+                        name="defaultView"
+                        value="home"
+                        checked={defaultView === "home"}
+                        onChange={() => handleDefaultViewChange("home")}
                       />
                       <label htmlFor="home-view">Home</label>
                     </div>
-                    <div 
-                      className={`radio-option ${defaultView === 'resources' ? 'selected' : ''}`}
-                      onClick={() => handleDefaultViewChange('resources')}
+                    <div
+                      className={`radio-option ${
+                        defaultView === "resources" ? "selected" : ""
+                      }`}
+                      onClick={() => handleDefaultViewChange("resources")}
                     >
                       <div className="size-preview">
                         <i className="fas fa-book"></i>
                       </div>
-                      <input 
-                        type="radio" 
-                        id="resources-view" 
-                        name="defaultView" 
-                        value="resources" 
-                        checked={defaultView === 'resources'} 
-                        onChange={() => handleDefaultViewChange('resources')}
+                      <input
+                        type="radio"
+                        id="resources-view"
+                        name="defaultView"
+                        value="resources"
+                        checked={defaultView === "resources"}
+                        onChange={() => handleDefaultViewChange("resources")}
                       />
                       <label htmlFor="resources-view">Resources</label>
                     </div>
-                    <div 
-                      className={`radio-option ${defaultView === 'hints' ? 'selected' : ''}`}
-                      onClick={() => handleDefaultViewChange('hints')}
+                    <div
+                      className={`radio-option ${
+                        defaultView === "hints" ? "selected" : ""
+                      }`}
+                      onClick={() => handleDefaultViewChange("hints")}
                     >
                       <div className="size-preview">
                         <i className="fas fa-lightbulb"></i>
                       </div>
-                      <input 
-                        type="radio" 
-                        id="hints-view" 
-                        name="defaultView" 
-                        value="hints" 
-                        checked={defaultView === 'hints'} 
-                        onChange={() => handleDefaultViewChange('hints')}
+                      <input
+                        type="radio"
+                        id="hints-view"
+                        name="defaultView"
+                        value="hints"
+                        checked={defaultView === "hints"}
+                        onChange={() => handleDefaultViewChange("hints")}
                       />
                       <label htmlFor="hints-view">Hints</label>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="setting-item">
                   <label>Timer Sound</label>
                   <div className="sound-options">
-                    <div 
-                      className={`sound-option ${timerSound === 'bell' ? 'selected' : ''}`}
-                      onClick={() => handleTimerSoundChange('bell')}
+                    <div
+                      className={`sound-option ${
+                        timerSound === "bell" ? "selected" : ""
+                      }`}
+                      onClick={() => handleTimerSoundChange("bell")}
                     >
                       <div className="sound-icon">
                         <i className="fas fa-bell"></i>
-                  </div>
-                        <input 
-                        type="radio" 
-                        id="bell-sound" 
-                        name="timerSound" 
-                        value="bell" 
-                        checked={timerSound === 'bell'} 
-                        onChange={() => handleTimerSoundChange('bell')}
+                      </div>
+                      <input
+                        type="radio"
+                        id="bell-sound"
+                        name="timerSound"
+                        value="bell"
+                        checked={timerSound === "bell"}
+                        onChange={() => handleTimerSoundChange("bell")}
                       />
                       <label htmlFor="bell-sound">Bell</label>
-                      </div>
-                    <div 
-                      className={`sound-option ${timerSound === 'digital' ? 'selected' : ''}`}
-                      onClick={() => handleTimerSoundChange('digital')}
+                    </div>
+                    <div
+                      className={`sound-option ${
+                        timerSound === "digital" ? "selected" : ""
+                      }`}
+                      onClick={() => handleTimerSoundChange("digital")}
                     >
                       <div className="sound-icon">
                         <i className="fas fa-clock"></i>
                       </div>
-                        <input 
-                        type="radio" 
-                        id="digital-sound" 
-                        name="timerSound" 
-                        value="digital" 
-                        checked={timerSound === 'digital'} 
-                        onChange={() => handleTimerSoundChange('digital')}
+                      <input
+                        type="radio"
+                        id="digital-sound"
+                        name="timerSound"
+                        value="digital"
+                        checked={timerSound === "digital"}
+                        onChange={() => handleTimerSoundChange("digital")}
                       />
                       <label htmlFor="digital-sound">Digital</label>
-                      </div>
-                    <div 
-                      className={`sound-option ${timerSound === 'gentle' ? 'selected' : ''}`}
-                      onClick={() => handleTimerSoundChange('gentle')}
+                    </div>
+                    <div
+                      className={`sound-option ${
+                        timerSound === "gentle" ? "selected" : ""
+                      }`}
+                      onClick={() => handleTimerSoundChange("gentle")}
                     >
                       <div className="sound-icon">
                         <i className="fas fa-music"></i>
-                    </div>
-                      <input 
-                        type="radio" 
-                        id="gentle-sound" 
-                        name="timerSound" 
-                        value="gentle" 
-                        checked={timerSound === 'gentle'} 
-                        onChange={() => handleTimerSoundChange('gentle')}
+                      </div>
+                      <input
+                        type="radio"
+                        id="gentle-sound"
+                        name="timerSound"
+                        value="gentle"
+                        checked={timerSound === "gentle"}
+                        onChange={() => handleTimerSoundChange("gentle")}
                       />
                       <label htmlFor="gentle-sound">Gentle</label>
                     </div>
-                    <div 
-                      className={`sound-option ${timerSound === 'alarm' ? 'selected' : ''}`}
-                      onClick={() => handleTimerSoundChange('alarm')}
+                    <div
+                      className={`sound-option ${
+                        timerSound === "alarm" ? "selected" : ""
+                      }`}
+                      onClick={() => handleTimerSoundChange("alarm")}
                     >
                       <div className="sound-icon">
                         <i className="fas fa-volume-up"></i>
                       </div>
-                      <input 
-                        type="radio" 
-                        id="alarm-sound" 
-                        name="timerSound" 
-                        value="alarm" 
-                        checked={timerSound === 'alarm'} 
-                        onChange={() => handleTimerSoundChange('alarm')}
+                      <input
+                        type="radio"
+                        id="alarm-sound"
+                        name="timerSound"
+                        value="alarm"
+                        checked={timerSound === "alarm"}
+                        onChange={() => handleTimerSoundChange("alarm")}
                       />
                       <label htmlFor="alarm-sound">Alarm</label>
                     </div>
                   </div>
-                  
+
                   <div className="volume-control">
                     <label>Volume</label>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="100" 
-                      value={timerVolume} 
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={timerVolume}
                       className="volume-slider"
-                      onChange={(e) => handleTimerVolumeChange(parseInt(e.target.value))}
+                      onChange={(e) =>
+                        handleTimerVolumeChange(parseInt(e.target.value))
+                      }
                     />
                     <div className="volume-label-container">
                       <span className="volume-label">Min</span>
@@ -5504,13 +6172,13 @@ function calculate() {
 
 // Render the app
 const renderApp = () => {
-  const container = document.getElementById('app');
+  const container = document.getElementById("app");
   if (container) {
     ReactDOM.render(<SidePanel />, container);
   }
 };
 
 // Initialize the app when the DOM is ready
-document.addEventListener('DOMContentLoaded', renderApp);
+document.addEventListener("DOMContentLoaded", renderApp);
 
-export default SidePanel; 
+export default SidePanel;

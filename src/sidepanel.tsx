@@ -113,6 +113,7 @@ const SidePanel: React.FC = () => {
         // If verification is needed, show the verification page
         if (needsVerification) {
           console.log('User needs verification, showing verification page');
+            
           setShowVerification(true);
           return; // Skip other checks if verification is needed
         }

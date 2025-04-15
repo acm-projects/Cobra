@@ -1,0 +1,327 @@
+/* Hints Page Specific Styles - Consistent with Resources and Errors pages */
+
+/* Keep blurred content functionality */
+.hint-card.blurred .blurred-content {
+  filter: blur(5px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.hint-card.hint-active .blurred-content {
+  filter: none;
+}
+
+.hint-card.blurred .hint-content p,
+.hint-card.blurred .hint-code-snippet pre code {
+  position: relative;
+  color: transparent;
+  overflow: hidden;
+}
+
+/* Individual line blurring */
+.hint-card .line-blurred {
+  filter: blur(5px);
+  color: transparent;
+  position: relative;
+  display: inline-block;
+  user-select: none;
+  transition: filter 0.3s ease, color 0.3s ease;
+}
+
+/* For code lines */
+.hint-code-snippet pre code {
+  display: block;
+}
+
+.hint-code-snippet pre code span.code-line {
+  display: block;
+  padding: 1px 0;
+  position: relative;
+}
+
+/* For paragraph lines */
+.hint-content p span.text-line {
+  display: inline-block;
+  width: 100%;
+  padding: 2px 0;
+  position: relative;
+}
+
+/* Progressive reveal controls */
+.hint-reveal-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  margin-bottom: 10px;
+}
+
+.hint-line-reveal-btn {
+  background-color: rgba(139, 92, 246, 0.1);
+  color: #8B5CF6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint-line-reveal-btn:hover {
+  background-color: rgba(139, 92, 246, 0.2);
+}
+
+.hint-line-reveal-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hint-reveal-progress {
+  font-size: 14px;
+  color: #8B5CF6;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* Card reveal button */
+.hint-card .hint-reveal-btn {
+  margin-top: 15px;
+}
+
+/* Hide controls when card is not active */
+.hint-card:not(.hint-active) .hint-reveal-controls,
+.hint-card:not(.hint-active) .hint-reveal-progress {
+  display: none;
+}
+
+/* Hide main reveal button when card is active */
+.hint-card.hint-active .hint-reveal-btn {
+  display: none;
+}
+
+/* Progressive reveal animation */
+@keyframes reveal-line {
+  0% {
+    filter: blur(5px);
+    opacity: 0.5;
+  }
+  100% {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+.hint-card .text-line:not(.line-blurred),
+.hint-card .code-line:not(.line-blurred) {
+  filter: blur(0);
+  color: inherit;
+  animation: reveal-line 0.5s ease forwards;
+}
+
+/* Match resources styling */
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.resource-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.resource-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 16px 0 10px 0;
+  color: white;
+}
+
+.resource-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8B5CF6;
+  font-size: 18px;
+}
+
+.resource-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(139, 92, 246, 0.1);
+  color: #8B5CF6;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.resource-section {
+  margin-bottom: 36px;
+}
+
+.resource-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.resource-section-title i {
+  color: #8B5CF6;
+}
+
+.resource-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.resource-category-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resource-category-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.resource-category-btn.active {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: #8B5CF6;
+  color: white;
+}
+
+#hints {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  padding-top: 20px;
+}
+
+.hints-container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 20px;
+  overflow-x: hidden;
+}
+
+.hints-header {
+  margin-bottom: 24px;
+}
+
+.hints-header h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-container {
+  margin-bottom: 28px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.difficulty-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 36px;
+  width: 100%;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hint-category {
+  width: 100%;
+  margin-bottom: 48px;
+}
+
+.hint-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+@media (min-width: 768px) {
+  .hint-cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+.hint-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.hint-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hint-title {
+  font-weight: 600;
+  max-width: 70%;
+  word-break: break-word;
+}
+
+/* Line-by-line reveal specific styles */
+.line-blurred {
+  filter: blur(5px);
+  user-select: none;
+  transition: filter 0.3s ease;
+}
+
+.text-line {
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.code-line {
+  display: block;
+  width: 100%;
+} 

@@ -36,6 +36,7 @@ const SignUp: React.FC = () => {
       console.log("send auth");
       
       console.log('Sign up successful, redirecting to verification page in sidepanel');
+
       
       // Store email for verification page
       localStorage.setItem('pendingVerificationEmail', username);
@@ -65,10 +66,28 @@ const SignUp: React.FC = () => {
               console.log('Closing popup window');
               await chrome.windows.remove(currentWindow.id);
             }
+      // Set a flag to show verification in sidepanel
+      localStorage.setItem('showVerificationInSidepanel', 'true');
+      
+      // Open the sidepanel instead of redirecting to verify.html
+      if (chrome && chrome.tabs && chrome.sidePanel) {
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+          if (tabs[0]?.id) {
+            chrome.sidePanel.open({tabId: tabs[0].id}).then(() => {
+              chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
+              // Close this popup window
+              window.close();
+            }).catch(err => {
+              // Fallback if sidepanel API fails
+              console.error('Failed to open sidepanel:', err);
+              window.location.href = 'verify.html';
+            });
+
           } else {
             // Fallback if no active tab
             window.location.href = 'verify.html';
           }
+
         } catch (error) {
           console.error('Error opening sidepanel:', error);
           // Fallback to redirect
@@ -76,6 +95,10 @@ const SignUp: React.FC = () => {
         }
       } else {
         // Fallback for browsers without chrome.sidePanel API
+        });
+      } else {
+        // Fallback for non-extension contexts or if chrome API is unavailable
+
         window.location.href = 'verify.html';
       }
     } catch (error) {

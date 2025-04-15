@@ -21,6 +21,35 @@ body.auth-page {
     margin: 0 auto;
 }
 
+/* Sidepanel-specific styles for auth pages */
+.auth-container.in-sidepanel {
+    max-width: 100%;
+    padding: 16px;
+}
+
+.in-sidepanel .auth-card {
+    width: 100%;
+}
+
+.in-sidepanel .auth-header {
+    margin-bottom: 16px;
+}
+
+.in-sidepanel .auth-logo {
+    width: 32px;
+    height: 32px;
+}
+
+.in-sidepanel .auth-header h1 {
+    font-size: 20px;
+}
+
+.in-sidepanel .code-input {
+    width: 35px;
+    height: 40px;
+    font-size: 18px; 
+}
+
 /* Updated Container */
 .container {
     display: flex;
@@ -63,7 +92,7 @@ body.auth-page {
     width: 100%;
     height: 100%;
     object-fit: contain;
-  }
+}
   
   .sidebar-toggle {
     width: 32px;

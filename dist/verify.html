@@ -36,6 +36,14 @@
             overflow: hidden;
         }
 
+        /* Specific styles for sidepanel context */
+        body.in-sidepanel {
+            width: 100%;
+            max-width: 100%;
+            min-width: 100%;
+            overflow-x: hidden;
+        }
+
         .auth-container {
             min-height: 100vh;
             height: auto;
@@ -48,6 +56,12 @@
             box-sizing: border-box;
             position: relative;
             margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Specific styles for sidepanel context */
+        .in-sidepanel .auth-container {
+            max-width: 100%;
             padding: 20px;
         }
 
@@ -102,6 +116,12 @@
             position: relative;
             overflow: visible;
             margin: 0 auto;
+        }
+
+        /* Specific styles for sidepanel context */
+        .in-sidepanel .auth-card {
+            max-width: 100%;
+            padding: 30px 25px;
         }
 
         /* Container decoration */
@@ -176,6 +196,12 @@
             box-sizing: border-box;
             padding: 0;
         }
+
+        /* Specific styles for sidepanel context */
+        .in-sidepanel .code-input {
+            width: 40px;
+            height: 46px;
+        }
         
         .code-input:focus {
             border-color: var(--button-bg);
@@ -202,10 +228,10 @@
             text-decoration: underline;
         }
 
-        .auth-error {
-            background: var(--error-bg);
-            border: 1px solid var(--error-border);
-            color: var(--error-text);
+        .auth-success {
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            color: #34d399;
             padding: 10px 12px;
             border-radius: 8px;
             font-size: 13px;
@@ -213,10 +239,10 @@
             margin-bottom: 16px;
         }
 
-        .auth-success {
-            background: rgba(52, 211, 153, 0.1);
-            border: 1px solid rgba(52, 211, 153, 0.2);
-            color: #34d399;
+        .auth-error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-text);
             padding: 10px 12px;
             border-radius: 8px;
             font-size: 13px;
@@ -278,6 +304,15 @@
             }
         }
     </style>
+    <script>
+        // Check if we're in a sidepanel context
+        document.addEventListener('DOMContentLoaded', function() {
+            // If we're in a chrome extension sidepanel, add appropriate class
+            if (chrome && chrome.sidePanel) {
+                document.body.classList.add('in-sidepanel');
+            }
+        });
+    </script>
 </head>
 <body class="auth-page">
     <div id="root"></div>

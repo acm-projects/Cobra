@@ -136,14 +136,14 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ onVerificationCompl
       const success = await Auth.verifyEmail(email || '', verificationString);
       
       if (success) {
+
         // Clear verification flags
         localStorage.removeItem('pendingVerificationEmail');
         localStorage.removeItem('showVerificationInSidepanel');
         localStorage.removeItem('needsVerification');
         
         // Set verification status to prevent showing verification screen again
-        localStorage.setItem('isVerified', 'true');
-        
+        localStorage.setItem('isVerified', 'true'); 
         // Show success message
         setSuccess('Verification successful!');
         

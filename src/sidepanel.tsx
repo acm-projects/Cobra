@@ -94,6 +94,30 @@ const SidePanel: React.FC = () => {
         const isAuthenticated = await Auth.isAuthenticated();
         setIsAuthenticated(isAuthenticated);
         
+        // Check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const verifiedParam = urlParams.get('verified') === 'true';
+        
+        // If verified via URL parameter, make sure it's set in localStorage
+        if (verifiedParam) {
+          localStorage.setItem('isVerified', 'true');
+          localStorage.removeItem('needsVerification');
+          localStorage.removeItem('showVerificationInSidepanel');
+        }
+        
+        // Check if verification is needed (but skip if we have the verified param)
+        const needsVerification = !verifiedParam && 
+                                 (localStorage.getItem('needsVerification') === 'true' || 
+                                  localStorage.getItem('showVerificationInSidepanel') === 'true');
+                                  
+        // If verification is needed, show the verification page
+        if (needsVerification) {
+          console.log('User needs verification, showing verification page');
+            
+          setShowVerification(true);
+          return; // Skip other checks if verification is needed
+        }
+        
         if (!isAuthenticated) {
           // If not authenticated, navigate to signin
           const window = await chrome.windows.getCurrent();

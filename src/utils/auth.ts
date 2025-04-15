@@ -1,6 +1,5 @@
-/**
- * Authentication utility class
- */
+import { signUpUser, signInUser, signOutUser, verifyEmail } from "../awsFunctions";
+
 export class Auth {
   /**
    * Check if the user is authenticated
@@ -31,28 +30,12 @@ export class Auth {
    * @param {string} password - The user's password
    * @returns {Promise<boolean>} Whether the sign up was successful
    */
-  static signUp(username: string, email: string, password: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
+  static signUp(username: string, email: string, password: string): Promise<any> {
+    return new Promise(async(resolve, reject) => {
       try {
-        // In a real implementation, we would:
-        // 1. Check if the user already exists
-        // 2. Create a new user record
-        // 3. Store the user's credentials securely
-        
-        // Demo: Just store the username, email and mark as authenticated
-        chrome.storage.local.set({ 
-          isAuthenticated: true,
-          username: username,
-          userEmail: email 
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('Error setting authentication state:', chrome.runtime.lastError);
-            reject(chrome.runtime.lastError);
-            return;
-          }
-          resolve(true);
-        });
-      } catch (error) {
+        const response = await signUpUser(username, email, password);
+        resolve(response);
+        } catch (error) {
         console.error('Error in signUp:', error);
         reject(error);
       }
@@ -66,23 +49,14 @@ export class Auth {
    * @returns {Promise<boolean>} Whether the sign in was successful
    */
   static signIn(username: string, password: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async(resolve, reject) => {
       try {
-        // Demo: accept any username/password for now
-        chrome.storage.local.set({ 
-          isAuthenticated: true,
-          username: username
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('Error setting authentication state:', chrome.runtime.lastError);
-            reject(chrome.runtime.lastError);
-            return;
-          }
-          resolve(true);
-        });
+        const response = await signInUser(username, password); // USERNAME
+        console.log("sign in successful. response: " + response);
+        resolve(true);
       } catch (error) {
-        console.error('Error in signIn:', error);
-        reject(error);
+        console.log("sign in failed. error: " + error);
+        reject(false);
       }
     });
   }
@@ -92,19 +66,13 @@ export class Auth {
    * @returns {Promise<boolean>} Whether the sign out was successful
    */
   static signOut(): Promise<boolean> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async(resolve, reject) => {
       try {
-        chrome.storage.local.remove(['isAuthenticated', 'username', 'userEmail'], () => {
-          if (chrome.runtime.lastError) {
-            console.error('Error removing authentication state:', chrome.runtime.lastError);
-            reject(chrome.runtime.lastError);
-            return;
-          }
-          resolve(true);
-        });
+        await signOutUser();
+        resolve(true)
       } catch (error) {
-        console.error('Error in signOut:', error);
-        reject(error);
+        console.error("Signout failed: " + error);
+        reject(false);
       }
     });
   }
@@ -115,25 +83,24 @@ export class Auth {
    * @param code The 6-digit verification code
    * @returns Promise that resolves to true if verification was successful
    */
-  static async verifyEmail(email: string, code: string): Promise<boolean> {
+  static async verifyEmail(username: string, code: string): Promise<boolean> {
     try {
-      // In a real app, this would make an API call to verify the code
-      // For now, we'll simulate a verification process
-      console.log(`Verifying email ${email} with code ${code}`);
+      console.log(`Verifying user ${username} with code ${code}`);
       
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(async(resolve, reject) => {
+        await verifyEmail(username, code)
+        resolve(true);
+      });
       
-      // For demo purposes, any code is valid
-      // In production, this would validate against a backend
       const success = true;
       
       if (success) {
         // Save verification status
-        localStorage.setItem('userEmail', email);
+        localStorage.setItem('username', username);
         localStorage.setItem('isVerified', 'true');
       }
-      
+      console.log("returning true success");
       return success;
     } catch (error) {
       console.error('Email verification error:', error);

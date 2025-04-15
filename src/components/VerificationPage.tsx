@@ -17,6 +17,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ onVerificationCompl
   // Get the email from localStorage
   useEffect(() => {
     const storedEmail = localStorage.getItem('pendingVerificationEmail');
+    console.log(storedEmail);
     if (storedEmail) {
       setEmail(storedEmail);
     }

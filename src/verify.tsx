@@ -9,54 +9,7 @@ const VerificationPage: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [resendCountdown, setResendCountdown] = useState<number>(60);
   const [email, setEmail] = useState<string>('');
-  const [inSidepanel, setInSidepanel] = useState<boolean>(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
-
-  // Detect if in sidepanel and add class to body
-  useEffect(() => {
-    // Multiple ways to detect if we're in a sidepanel
-    const detectContext = () => {
-      // Method 1: Check window dimensions - sidepanels are typically narrower
-      const isSidepanelByWidth = window.innerWidth < 450;
-      
-      // Method 2: Check for URL parameters that might indicate we're in a sidepanel
-      const urlParams = new URLSearchParams(window.location.search);
-      const inSidepanelParam = urlParams.get('inSidepanel') === 'true';
-      
-      // Method 3: Try to detect based on parent window relationships
-      const isProbablySidepanel = window.innerWidth < window.screen.width * 0.5 && 
-                                  window.innerHeight > 400;
-      
-      // Combine detection methods
-      const isSidepanel = inSidepanelParam || isSidepanelByWidth || isProbablySidepanel;
-      
-      console.log('Sidepanel detection:', { 
-        width: window.innerWidth, 
-        byWidth: isSidepanelByWidth,
-        byParam: inSidepanelParam,
-        byProbability: isProbablySidepanel,
-        finalResult: isSidepanel
-      });
-      
-      setInSidepanel(isSidepanel);
-      
-      if (isSidepanel) {
-        document.body.classList.add('in-sidepanel');
-      } else {
-        document.body.classList.remove('in-sidepanel');
-      }
-    };
-    
-    // Initial detection
-    detectContext();
-    
-    // Listen for resize events
-    window.addEventListener('resize', detectContext);
-    
-    return () => {
-      window.removeEventListener('resize', detectContext);
-    };
-  }, []);
 
   // Get the email from URL params or localStorage
   useEffect(() => {
@@ -192,87 +145,40 @@ const VerificationPage: React.FC = () => {
     try {
       setIsVerifying(true);
       setError('');
-      const success = await Auth.verifyEmail(email || '', verificationString);
-      
+      const success = await Auth.verifyEmail(email, verificationString);
+      console.log("recieved this value for success: " + success);
       if (success) {
-        // Clear any pending verification flags
         localStorage.removeItem('pendingVerificationEmail');
-        localStorage.removeItem('showVerificationInSidepanel');
-        localStorage.removeItem('needsVerification');
         
         // Set flag to show loading screen in sidepanel after verification
         localStorage.setItem('showLoadingOnSidepanel', 'true');
-        localStorage.setItem('justVerified', 'true');
-        // Make sure we're fully verified and don't show verification again
-        localStorage.setItem('isVerified', 'true');
-        
-        console.log('Verification successful, set loading flags in localStorage');
         
         // Show success message
         setSuccess('Verification successful! Redirecting...');
         
         // Redirect after a brief delay to show the success message
         setTimeout(() => {
-          // In Chrome extension context, navigate to sidepanel.html with loading parameter
+          // In Chrome extension context, try to open the sidepanel
           if (chrome && chrome.tabs && chrome.sidePanel) {
-            console.log('Chrome extension environment detected');
             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
               if (tabs[0]?.id) {
-                console.log('Active tab found, tab ID:', tabs[0].id);
-                // Don't open a new sidepanel if we're already in one, just navigate
-                if (document.body.classList.contains('in-sidepanel')) {
-                  console.log('Already in sidepanel, navigating directly');
-                  // We're already in a sidepanel, just navigate to the loading screen
-                  window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
-                } else {
-                  console.log('In popup, attempting to open sidepanel');
-                  // We're not in a sidepanel, so we need to open one with the loading screen
-                  // First set the path before opening to ensure it loads with the right parameters
-                  chrome.sidePanel.setOptions({ 
-                    path: 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true' 
-                  }).then(() => {
-                    console.log('Sidepanel options set successfully');
-                    // Then open the sidepanel - using the current window to fix the type error
-                    chrome.windows.getCurrent().then(currentWindow => {
-                      if (currentWindow.id) {
-                        console.log('Opening sidepanel with windowId:', currentWindow.id);
-                        chrome.sidePanel.open({ windowId: currentWindow.id })
-                          .then(() => {
-                            console.log('Sidepanel opened successfully, closing popup');
-                            // Only close popup after sidepanel is successfully opened
-                            window.close();
-                          })
-                          .catch(err => {
-                            console.error('Failed to open sidepanel:', err);
-                            // Fallback - navigate directly
-                            window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
-                          });
-                      } else {
-                        console.log('No window ID available, using fallback navigation');
-                        // Fallback if no window id
-                        window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
-                      }
-                    }).catch(err => {
-                      console.error('Failed to get current window:', err);
-                      window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
-                    });
-                    
-                    // Don't close the popup window here - we'll close it after the sidepanel is opened
-                    // This ensures the sidepanel is fully loaded before the popup is closed
-                  }).catch(err => {
-                    console.error('Failed to set sidepanel options:', err);
-                    // Fallback - navigate directly
-                    window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
-                  });
-                }
+                chrome.sidePanel.open({tabId: tabs[0].id}).then(() => {
+                  chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
+                  // Close this popup window if we're in a popup
+                  window.close();
+                }).catch(err => {
+                  // Fallback if sidepanel API fails
+                  console.error('Failed to open sidepanel:', err);
+                  window.location.href = 'sidepanel.html';
+                });
               } else {
                 // Fallback if no active tab
-                window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
+                window.location.href = 'sidepanel.html';
               }
             });
           } else {
             // Fallback for non-extension contexts or if chrome API is unavailable
-            window.location.href = 'sidepanel.html?loading=true&justVerified=true&inSidepanel=true&verified=true';
+            window.location.href = 'sidepanel.html';
           }
         }, 1500);
       } else {
@@ -300,7 +206,7 @@ const VerificationPage: React.FC = () => {
   };
 
   return (
-    <div className={`auth-container ${inSidepanel ? 'in-sidepanel' : ''}`}>
+    <div className="auth-container">
       <div className="bg-decoration">
         <div className="bg-circle"></div>
         <div className="bg-circle"></div>

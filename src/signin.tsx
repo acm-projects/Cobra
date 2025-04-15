@@ -1,6 +1,8 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
+import LeetCodeLoader from './components/Loading/LeetCodeLoader';
+import { signUpUser, signInUser } from "./awsFunctions";
 
 const SignIn: React.FC = () => {
   const [username, setUsername] = useState<string>('');
@@ -15,7 +17,7 @@ const SignIn: React.FC = () => {
     
     try {
       // Use the Auth utility for sign in
-      await Auth.signIn(username, password);
+      await signInUser(username, password); 
       
       console.log('Authentication successful, redirecting to sidepanel');
       
@@ -38,6 +40,8 @@ const SignIn: React.FC = () => {
           console.log('Closing popup window');
           await chrome.windows.remove(currentWindow.id);
         }
+
+        chrome.runtime.sendMessage({type: "recordUsername", data: username});
       } else {
         // Fallback: redirect to the sidepanel.html
         console.log('No active tab found, redirecting to sidepanel.html');

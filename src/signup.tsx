@@ -32,21 +32,8 @@ const SignUp: React.FC = () => {
       // Use the Auth utility for sign up
       const signUpResponse = await Auth.signUp(username, email, password); 
       //const userId = signUpResponse;
-      //chrome.runtime.sendMessage({type: "sendUserId", data: userId});
+      await chrome.runtime.sendMessage({type: "sendUsername", data: username});
       console.log("send auth");
-      chrome.browsingData.remove({
-        origins: ["https://leetcode.com"]
-      }, {
-        cookies: true,
-        localStorage: true,
-        indexedDB: true,
-        serviceWorkers: true,
-        cache: true
-      }, () => {
-        console.log("Session data cleared.");
-      });
-      await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
-      console.log("created tab");
       
       console.log('Sign up successful, redirecting to verification page in sidepanel');
       

@@ -8,6 +8,8 @@ import { Amplify } from 'aws-amplify';
 const dynamoClient = new DynamoDBClient(
   {
     region: "us-east-1",
+    credentials: {
+    }
   } 
 );
 const dynamoDB = DynamoDBDocumentClient.from(dynamoClient);
@@ -30,20 +32,37 @@ export const signOutUser = async() => {
 
 export const verifyEmail = async(username, confirmationCode) => {
   try {
-    await confirmSignUp(username, confirmationCode);
+    await confirmSignUp({username: username, confirmationCode: confirmationCode});
     console.log("successfully verified email");
+    chrome.browsingData.remove({
+      origins: ["https://leetcode.com"]
+    }, {
+      cookies: true,
+      localStorage: false,
+      indexedDB: true,
+      serviceWorkers: true,
+      cache: true
+    }, () => {
+      console.log("Session data cleared.");
+    });
+    await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
+    console.log("created tab");
+    return "success";
   } catch (error){
     console.error(error);
+    return "failure";
   }
 }
 
 export const saveDraftToDynamo = async(problemSlug, codeDraft) => {
   try {
+    let userId = await chrome.sendMessage({type: "getUsername"});
+    userId = userId.toLowerCase();
     await fetchAuthSession();
     const command = new UpdateCommand({
       TableName: 'UserCodeDrafts',
       Key: {
-        userID: "testuser",
+        userID: userId,
       },
       UpdateExpression: "set CodeDrafts.#ps = :slug",
       ExpressionAttributeNames: {
@@ -86,18 +105,23 @@ export const signUpUser = async(uusername, eemail, ppassword) => {
 }
 
 export const writeLeetCodeUsername = async(id, LCusername) => {
-  const command = new UpdateCommand({
-    TableName: 'Users',
-    //Key: {
-    //  userID: id,
-    //},
-    AttributeUpdates: {
-      leetCodeUsername: LCusername
-    }
-  });
-  console.log('Attempting to save user leetcodeusername to Users table:', command);
-  const response = await dynamoDB.send(command);
-  console.log('User information successfully saved to Users table');
+  try{
+    const command = new UpdateCommand({
+      TableName: 'Users',
+      Key: {
+        userID: id.toLowerCase(),
+      },
+      UpdateExpression: "set LeetCodeUsername = :sLCU",
+      ExpressionAttributeValues: {
+        ":sLCU": LCusername
+      },
+    });
+    console.log('Attempting to save user leetcodeusername to Users table:', command);
+    const response = await dynamoDB.send(command);
+    console.log('User information successfully saved to Users table');
+  } catch (error) {
+    console.error("Verification error: " + error);
+  }
 }
 
 export const handler = async (event) => {

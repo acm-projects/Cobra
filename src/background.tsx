@@ -76,6 +76,7 @@ chrome.tabs.onUpdated.addListener(async(tabId, tab) => {
 
 let storedLeetCodeUsername = '';
 let loggedInBool = false;
+let username = '';
 // Handle messages
 const messageHandler: MessageHandler = (message, sender, sendResponse): boolean => {
   console.log('Background received message:', message);
@@ -88,14 +89,19 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
       chrome.tabs.remove(tab.id!);
       console.log(response);
       storedLeetCodeUsername = response;
+      let writeResponse = await writeLeetCodeUsername(username.toLowerCase(), storedLeetCodeUsername);
+      console.log(writeResponse);
     })();
 
     return true; // Keep message channel open for async sendResponse
   }
 
-  if(message.type === 'requestUsername'){
-      console.log("popup requested username");
-      sendResponse(storedLeetCodeUsername);
+  if(message.type === 'sendUsername'){
+    username = message.data;
+  }
+
+  if(message.type === "getUsername"){ 
+    sendResponse(username);
   }
 
   if(message.type === 'sendDraft'){ 
@@ -119,12 +125,6 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
     }
   }
   
-  if(message.type === "sendUserId"){ 
-    //async() =>{
-    //  const id = message.data;
-    //  await writeLeetCodeUsername(id, storedLeetCodeUsername);
-    //}
-  }
 
   if (message.type === 'detectPlatform') {
     const platformMessage = message as DetectPlatformMessage;

@@ -88,7 +88,10 @@ export class Auth {
       console.log(`Verifying user ${username} with code ${code}`);
       
       // Simulate API call
-      await new Promise(async() => verifyEmail(username, code));
+      await new Promise(async(resolve, reject) => {
+        await verifyEmail(username, code)
+        resolve(true);
+      });
       
       const success = true;
       
@@ -97,7 +100,7 @@ export class Auth {
         localStorage.setItem('username', username);
         localStorage.setItem('isVerified', 'true');
       }
-      
+      console.log("returning true success");
       return success;
     } catch (error) {
       console.error('Email verification error:', error);

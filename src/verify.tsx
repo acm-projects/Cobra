@@ -146,7 +146,7 @@ const VerificationPage: React.FC = () => {
       setIsVerifying(true);
       setError('');
       const success = await Auth.verifyEmail(email, verificationString);
-      
+      console.log("recieved this value for success: " + success);
       if (success) {
         localStorage.removeItem('pendingVerificationEmail');
         

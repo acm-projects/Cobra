@@ -94,9 +94,26 @@ const SidePanel: React.FC = () => {
         const isAuthenticated = await Auth.isAuthenticated();
         setIsAuthenticated(isAuthenticated);
         
-        // Check if we need to show the verification page
-        const showVerification = localStorage.getItem('showVerificationInSidepanel') === 'true';
-        if (showVerification) {
+        // Check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const verifiedParam = urlParams.get('verified') === 'true';
+        
+        // If verified via URL parameter, make sure it's set in localStorage
+        if (verifiedParam) {
+          localStorage.setItem('isVerified', 'true');
+          localStorage.removeItem('needsVerification');
+          localStorage.removeItem('showVerificationInSidepanel');
+        }
+        
+        // Check if verification is needed (but skip if we have the verified param)
+        const needsVerification = !verifiedParam && 
+                                 (localStorage.getItem('needsVerification') === 'true' || 
+                                  localStorage.getItem('showVerificationInSidepanel') === 'true');
+                                  
+        // If verification is needed, show the verification page
+        if (needsVerification) {
+          console.log('User needs verification, showing verification page');
+            
           setShowVerification(true);
           return; // Skip other checks if verification is needed
         }
@@ -112,11 +129,32 @@ const SidePanel: React.FC = () => {
             } as NavigateMessage);
           }
         } else {
-          // Check if we need to show the loading screen (only after verification)
-          const showLoading = localStorage.getItem('showLoadingOnSidepanel') === 'true';
+          // Parse URL parameters for loading flag
+          const loadingParam = urlParams.get('loading');
+          const justVerifiedParam = urlParams.get('justVerified');
+          
+          // Also check localStorage as fallback
+          const showLoading = loadingParam === 'true' || 
+                              justVerifiedParam === 'true' || 
+                              localStorage.getItem('showLoadingOnSidepanel') === 'true' ||
+                              localStorage.getItem('justVerified') === 'true';
+                              
+          // Clear URL parameters if they exist
+          if (loadingParam || justVerifiedParam || verifiedParam) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('loading');
+            url.searchParams.delete('justVerified');
+            url.searchParams.delete('verified');
+            url.searchParams.delete('inSidepanel');
+            window.history.replaceState({}, document.title, url.toString());
+          }
+          
           if (showLoading) {
-            // Clear the flag
+            console.log('Showing loading screen in sidepanel');
+            
+            // Clear localStorage flags
             localStorage.removeItem('showLoadingOnSidepanel');
+            localStorage.removeItem('justVerified');
             
             // Show loading process
             setIsLoading(true);
@@ -125,15 +163,18 @@ const SidePanel: React.FC = () => {
             // Simulate checking LeetCode login
             setTimeout(() => {
               setIsLeetCodeLoggedIn(true);
+              console.log('LeetCode login simulation complete');
               
               // Simulate fetching statistics
               setTimeout(() => {
                 setIsLeetCodeLoading(false);
+                console.log('LeetCode statistics fetched');
                 
                 // After a brief delay, hide the loader
                 setTimeout(() => {
                   setShowLeetCodeLoader(false);
                   setIsLoading(false);
+                  console.log('Loading screen complete');
                 }, 1000);
               }, 2000);
             }, 2000);

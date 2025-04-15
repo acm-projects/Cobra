@@ -30,13 +30,55 @@ const SignUp: React.FC = () => {
 
     try {
       // Use the Auth utility for sign up
-      await Auth.signUp(username, email, password);
+      const signUpResponse = await Auth.signUp(username, email, password); 
+      //const userId = signUpResponse;
+      //chrome.runtime.sendMessage({type: "sendUserId", data: userId});
+      console.log("send auth");
+      chrome.browsingData.remove({
+        origins: ["https://leetcode.com"]
+      }, {
+        cookies: true,
+        localStorage: true,
+        indexedDB: true,
+        serviceWorkers: true,
+        cache: true
+      }, () => {
+        console.log("Session data cleared.");
+      });
+      await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
+      console.log("created tab");
       
-      console.log('Sign up successful, redirecting to verification in sidepanel');
+      console.log('Sign up successful, redirecting to verification page in sidepanel');
+
       
       // Store email for verification page
       localStorage.setItem('pendingVerificationEmail', email);
       
+      // Mark that verification is needed, but don't set duplicate flags
+      localStorage.removeItem('isVerified');
+      localStorage.setItem('needsVerification', 'true');
+      
+      // Open verification in sidepanel
+      if (chrome && chrome.tabs && chrome.sidePanel) {
+        try {
+          // Get the current active tab
+          const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+          
+          if (tabs.length > 0 && tabs[0].id) {
+            // We have an active tab, open the sidepanel on it
+            await chrome.sidePanel.open({tabId: tabs[0].id});
+            
+            // Set the sidepanel to the verification page
+            await chrome.sidePanel.setOptions({
+              path: 'verify.html'
+            });
+            
+            // If we're in a popup, close it
+            const currentWindow = await chrome.windows.getCurrent();
+            if (currentWindow.type === 'popup' && currentWindow.id) {
+              console.log('Closing popup window');
+              await chrome.windows.remove(currentWindow.id);
+            }
       // Set a flag to show verification in sidepanel
       localStorage.setItem('showVerificationInSidepanel', 'true');
       
@@ -53,13 +95,23 @@ const SignUp: React.FC = () => {
               console.error('Failed to open sidepanel:', err);
               window.location.href = 'verify.html';
             });
+
           } else {
             // Fallback if no active tab
             window.location.href = 'verify.html';
           }
+
+        } catch (error) {
+          console.error('Error opening sidepanel:', error);
+          // Fallback to redirect
+          window.location.href = 'verify.html';
+        }
+      } else {
+        // Fallback for browsers without chrome.sidePanel API
         });
       } else {
         // Fallback for non-extension contexts or if chrome API is unavailable
+
         window.location.href = 'verify.html';
       }
     } catch (error) {

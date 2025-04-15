@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Cobratest",
+  "name": "Cobra",
   "version": "1.0",
   "description": "A Chrome extension for coding assistance",
   "icons": {
@@ -24,9 +24,7 @@
     "sidePanel",
     "activeTab",
     "windows",
-    "notifications",
-    "browsingData",
-    "cookies"
+    "notifications"
   ],
   "side_panel": {
     "default_path": "sidepanel.html"

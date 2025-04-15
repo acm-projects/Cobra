@@ -1,4 +1,7 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
+import { Auth } from './utils/auth';
+import { writeLeetCodeUsername, saveDraftToDynamo } from '../dist/awsFunctions.js';
 
 // Background service worker for Cobra extension
 // Type definitions for Chrome API

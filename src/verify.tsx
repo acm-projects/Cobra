@@ -149,7 +149,10 @@ const VerificationPage: React.FC = () => {
       console.log("recieved this value for success: " + success);
       if (success) {
         localStorage.removeItem('pendingVerificationEmail');
-        
+        localStorage.removeItem('needsVerification');
+        localStorage.removeItem('showVerificationInSidepanel');
+        localStorage.setItem('isVerified', 'true');
+      
         // Set flag to show loading screen in sidepanel after verification
         localStorage.setItem('showLoadingOnSidepanel', 'true');
         
@@ -160,22 +163,7 @@ const VerificationPage: React.FC = () => {
         setTimeout(() => {
           // In Chrome extension context, try to open the sidepanel
           if (chrome && chrome.tabs && chrome.sidePanel) {
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-              if (tabs[0]?.id) {
-                chrome.sidePanel.open({tabId: tabs[0].id}).then(() => {
-                  chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
-                  // Close this popup window if we're in a popup
-                  window.close();
-                }).catch(err => {
-                  // Fallback if sidepanel API fails
-                  console.error('Failed to open sidepanel:', err);
-                  window.location.href = 'sidepanel.html';
-                });
-              } else {
-                // Fallback if no active tab
-                window.location.href = 'sidepanel.html';
-              }
-            });
+            chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
           } else {
             // Fallback for non-extension contexts or if chrome API is unavailable
             window.location.href = 'sidepanel.html';

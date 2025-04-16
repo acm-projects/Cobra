@@ -149,7 +149,10 @@ const VerificationPage: React.FC = () => {
       console.log("recieved this value for success: " + success);
       if (success) {
         localStorage.removeItem('pendingVerificationEmail');
-        
+        localStorage.removeItem('needsVerification');
+        localStorage.removeItem('showVerificationInSidepanel');
+        localStorage.setItem('isVerified', 'true');
+      
         // Set flag to show loading screen in sidepanel after verification
         localStorage.setItem('showLoadingOnSidepanel', 'true');
         

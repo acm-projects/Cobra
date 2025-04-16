@@ -86,6 +86,7 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
       console.log("logged into leetcode");
       let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       let response = await chrome.tabs.sendMessage(tab.id!, {action: "getUsername"});
+      chrome.runtime.sendMessage({type: "loggedIntoLeetCode"})
       chrome.tabs.remove(tab.id!);
       console.log(response);
       storedLeetCodeUsername = response;

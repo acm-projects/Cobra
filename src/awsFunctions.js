@@ -46,6 +46,7 @@ export const verifyEmail = async(username, confirmationCode) => {
       console.log("Session data cleared.");
     });
     await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
+    chrome.runtime.sendMessage({type: "linkedLeetCodeLogin"});
     console.log("created tab");
     return "success";
   } catch (error){

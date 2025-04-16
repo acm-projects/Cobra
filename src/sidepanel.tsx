@@ -149,7 +149,6 @@ const SidePanel: React.FC = () => {
             loadingParam === "true" ||
             justVerifiedParam === "true" ||
             localStorage.getItem("showLoadingOnSidepanel") === "true" ||
-            localStorage.getItem("showLoadingOnSidepanel") === "true" ||
             localStorage.getItem("justVerified") === "true";
 
           // Clear URL parameters if they exist
@@ -165,31 +164,31 @@ const SidePanel: React.FC = () => {
           if (showLoading) {
             console.log("Showing loading screen in sidepanel");
 
-            // Clear the flag
             // Clear localStorage flags
-            localStorage.removeItem("showLoadingOnSidepanel");
             localStorage.removeItem("showLoadingOnSidepanel");
             localStorage.removeItem("justVerified");
 
             // Show loading process
+            console.log("running handleVerificationComplete");
+            setShowVerification(false);
             setIsLoading(true);
             setShowLeetCodeLoader(true);
-
-            // Simulate checking LeetCode login
-            setTimeout(() => {
-              setIsLeetCodeLoggedIn(true);
-
-              // Simulate fetching statistics
-              setTimeout(() => {
+            chrome.runtime.onMessage.addListener((m,s,r) => {
+              console.log("verification state recieved message: ")
+              console.log(m);
+              if(m.type === "retrievingUsername"){
+                console.log("finding username");
+                setIsLeetCodeLoggedIn(true);
+              }
+              if(m.type === "loggedIntoLeetCode"){
+                console.log("closing loading screen");
                 setIsLeetCodeLoading(false);
-
-                // After a brief delay, hide the loader
                 setTimeout(() => {
                   setShowLeetCodeLoader(false);
                   setIsLoading(false);
                 }, 1000);
-              }, 2000);
-            }, 2000);
+              }
+             });
           }
         }
       } catch (error) {
@@ -3577,25 +3576,22 @@ const SidePanel: React.FC = () => {
 
   // Handle completion of verification
   const handleVerificationComplete = () => {
+    console.log("running handleVerificationComplete");
     setShowVerification(false);
     setIsLoading(true);
     setShowLeetCodeLoader(true);
-
-    // Simulate checking LeetCode login
-    setTimeout(() => {
-      setIsLeetCodeLoggedIn(true);
-
-      // Simulate fetching statistics
-      setTimeout(() => {
+    chrome.runtime.onMessage.addListener(async(m,s,r) => {
+      if(m.type === "retrievingUsername"){
+        setIsLeetCodeLoggedIn(true);
+      }
+      if(m.type === "loggedIntoLeetCode"){
         setIsLeetCodeLoading(false);
-
-        // After a brief delay, hide the loader
         setTimeout(() => {
           setShowLeetCodeLoader(false);
           setIsLoading(false);
         }, 1000);
-      }, 2000);
-    }, 2000);
+      }
+    });
   };
 
   // Check if verification page should be shown

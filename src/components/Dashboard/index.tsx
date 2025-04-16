@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
   ]);
 
   // Check LeetCode login status and fetch statistics
-  useEffect(() => {
+  /*useEffect(() => {
     const checkLeetCodeStatus = async () => {
       try {
         // Simulate checking if user is logged into LeetCode
@@ -87,7 +87,7 @@ const Dashboard: React.FC = () => {
     };
     
     checkLeetCodeStatus();
-  }, []);
+  }, []);*/
 
   // Force show loader again (for testing or refreshing)
   const refreshLeetCodeStats = () => {

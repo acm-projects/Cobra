@@ -87928,18 +87928,21 @@ var verifyEmail = /*#__PURE__*/function () {
             url: "https://leetcode.com/accounts/login/"
           });
         case 7:
+          chrome.runtime.sendMessage({
+            type: "linkedLeetCodeLogin"
+          });
           console.log("created tab");
           return _context2.abrupt("return", "success");
-        case 11:
-          _context2.prev = 11;
+        case 12:
+          _context2.prev = 12;
           _context2.t0 = _context2["catch"](0);
           console.error(_context2.t0);
           return _context2.abrupt("return", "failure");
-        case 15:
+        case 16:
         case "end":
           return _context2.stop();
       }
-    }, _callee2, null, [[0, 11]]);
+    }, _callee2, null, [[0, 12]]);
   }));
   return function verifyEmail(_x, _x2) {
     return _ref2.apply(this, arguments);
@@ -89006,7 +89009,6 @@ var SidePanel = function () {
                         showLoading = loadingParam === "true" ||
                             justVerifiedParam === "true" ||
                             localStorage.getItem("showLoadingOnSidepanel") === "true" ||
-                            localStorage.getItem("showLoadingOnSidepanel") === "true" ||
                             localStorage.getItem("justVerified") === "true";
                         // Clear URL parameters if they exist
                         if (loadingParam || justVerifiedParam || verifiedParam) {
@@ -89019,27 +89021,30 @@ var SidePanel = function () {
                         }
                         if (showLoading) {
                             console.log("Showing loading screen in sidepanel");
-                            // Clear the flag
                             // Clear localStorage flags
-                            localStorage.removeItem("showLoadingOnSidepanel");
                             localStorage.removeItem("showLoadingOnSidepanel");
                             localStorage.removeItem("justVerified");
                             // Show loading process
+                            console.log("running handleVerificationComplete");
+                            setShowVerification(false);
                             setIsLoading(true);
                             setShowLeetCodeLoader(true);
-                            // Simulate checking LeetCode login
-                            setTimeout(function () {
-                                setIsLeetCodeLoggedIn(true);
-                                // Simulate fetching statistics
-                                setTimeout(function () {
+                            chrome.runtime.onMessage.addListener(function (m, s, r) {
+                                console.log("verification state recieved message: ");
+                                console.log(m);
+                                if (m.type === "retrievingUsername") {
+                                    console.log("finding username");
+                                    setIsLeetCodeLoggedIn(true);
+                                }
+                                if (m.type === "loggedIntoLeetCode") {
+                                    console.log("closing loading screen");
                                     setIsLeetCodeLoading(false);
-                                    // After a brief delay, hide the loader
                                     setTimeout(function () {
                                         setShowLeetCodeLoader(false);
                                         setIsLoading(false);
                                     }, 1000);
-                                }, 2000);
-                            }, 2000);
+                                }
+                            });
                         }
                         _a.label = 4;
                     case 4: return [3 /*break*/, 6];
@@ -89631,22 +89636,25 @@ var SidePanel = function () {
     };
     // Handle completion of verification
     var handleVerificationComplete = function () {
+        console.log("running handleVerificationComplete");
         setShowVerification(false);
         setIsLoading(true);
         setShowLeetCodeLoader(true);
-        // Simulate checking LeetCode login
-        setTimeout(function () {
-            setIsLeetCodeLoggedIn(true);
-            // Simulate fetching statistics
-            setTimeout(function () {
-                setIsLeetCodeLoading(false);
-                // After a brief delay, hide the loader
-                setTimeout(function () {
-                    setShowLeetCodeLoader(false);
-                    setIsLoading(false);
-                }, 1000);
-            }, 2000);
-        }, 2000);
+        chrome.runtime.onMessage.addListener(function (m, s, r) { return __awaiter(void 0, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                if (m.type === "retrievingUsername") {
+                    setIsLeetCodeLoggedIn(true);
+                }
+                if (m.type === "loggedIntoLeetCode") {
+                    setIsLeetCodeLoading(false);
+                    setTimeout(function () {
+                        setShowLeetCodeLoader(false);
+                        setIsLoading(false);
+                    }, 1000);
+                }
+                return [2 /*return*/];
+            });
+        }); });
     };
     // Check if verification page should be shown
     if (showVerification) {

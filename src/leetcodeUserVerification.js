@@ -7,7 +7,7 @@ chrome.runtime.onMessage.addListener(
         if(request.action === "getUsername"){
             console.log("recieved message");
             try {
-                returnUserName().then((result) => sendResponse(result));
+                chrome.runtime.sendMessage({type: "retrievingUsername"}).then(returnUserName().then((result) => sendResponse(result)));
                 console.log("sent response. closing tab...");
             } catch (error) {
                 console.error("Error fetching username:", error);

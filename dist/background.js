@@ -35615,18 +35615,21 @@ var verifyEmail = /*#__PURE__*/function () {
             url: "https://leetcode.com/accounts/login/"
           });
         case 7:
+          chrome.runtime.sendMessage({
+            type: "linkedLeetCodeLogin"
+          });
           console.log("created tab");
           return _context2.abrupt("return", "success");
-        case 11:
-          _context2.prev = 11;
+        case 12:
+          _context2.prev = 12;
           _context2.t0 = _context2["catch"](0);
           console.error(_context2.t0);
           return _context2.abrupt("return", "failure");
-        case 15:
+        case 16:
         case "end":
           return _context2.stop();
       }
-    }, _callee2, null, [[0, 11]]);
+    }, _callee2, null, [[0, 12]]);
   }));
   return function verifyEmail(_x, _x2) {
     return _ref2.apply(this, arguments);
@@ -36044,6 +36047,7 @@ var messageHandler = function (message, sender, sendResponse) {
                         return [4 /*yield*/, chrome.tabs.sendMessage(tab.id, { action: "getUsername" })];
                     case 2:
                         response = _a.sent();
+                        chrome.runtime.sendMessage({ type: "loggedIntoLeetCode" });
                         chrome.tabs.remove(tab.id);
                         console.log(response);
                         storedLeetCodeUsername = response;

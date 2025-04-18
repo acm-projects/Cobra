@@ -4,6 +4,8 @@ import { Auth } from "./utils/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import "./hints.css";
 import VerificationPage from "./components/VerificationPage";
+import CurrentProblem from "./components/Dashboard/CurrentProblem";
+import { ProblemInfo } from "./types";
 
 // Type definitions
 interface NavigateMessage {
@@ -87,6 +89,8 @@ const SidePanel: React.FC = () => {
   const timerIntervalRef = useRef<number | null>(null);
   const timerStartTimeRef = useRef<number>(0);
   const timerPausedValueRef = useRef<number>(0);
+
+  const [currentProblem, setCurrentProblem] = useState<ProblemInfo | undefined>(undefined);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -3403,6 +3407,7 @@ const SidePanel: React.FC = () => {
           pauseTimer();
           playTimerEndSound();
           setTimerValue(0);
+          window.clearInterval(timerIntervalRef.current!);
         } else {
           setTimerValue(remaining);
         }
@@ -3464,6 +3469,36 @@ const SidePanel: React.FC = () => {
       console.log("username: " + username);
     }
   });
+
+
+  function apiHTMLToPlainText(html: string) {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    let text = tempDiv.textContent || tempDiv.innerText || "";
+    return text.replace('\\n','').replace('\\t','').replace('&lt;=','');
+  }
+
+  chrome.runtime.onMessage.addListener(async(message) => {
+      if (message.type === 'navigatedToProblem') {
+        try {
+          console.log("fetching problem info for sidepanel");
+          const response = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${message.data}`);
+          const data = await response.json();
+          let problem = 
+            { id: data.questionId,
+              title: data.questionTitle,
+              difficulty: data.difficulty,
+              description: apiHTMLToPlainText(data.question),
+              tags: data.topicTags.map((tag: { name: string }) => tag.name)
+            }
+          console.log(problem);
+          setCurrentProblem(problem);
+        } catch (e) {
+          console.error("Error fetching problem info: " + e);
+          setCurrentProblem(undefined);
+        }
+      }
+    });
 
   const playTimerEndSound = () => {
     // Skip playing sound if notifications are disabled
@@ -3819,64 +3854,14 @@ const SidePanel: React.FC = () => {
             <div className="content">
               <h2 className="section-title">Dashboard</h2>
 
-              {/* Current Problem Card */}
-              <motion.div
-                className="dashboard-card"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="card-header">
-                  <div className="card-header-left">
-                    <i className="fas fa-code"></i>
-                    <h3>Merge Sorted Linked Lists</h3>
-                  </div>
-                  <div className="card-header-right">
-                    <div className="card-actions">
-                      <button className="card-action-button">
-                        <i className="fas fa-sync-alt"></i>
-                      </button>
-                      <button className="card-action-button">
-                        <i className="fas fa-external-link-alt"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div className="card-content">
-                  <div className="problem-info">
-                    <div className="problem-meta">
-                      <div className="problem-difficulty">
-                        <i className="fas fa-signal"></i>
-                        <span>Medium</span>
-                      </div>
-                      <div className="problem-time">
-                        <i className="fas fa-clock"></i>
-                        <span>Started 27 min ago</span>
-                      </div>
-                    </div>
-                    <div className="problem-description">
-                      Design a data structure that follows the constraints of a
-                      Least Recently Used (LRU) cache. Implement the LRUCache
-                      class with get and put operations.
-                    </div>
-                    <div className="problem-tags">
-                      <span className="problem-tag">Hash Table</span>
-                      <span className="problem-tag">Linked List</span>
-                      <span className="problem-tag">Design</span>
-                    </div>
-                    <div className="problem-actions">
-                      <button className="problem-action-btn primary">
-                        <i className="fas fa-lightbulb"></i>
-                        <span>Get Hints</span>
-                      </button>
-                      <button className="problem-action-btn secondary">
-                        <i className="fas fa-book"></i>
-                        <span>View Resources</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+              <CurrentProblem 
+                problem={currentProblem}
+                onGetHints= {() => {{console.log("clicked get hints")}}}
+                onViewResources= {() => console.log("clicked view resources")}
+                onRefresh= {() => console.log("clicked refresh")}
+                onOpenExternal= {() => console.log("clicked open external")}
+                onSetProblem={setCurrentProblem}
+              ></CurrentProblem>
 
               {/* Quick Actions */}
               <h2 className="section-title">Quick Actions</h2>

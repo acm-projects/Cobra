@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 import { motion } from 'framer-motion';
 import { ProblemInfo } from '../../types';
 
@@ -8,6 +8,7 @@ interface CurrentProblemProps {
   onViewResources: () => void;
   onRefresh: () => void;
   onOpenExternal: () => void;
+  onSetProblem: Dispatch<SetStateAction<ProblemInfo | undefined>>;
 }
 
 const CurrentProblem: React.FC<CurrentProblemProps> = ({
@@ -15,7 +16,8 @@ const CurrentProblem: React.FC<CurrentProblemProps> = ({
   onGetHints,
   onViewResources,
   onRefresh,
-  onOpenExternal
+  onOpenExternal,
+  onSetProblem
 }) => {
   // If no problem is detected
   if (!problem) {

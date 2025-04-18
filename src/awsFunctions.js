@@ -8,8 +8,6 @@ import { Amplify } from 'aws-amplify';
 const dynamoClient = new DynamoDBClient(
   {
     region: "us-east-1",
-    credentials: {
-    }
   } 
 );
 const dynamoDB = DynamoDBDocumentClient.from(dynamoClient);
@@ -55,11 +53,11 @@ export const verifyEmail = async(username, confirmationCode) => {
   }
 }
 
-export const saveDraftToDynamo = async(problemSlug, codeDraft) => {
+export const saveDraftToDynamo = async(username, problemSlug, codeDraft) => {
   try {
-    let userId = await chrome.sendMessage({type: "getUsername"});
-    userId = userId.toLowerCase();
-    await fetchAuthSession();
+    console.log("saving...")
+    console.log("username: " + username);
+    let userId = username.toLowerCase();
     const command = new UpdateCommand({
       TableName: 'UserCodeDrafts',
       Key: {
@@ -73,12 +71,36 @@ export const saveDraftToDynamo = async(problemSlug, codeDraft) => {
         ":slug": codeDraft
       },
     });
+
+    const dtscommand = new UpdateCommand({
+      TableName: 'UserCodeDrafts',
+      Key: {
+        userID: userId,
+      },
+      UpdateExpression: "set DraftTimeStamps.#dts = :slug",
+      ExpressionAttributeNames: {
+        "#dts": problemSlug
+      },
+      ExpressionAttributeValues: {
+        ":slug": Date.now()
+      },
+    });
+
+
     console.log('Attempting to save draft for ' + problemSlug + ' to UserCodeDrafts table: ', command);
     const response = await dynamoDB.send(command);
     console.log('User information successfully saved to UserCodeDrafts table');
     console.log(response);
+
+    console.log('Attempting to save timestamp for ' + problemSlug + ' to UserCodeDrafts table: ', dtscommand);
+    const dtsResponse = await dynamoDB.send(dtscommand);
+    console.log('User information successfully saved to UserCodeDrafts table');
+    console.log(dtsResponse);
+    return true;
+
   } catch (error) {
     console.error(error);
+    return false;
   }
 }
 

@@ -1,6 +1,11 @@
-chrome.runtime.sendMessage({status: "DOM loaded"});
+let needGrab = false;
+needGrab = chrome.runtime.sendMessage({status: "DOM loaded"});
 let user = "username: nothing";
 console.log();
+
+if(!needGrab){
+    return;
+}
 
 chrome.runtime.onMessage.addListener(   
     function(request, sender, sendResponse) {

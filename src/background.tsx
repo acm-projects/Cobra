@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
 import { writeLeetCodeUsername, saveDraftToDynamo } from './awsFunctions.js';
+import LeetCodeLoader from './components/Loading/LeetCodeLoader';
+import { useAnimationFrame } from 'framer-motion';
 
 // Background service worker for Cobra extension
 // Type definitions for Chrome API
@@ -67,6 +69,7 @@ chrome.tabs.onUpdated.addListener(async(tabId, tab) => {
     const urlSecondHalf = tab.url.split("/problems/")[1];
     slug = urlSecondHalf.split("/")[0].trim();
     console.log(slug);
+    chrome.runtime.sendMessage({type: "navigatedToProblem", data: slug});
   } else {
     console.log("something went wrong");
     return;
@@ -83,6 +86,12 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
 
   if (!loggedInBool && message.status === "DOM loaded") {
     (async () => {
+      console.log(storedLeetCodeUsername);
+      if(storedLeetCodeUsername!==''){
+        sendResponse(false);
+        return;
+      }
+      sendResponse(true);
       console.log("logged into leetcode");
       let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       let response = await chrome.tabs.sendMessage(tab.id!, {action: "getUsername"});
@@ -102,23 +111,20 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
   }
 
   if(message.type === "getUsername"){ 
+    username = localStorage.getItem("username")!;
     sendResponse(username);
+    return true;
   }
 
   if(message.type === 'sendDraft'){ 
     console.log("new draft recieved: " + message.data);
     try {
       let code = message.data;
-      const saveDraftPromise = new Promise((resolve, reject)=>{
-        try{
-          console.log(slug);
-          saveDraftToDynamo(slug, code);
-          console.log("drafted saved successfully to dynamodb");
-          resolve(true);
-        } catch (error) {
-          console.error(error);
-          reject(false);
-        }
+      const saveDraftPromise = new Promise(async(resolve, reject)=>{
+      console.log(slug);
+      await saveDraftToDynamo(username, slug, code);
+      console.log("draft saved successfully to dynamodb");
+      resolve(true);
     });
     console.log(saveDraftPromise);
     } catch (error) {

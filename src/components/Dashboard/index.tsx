@@ -142,6 +142,25 @@ const Dashboard: React.FC = () => {
     setCurrentProblem(undefined);
   };
 
+  const renderProblem = async(m: { data: any; }) => {
+    try {
+      console.log("fetching problem info for sidepanel");
+      const response = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${m.data}`);
+      const data = await response.json();
+      let problem = 
+        { id: data.questionId,
+          title: data.questionTitle,
+          difficulty: data.difficulty,
+          description: data.question,
+          tags: data.topicTags.map((tag: { name: string }) => tag.name)
+        }
+      console.log(problem);
+      setCurrentProblem(problem);
+    } catch (e) {
+      console.error("Error fetching problem info: " + e);
+    }
+  }
+
   return (
     <motion.div 
       className="dashboard-container"
@@ -171,13 +190,7 @@ const Dashboard: React.FC = () => {
       
       <div className="dashboard-grid">
         <div className="dashboard-main">
-          <CurrentProblem 
-            problem={currentProblem}
-            onGetHints={handleGetHints}
-            onViewResources={handleViewResources}
-            onRefresh={handleRefreshProblem}
-            onOpenExternal={handleOpenExternal}
-          />
+          
           
           <RecentActivity 
             activities={activities} 

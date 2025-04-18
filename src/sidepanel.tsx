@@ -3852,7 +3852,7 @@ const SidePanel: React.FC = () => {
             id="home"
           >
             <div className="content">
-              <h2 className="section-title">Dashboard</h2>
+              {/* Removed Dashboard section title */}
 
               <CurrentProblem 
                 problem={currentProblem}
@@ -3863,8 +3863,7 @@ const SidePanel: React.FC = () => {
                 onSetProblem={setCurrentProblem}
               ></CurrentProblem>
 
-              {/* Quick Actions */}
-              <h2 className="section-title">Quick Actions</h2>
+              {/* Quick Actions - Removed section title */}
               <div className="tools-grid">
                 <motion.div
                   className="tool-button hints"
@@ -3943,8 +3942,7 @@ const SidePanel: React.FC = () => {
                 </motion.div>
               </div>
 
-              {/* Recent Activity */}
-              <h2 className="section-title">Recent Activity</h2>
+              {/* Recent Activity - Removed section title */}
               <motion.div
                 className="dashboard-card"
                 initial={{ opacity: 0, y: 20 }}

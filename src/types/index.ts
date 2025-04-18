@@ -53,7 +53,7 @@ export interface TimerState {
 export interface ProblemInfo {
   id: string;
   title: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: string;
   description: string;
   tags: string[];
   startTime?: Date;

@@ -18,7 +18,8 @@ const SignIn: React.FC = () => {
     try {
       // Use the Auth utility for sign in
       await signInUser(username, password); 
-      
+      chrome.runtime.sendMessage({type: "sendUsername", data: username});
+      localStorage.setItem("username", username);
       console.log('Authentication successful, redirecting to sidepanel');
       
       // Navigate directly to the sidepanel without showing the loading screen

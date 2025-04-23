@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 interface HintCardProps {
     title: any;
     hint: string;
+    description?: string;
     type: "conceptual" | "code";
     };
 
@@ -15,7 +16,7 @@ const HintLine = ({ line, index }: { line: string; index: number }) => {
     );
 }
 
-const HintCard: React.FC<HintCardProps> = ({ title, hint, type }) => {
+const HintCard: React.FC<HintCardProps> = ({ title, hint, type, description }) => {
 
     if(type === "conceptual"){
         const hints = hint.split("\n");
@@ -40,7 +41,7 @@ const HintCard: React.FC<HintCardProps> = ({ title, hint, type }) => {
                         <i className="fas fa-code"></i>
                         </div>
                         <div className="hint-badge">Basic</div>
-                        <h3>{title}: Conceptual Hints</h3>
+                        <h3>Three Conceptual Hints</h3>
                         <div className="hint-content">
                         <p>
                             Get an idea of how to approach the problem.
@@ -146,11 +147,10 @@ const HintCard: React.FC<HintCardProps> = ({ title, hint, type }) => {
             <i className="fas fa-code"></i>
             </div>
             <div className="hint-badge">Basic</div>
-            <h3>{title}: Code Hints</h3>
+            <h3>{title}</h3>
             <div className="hint-content">
             <p>
-                Get an idea of how to approach the problem.
-                All concepts. No code.
+                {description}
             </p>
             <div className="hint-code-snippet blurred">
                 <pre>

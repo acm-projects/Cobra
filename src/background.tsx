@@ -4,6 +4,7 @@ import { Auth } from './utils/auth';
 import { writeLeetCodeUsername, saveDraftToDynamo, getHints, getCodeSnipets } from './awsFunctions.js';
 import LeetCodeLoader from './components/Loading/LeetCodeLoader';
 import { useAnimationFrame } from 'framer-motion';
+import HintCard from './components/HintCard';
 
 // Background service worker for Cobra extension
 // Type definitions for Chrome API
@@ -75,9 +76,13 @@ chrome.tabs.onUpdated.addListener(async(tabId, changeInfo, tab) => {
       slug = newslug;
       console.log("fetching hints for sidepanel");
       let hint = await getHints(slug);
-      let codeSnipets = await getCodeSnipets(slug);
-      console.log("codeSnipets fetched for sidepanel: " + codeSnipets);
-      chrome.runtime.sendMessage({type: "navigatedToProblem", data: slug, hint: hint, codeSnipets: codeSnipets});
+      let codeSnippets = await getCodeSnipets(slug);
+      console.log("codeSnipets fetched for sidepanel: " + codeSnippets);
+      //const codeSnippetCards: JSX.Element[] = codeSnippets.map((codeSnippet: any, index: number) => {
+      //  return (<HintCard key={index} type="code" hint={codeSnippet.code} title={codeSnippet.title}></HintCard>);
+      //});
+      console.log(codeSnippets);
+      chrome.runtime.sendMessage({type: "navigatedToProblem", data: slug, hint: hint, codeSnipets: codeSnippets});
     } else {
       console.log("slug UNCHANGED: " + slug);
     }

@@ -5,6 +5,7 @@ import { DynamoDBDocumentClient, PutCommand, UpdateCommand, GetCommand } from '@
 import {signIn, signOut, signUp, confirmSignUp, fetchAuthSession } from "aws-amplify/auth";
 import { Amplify } from 'aws-amplify';
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import HintCard from './components/HintCard';
 
 
 
@@ -106,9 +107,11 @@ export const getCodeSnipets = async(slug) => {
       body: JSON.stringify({ "leetcodeSlug": slug })
     });
      const responseObject = await response.json();
-     const codeSnippets =  JSON.parse(responseObject.body).reply;
-     console.log(codeSnippets);
-     return codeSnippets;
+     console.log(responseObject);
+     const replyJSON =  JSON.parse(responseObject.body).reply;
+     console.log(replyJSON);
+     const result = JSON.parse(replyJSON).hints;
+     return result;
   } catch (error) {
     console.error("Error fetching code snippets:", error);
   }

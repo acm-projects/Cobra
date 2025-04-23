@@ -4,6 +4,9 @@ import { DynamoDBDocumentClient, PutCommand, UpdateCommand, GetCommand } from '@
 
 import {signIn, signOut, signUp, confirmSignUp, fetchAuthSession } from "aws-amplify/auth";
 import { Amplify } from 'aws-amplify';
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+
+
 
 const dynamoClient = new DynamoDBClient(
   {
@@ -53,6 +56,64 @@ export const verifyEmail = async(username, confirmationCode) => {
   }
 }
 
+export const sendChat = async(message) => {
+  try{
+    console.log("sending chat: " + message);
+    const response = await fetch(`https://i27yrfhe70.execute-api.us-east-1.amazonaws.com/dev/chatbot`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: message })
+    });
+     const responseObject = await response.json();
+     console.log(responseObject);
+     const chatbotSays =  responseObject.reply;
+     console.log(chatbotSays);
+     return chatbotSays;
+  } catch (error) {
+    console.error("Error sending chat:", error);
+  }
+}
+
+export const getHints = async(slug) => {
+  try{
+    console.log("grabbing hints with slug: " + slug);
+    const response = await fetch (`https://vmecerx9b2.execute-api.us-east-1.amazonaws.com/dev/hints`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ leetcodeSlug: slug })
+    });
+     const responseObject = await response.json();
+     const hints =  JSON.parse(responseObject.body).reply;
+     console.log(hints);
+     return hints;
+  } catch (error) {
+    console.error("Error fetching hints:", error);
+  }
+}
+
+export const getCodeSnipets = async(slug) => {
+  try{
+    console.log("grabbing code snippets with slug: " + slug);
+    const response = await fetch (`https://vmecerx9b2.execute-api.us-east-1.amazonaws.com/dev/snippets`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json", 
+      },
+      body: JSON.stringify({ "leetcodeSlug": slug })
+    });
+     const responseObject = await response.json();
+     const codeSnippets =  JSON.parse(responseObject.body).reply;
+     console.log(codeSnippets);
+     return codeSnippets;
+  } catch (error) {
+    console.error("Error fetching code snippets:", error);
+  }
+}
+
 export const saveDraftToDynamo = async(username, problemSlug, codeDraft) => {
   try {
     console.log("saving...")
@@ -87,12 +148,12 @@ export const saveDraftToDynamo = async(username, problemSlug, codeDraft) => {
     });
 
 
-    console.log('Attempting to save draft for ' + problemSlug + ' to UserCodeDrafts table: ', command);
+    console.log('Attempting to save draft for ' + problemSlug + ' to UserCodeDrafts table: ');//, command);
     const response = await dynamoDB.send(command);
     console.log('User information successfully saved to UserCodeDrafts table');
     console.log(response);
 
-    console.log('Attempting to save timestamp for ' + problemSlug + ' to UserCodeDrafts table: ', dtscommand);
+    console.log('Attempting to save timestamp for ' + problemSlug + ' to UserCodeDrafts table: ');//, dtscommand);
     const dtsResponse = await dynamoDB.send(dtscommand);
     console.log('User information successfully saved to UserCodeDrafts table');
     console.log(dtsResponse);
@@ -106,9 +167,9 @@ export const saveDraftToDynamo = async(username, problemSlug, codeDraft) => {
 
 export const signInUser = async(username, password) => {
       const signOutResponse = await signOut();
-      console.log(signOutResponse);
+      //console.log(signOutResponse);
       const signInResponse = await signIn({username: username, password: password});
-      console.log(signInResponse);
+      //console.log(signInResponse);
       //const user = await Auth.currentAuthenticatedUser();
       //const userId = user.attributes.userId;
       //console.log("userId: " + userId);
@@ -139,7 +200,7 @@ export const writeLeetCodeUsername = async(id, LCusername) => {
         ":sLCU": LCusername
       },
     });
-    console.log('Attempting to save user leetcodeusername to Users table:', command);
+    console.log('Attempting to save user leetcodeusername to Users table:');//, command);
     const response = await dynamoDB.send(command);
     console.log('User information successfully saved to Users table');
   } catch (error) {

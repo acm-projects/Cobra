@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { Auth } from './utils/auth';
+import { Auth } from './src/utils/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import './hints.css';
 

@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
     setCurrentProblem(undefined);
   };
 
-  const renderProblem = async(m: { data: any; }) => {
+  /*const renderProblem = async(m: { data: any; }) => {
     try {
       console.log("fetching problem info for sidepanel");
       const response = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${m.data}`);
@@ -159,7 +159,7 @@ const Dashboard: React.FC = () => {
     } catch (e) {
       console.error("Error fetching problem info: " + e);
     }
-  }
+  }*/
 
   return (
     <motion.div 

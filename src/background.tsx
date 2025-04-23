@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
-import { writeLeetCodeUsername, saveDraftToDynamo } from './awsFunctions.js';
+import { writeLeetCodeUsername, saveDraftToDynamo, getHints, getCodeSnipets } from './awsFunctions.js';
 import LeetCodeLoader from './components/Loading/LeetCodeLoader';
 import { useAnimationFrame } from 'framer-motion';
 
@@ -64,14 +64,25 @@ chrome.action.onClicked.addListener((tab: chrome.tabs.Tab): void => {
 });
 
 let slug = "";
-chrome.tabs.onUpdated.addListener(async(tabId, tab) => {
+chrome.tabs.onUpdated.addListener(async(tabId, changeInfo, tab) => {
+  //console.log(changeInfo);
   if(tab.url && tab.url.includes("leetcode.com/problems/")){
+    //console.log(tab.url);
     const urlSecondHalf = tab.url.split("/problems/")[1];
-    slug = urlSecondHalf.split("/")[0].trim();
-    console.log(slug);
-    chrome.runtime.sendMessage({type: "navigatedToProblem", data: slug});
+    let newslug = urlSecondHalf.split("/")[0].trim();
+    if(newslug !== slug){
+      console.log("slug IS DIFFERENT: " + newslug);
+      slug = newslug;
+      console.log("fetching hints for sidepanel");
+      let hint = await getHints(slug);
+      let codeSnipets = await getCodeSnipets(slug);
+      console.log("codeSnipets fetched for sidepanel: " + codeSnipets);
+      chrome.runtime.sendMessage({type: "navigatedToProblem", data: slug, hint: hint, codeSnipets: codeSnipets});
+    } else {
+      console.log("slug UNCHANGED: " + slug);
+    }
   } else {
-    console.log("something went wrong");
+    console.log("not a leetcode problem page");
     return;
   }
 });   
@@ -82,7 +93,7 @@ let loggedInBool = false;
 let username = '';
 // Handle messages
 const messageHandler: MessageHandler = (message, sender, sendResponse): boolean => {
-  console.log('Background received message:', message);
+  //console.log('Background received message:', message);
 
   if (!loggedInBool && message.status === "DOM loaded") {
     (async () => {
@@ -117,16 +128,16 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
   }
 
   if(message.type === 'sendDraft'){ 
-    console.log("new draft recieved: " + message.data);
+    console.log("new draft recieved from content script");
     try {
       let code = message.data;
       const saveDraftPromise = new Promise(async(resolve, reject)=>{
-      console.log(slug);
+      //console.log(slug);
       await saveDraftToDynamo(username, slug, code);
-      console.log("draft saved successfully to dynamodb");
+      //console.log("draft saved successfully to dynamodb");
       resolve(true);
     });
-    console.log(saveDraftPromise);
+    //console.log(saveDraftPromise);
     } catch (error) {
       console.error(error);
     }

@@ -245,6 +245,7 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
     console.log("new draft recieved from content script");
     try {
       let code = message.data;
+      console.log(code);
       storedCode = code;
       const saveDraftPromise = new Promise(async(resolve, reject)=>{
       //console.log(slug);

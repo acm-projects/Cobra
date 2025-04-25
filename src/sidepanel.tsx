@@ -59,7 +59,8 @@ const SidePanel: React.FC = () => {
 
   // Chat state
   const [messageText, setMessageText] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>([]);
+    /*[
     {
       id: "1",
       role: "assistant",
@@ -109,13 +110,14 @@ function binarySearch(arr, target) {
 Would you like me to explain the time complexity of this algorithm?`,
       timestamp: new Date(new Date().setHours(10, 33)),
     },
-  ]);
+  ]);*/
   const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
-  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
+    /*[
     "Explain time complexity of binary search",
     "Show me a recursive binary search example",
     "What's the difference between merge sort and quick sort?",
-  ]);
+  ]);*/
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);

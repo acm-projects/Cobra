@@ -11,7 +11,9 @@ module.exports = {
     signin: './src/signin.tsx',
     signup: './src/signup.tsx',
     sidepanel: './src/sidepanel.tsx',
-    verify: './src/verify.tsx'
+    verify: './src/verify.tsx',
+    leetcodeUserVerification: './src/leetcodeUserVerification.js',
+    contentGrabCodeDraft: './src/contentGrabCodeDraft.js'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

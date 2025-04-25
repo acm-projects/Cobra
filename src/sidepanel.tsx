@@ -3,10 +3,11 @@ import ReactDOM from "react-dom";
 import { Auth } from "./utils/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import "./hints.css";
+import "./styles/chat.css";
 import VerificationPage from "./components/VerificationPage";
 import CurrentProblem from "./components/Dashboard/CurrentProblem";
 import { getHints, sendChat } from "./awsFunctions";
-import HintCard  from "./components/HintCard";
+import HintCard from "./components/HintCard";
 import { ProblemInfo, Message } from "./types";
 import ResourceCard from "./components/ResourceCard";
 
@@ -60,15 +61,65 @@ const SidePanel: React.FC = () => {
   const [messageText, setMessageText] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: "welcome",
+      id: "1",
       role: "assistant",
       content: "Hello! I'm your coding assistant. How can I help you today?",
-      timestamp: new Date(),
+      timestamp: new Date(new Date().setHours(10, 30)),
+    },
+    {
+      id: "2",
+      role: "user",
+      content: "I'm having trouble with a binary search algorithm. Can you explain how it works?",
+      timestamp: new Date(new Date().setHours(10, 32)),
+    },
+    {
+      id: "3",
+      role: "assistant",
+      content: `Binary search is an efficient algorithm for finding an item in a sorted array. Here's how it works:
+
+1. Compare the target value to the middle element of the array.
+2. If they match, return the index of the middle element.
+3. If the target is less than the middle element, continue searching in the left half.
+4. If the target is greater, continue searching in the right half.
+5. Repeat until the item is found or the subarray size becomes zero.
+
+\`\`\`javascript
+function binarySearch(arr, target) {
+  let left = 0;
+  let right = arr.length - 1;
+  
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    
+    if (arr[mid] === target) {
+      return mid; // Target found
+    }
+    
+    if (arr[mid] < target) {
+      left = mid + 1; // Search in the right half
+    } else {
+      right = mid - 1; // Search in the left half
+    }
+  }
+  
+  return -1; // Target not found
+}
+\`\`\`
+
+Would you like me to explain the time complexity of this algorithm?`,
+      timestamp: new Date(new Date().setHours(10, 33)),
     },
   ]);
-  const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
+    "Explain time complexity of binary search",
+    "Show me a recursive binary search example",
+    "What's the difference between merge sort and quick sort?",
+  ]);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isTyping, setIsTyping] = useState<boolean>(false);
 
   // New settings
   const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
@@ -311,60 +362,6 @@ const SidePanel: React.FC = () => {
         margin: 0;
         padding: 0;
         position: relative;
-        overflow: hidden;
-      }
-      
-      .main-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        position: relative;
-        padding: 0;
-        margin: 0;
-        height: 100vh;
-        background-color: #0A0B1E;
-      }
-      
-      /* Typing indicator styles */
-      .typing-indicator {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 12px;
-        min-height: 24px;
-      }
-
-      .typing-indicator span {
-        height: 8px;
-        width: 8px;
-        margin: 0 2px;
-        background-color: #8B5CF6;
-        border-radius: 50%;
-        display: inline-block;
-        opacity: 0.6;
-      }
-
-      .typing-indicator span:nth-child(1) {
-        animation: bounce 1.5s infinite ease-in-out;
-      }
-
-      .typing-indicator span:nth-child(2) {
-        animation: bounce 1.5s infinite ease-in-out 0.2s;
-      }
-
-      .typing-indicator span:nth-child(3) {
-        animation: bounce 1.5s infinite ease-in-out 0.4s;
-      }
-
-      @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-8px); }
-      }
-
-      .message.typing .message-content {
-        background-color: rgba(255, 255, 255, 0.03);
-        min-width: 60px;
       }
       
       .container.loading .main-content {
@@ -592,12 +589,11 @@ const SidePanel: React.FC = () => {
         flex: 1;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
-        position: relative;
-        padding: 0;
-        margin: 0;
         height: 100vh;
-        background-color: #0A0B1E;
+        overflow: hidden;
+        padding: 16px;
+        box-sizing: border-box;
+        background-color: rgba(10, 11, 30, 0.4);
       }
       
       .content-section {
@@ -619,11 +615,6 @@ const SidePanel: React.FC = () => {
         display: flex;
         flex-direction: column;
         opacity: 1;
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        margin: 0;
-        overflow: hidden;
       }
       
       .dashboard-welcome {
@@ -1558,41 +1549,23 @@ const SidePanel: React.FC = () => {
       .chat-container {
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        background-color: #0A0B1E;
-        width: 100%;
-        margin: 0;
-        padding: 0;
+        height: calc(100vh - 32px); /* Adjust to account for padding */
+        background-color: rgba(10, 11, 30, 0.4);
+        border-radius: 8px;
         overflow: hidden;
-        border: none;
-        border-radius: 0;
         box-shadow: none;
+        width: 100%;
+        margin: 0 auto;
       }
       
       .chat-messages {
         flex: 1;
         overflow-y: auto;
-        padding: 12px 16px;
+        padding: 12px;
         display: flex;
         flex-direction: column;
         gap: 12px;
-        background-color: #0A0B1E;
-        margin: 0;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(139, 92, 246, 0.3) rgba(0, 0, 0, 0.1);
-      }
-      
-      .chat-messages::-webkit-scrollbar {
-        width: 6px;
-      }
-      
-      .chat-messages::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.1);
-      }
-      
-      .chat-messages::-webkit-scrollbar-thumb {
-        background-color: rgba(139, 92, 246, 0.3);
-        border-radius: 6px;
+        margin-bottom: 0;
       }
       
       .chat-actions {
@@ -1680,13 +1653,12 @@ const SidePanel: React.FC = () => {
       }
       
       .chat-header {
-        padding: 16px;
-        background: rgba(20, 20, 40, 0.8);
+        padding: 12px;
+        background: rgba(20, 20, 40, 0.6);
         border-bottom: 1px solid rgba(139, 92, 246, 0.2);
         backdrop-filter: blur(10px);
         position: relative;
         z-index: 10;
-        margin: 0;
       }
       
       .chat-header h3 {
@@ -1721,9 +1693,10 @@ const SidePanel: React.FC = () => {
       .message {
         display: flex;
         align-items: flex-start;
-        gap: 10px;
+        gap: 8px;
         max-width: 85%;
-        margin: 4px 0;
+        margin: 2px 0;
+        animation: fadeIn 0.3s ease;
       }
       
       .message.user {
@@ -1733,8 +1706,6 @@ const SidePanel: React.FC = () => {
       
       .message.assistant {
         margin-right: auto;
-        margin-top: 4px; /* Added top margin for assistant messages */
-        align-items: flex-start; /* Align items to the top */
       }
       
       .message-avatar {
@@ -1746,7 +1717,6 @@ const SidePanel: React.FC = () => {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-top: 8px; /* Added margin to move the avatar down */
       }
       
       .message-avatar img {
@@ -1756,10 +1726,10 @@ const SidePanel: React.FC = () => {
       }
       
       .message-content {
-        padding: 10px 14px;
-        border-radius: 18px;
+        padding: 8px 12px;
+        border-radius: 16px;
         font-size: 14px;
-        line-height: 1.5;
+        line-height: 1.4;
         position: relative;
       }
       
@@ -1767,12 +1737,14 @@ const SidePanel: React.FC = () => {
         background-color: #8B5CF6;
         color: white;
         border-bottom-right-radius: 4px;
+        margin-right: 4px;
       }
       
       .message.assistant .message-content {
-        background-color: rgba(255, 255, 255, 0.07);
+        background-color: rgba(255, 255, 255, 0.05);
         color: #e2e8f0;
         border-bottom-left-radius: 4px;
+        margin-left: 4px;
       }
       
       .message-text {
@@ -1783,6 +1755,10 @@ const SidePanel: React.FC = () => {
         font-size: 10px;
         color: rgba(255, 255, 255, 0.5);
         margin-top: 4px;
+        display: block;
+      }
+      
+      .message.user .message-time {
         text-align: right;
       }
       
@@ -1808,51 +1784,58 @@ const SidePanel: React.FC = () => {
       }
       
       .chat-input-container {
-        padding: 12px 16px 16px;
-        background-color: rgba(20, 20, 40, 0.8);
+        padding: 8px 12px;
+        background: rgba(20, 20, 40, 0.6);
         border-top: 1px solid rgba(139, 92, 246, 0.2);
-        margin-top: auto;
         display: flex;
-        gap: 8px;
-        width: 100%;
-        box-sizing: border-box;
+        gap: 10px;
+        align-items: center;
+        backdrop-filter: blur(10px);
+        position: relative;
+        z-index: 10;
+        margin-top: auto;
+        margin-bottom: 0;
+        height: 60px;
       }
       
       .chat-input-wrapper {
         flex: 1;
-        background-color: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 24px;
-        padding: 10px 16px;
+        padding: 8px 14px;
+        position: relative;
         transition: all 0.2s ease;
+        max-width: 85%;
+        height: 44px;
         display: flex;
         align-items: center;
       }
       
-      .chat-input-wrapper:focus-within {
-        border-color: rgba(139, 92, 246, 0.5);
-        box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
-      }
-      
       .chat-input {
         width: 100%;
+        height: 100%;
         background: transparent;
         border: none;
         color: white;
-        font-size: 14px;
+        resize: none;
         outline: none;
-        padding: 0;
-        line-height: 1.5;
+        font-size: 14px;
+        line-height: 1.4;
+        padding-right: 80px;
       }
       
       .chat-input::placeholder {
-        color: rgba(255, 255, 255, 0.5);
+        color: rgba(255, 255, 255, 0.4);
       }
       
       .chat-input-buttons {
+        position: absolute;
+        right: 10px;
         display: flex;
         gap: 8px;
-        margin-left: 8px;
+        height: 100%;
+        align-items: center;
       }
       
       .chat-input-button {
@@ -1866,22 +1849,24 @@ const SidePanel: React.FC = () => {
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: all 0.2s ease;
+        font-size: 14px;
       }
       
       .chat-send-button {
-        width: 40px;
-        height: 40px;
+        width: 46px;
+        height: 46px;
         border-radius: 50%;
-        background-color: #8B5CF6;
-        color: white;
+        background: linear-gradient(135deg, #8B5CF6, #6d28d9);
         border: none;
+        color: white;
         display: flex;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3);
         cursor: pointer;
         transition: all 0.2s ease;
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        flex-shrink: 0;
+        font-size: 18px;
       }
       
       /* Sidebar profile and spacer */
@@ -3158,40 +3143,6 @@ const SidePanel: React.FC = () => {
       .icon-larger {
         font-size: 22px !important;
       }
-
-      /* Add this to the existing CSS section in the file */
-      .typing-indicator {
-        display: flex;
-        align-items: center;
-        padding: 10px 15px;
-      }
-
-      .typing-indicator span {
-        height: 8px;
-        width: 8px;
-        margin: 0 2px;
-        background-color: #8B5CF6;
-        border-radius: 50%;
-        display: inline-block;
-        opacity: 0.6;
-      }
-
-      .typing-indicator span:nth-child(1) {
-        animation: bounce 1.5s infinite ease-in-out;
-      }
-
-      .typing-indicator span:nth-child(2) {
-        animation: bounce 1.5s infinite ease-in-out 0.2s;
-      }
-
-      .typing-indicator span:nth-child(3) {
-        animation: bounce 1.5s infinite ease-in-out 0.4s;
-      }
-
-      @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-8px); }
-      }
     `;
     document.head.appendChild(styleElement);
   }, []);
@@ -3776,22 +3727,22 @@ const SidePanel: React.FC = () => {
   const handleSendMessage = async() => {
     if (!messageText.trim()) return;
     
-    // Create a new user message
+    // Create new user message
     const newUserMessage: Message = {
-      id: `user-${Date.now()}`,
+      id: Date.now().toString(),
       role: "user",
       content: messageText,
       timestamp: new Date(),
     };
     
-    // Add the user message to the messages array
+    // Add user message to chat
     setMessages(prevMessages => [...prevMessages, newUserMessage]);
     
-    // Clear the input field
+    // Clear input field
     setMessageText("");
     
-    // Show typing indicator
-    setIsTyping(true);
+    // Show loading state
+    setIsMessagesLoading(true);
     
     try {
       const response = await sendChat(messageText);
@@ -3800,6 +3751,7 @@ const SidePanel: React.FC = () => {
         role: "assistant",
         content: `${response}`,
         timestamp: new Date(),
+        isError: false,
       };
       
       // Add the assistant's response and hide typing indicator
@@ -4748,20 +4700,15 @@ function calculate() {
                 </h3>
               </motion.div>
 
-              <div className="chat-messages">
+              <div className="chat-messages" ref={chatMessagesRef}>
                 <AnimatePresence>
                   {messages.map((message) => (
                     <motion.div
                       key={message.id}
                       className={`message ${message.role}`}
-                      initial={{ opacity: 0, x: message.role === "user" ? 20 : -20, scale: message.role === "assistant" ? 0.9 : 1 }}
-                      animate={{ opacity: 1, x: 0, scale: 1 }}
-                      transition={{ 
-                        duration: 0.4, 
-                        type: "spring",
-                        stiffness: message.role === "assistant" ? 300 : 200,
-                        damping: message.role === "assistant" ? 20 : 15
-                      }}
+                      initial={{ opacity: 0, x: message.role === "assistant" ? -20 : 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4 }}
                       layout
                     >
                       {message.role === "assistant" && (
@@ -4783,17 +4730,60 @@ function calculate() {
                         className="message-content"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
+                        transition={{ duration: 0.3, delay: 0.2 }}
                       >
                         <div className="message-text">
-                          <p>{message.content}</p>
+                          <p dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, "<br>").replace(/```([\s\S]*?)```/g, (match, code) => {
+                            return `<div class="message-code-block">
+                              <div class="message-code-header">
+                                <div class="message-code-language">
+                                  <i class="fas fa-code"></i>
+                                  <span></span>
+                                </div>
+                                <div class="message-code-actions">
+                                  <button class="message-code-action">
+                                    <i class="fas fa-copy"></i>
+                                    <span>Copy</span>
+                                  </button>
+                                </div>
+                              </div>
+                              <div class="message-code-content">
+                                <pre>${code}</pre>
+                              </div>
+                            </div>`;
+                          }) }} />
                         </div>
                         <div className="message-time">
-                          {message.timestamp.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
+                        {message.role === "assistant" && message.id === messages[messages.length - 1].id && (
+                          <motion.div
+                            className="suggestion-chips"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: 0.5 }}
+                          >
+                            {suggestedPrompts.map((prompt, index) => (
+                              <motion.button
+                                key={index}
+                                className="suggestion-chip"
+                                whileHover={{
+                                  scale: 1.05,
+                                  backgroundColor: "rgba(139, 92, 246, 0.2)",
+                                }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  setMessageText(prompt);
+                                  if (chatInputRef.current) {
+                                    chatInputRef.current.focus();
+                                  }
+                                }}
+                              >
+                                {prompt}
+                              </motion.button>
+                            ))}
+                          </motion.div>
+                        )}
                       </motion.div>
                       {message.role === "user" && (
                         <motion.div
@@ -4812,30 +4802,43 @@ function calculate() {
                       )}
                     </motion.div>
                   ))}
-
-                  {isTyping && (
+                  {isMessagesLoading && (
                     <motion.div
-                      className="message assistant typing"
+                      className="message assistant"
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
                       transition={{ duration: 0.3 }}
-                      key="typing-indicator"
+                      layout
                     >
-                      <motion.div className="message-avatar">
+                      <motion.div
+                        className="message-avatar"
+                        whileHover={{ scale: 1.1 }}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 15,
+                        }}
+                      >
                         <img src="images/icon.png" alt="Cobra Assistant" />
                       </motion.div>
-                      <motion.div className="message-content">
-                        <div className="typing-indicator">
-                          <span></span>
-                          <span></span>
-                          <span></span>
+                      <motion.div
+                        className="message-content"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="message-text">
+                          <div className="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                          </div>
                         </div>
                       </motion.div>
                     </motion.div>
                   )}
-                  
-                  <div ref={messagesEndRef} />
                 </AnimatePresence>
               </div>
 
@@ -4843,7 +4846,7 @@ function calculate() {
                 className="chat-input-container"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.5, delay: 1.5 }}
               >
                 <div className="chat-input-wrapper">
                   <input
@@ -4892,10 +4895,14 @@ function calculate() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1, rotate: [0, 360] }}
                   transition={{
-                    scale: { duration: 0.3 },
-                    rotate: { duration: 0.5 },
+                    scale: { duration: 0.3, delay: 1.6 },
+                    rotate: { duration: 0.5, delay: 1.6 },
                   }}
-                  onClick={handleSendMessage}
+                  onClick={() => {
+                    if (messageText.trim()) {
+                      handleSendMessage();
+                    }
+                  }}
                 >
                   <i className="fas fa-paper-plane"></i>
                 </motion.button>

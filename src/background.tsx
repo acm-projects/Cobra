@@ -236,6 +236,71 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
 
 chrome.runtime.onMessage.addListener(messageHandler);
 
+// Background script
+console.log("COBRA Background Script Running");
+
+// Store the latest code selection
+let latestCodeSelection = {
+  text: "",
+  url: "",
+  timestamp: 0
+};
+
+// Listen for messages from content scripts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("Background script received message:", message);
+
+  if (message.action === "leetCodeSelection") {
+    // Store the selection
+    latestCodeSelection = {
+      text: message.text,
+      url: message.url,
+      timestamp: Date.now()
+    };
+
+    // Try to send it to the side panel if it exists
+    try {
+      chrome.runtime.sendMessage({
+        action: "updateSidePanel",
+        selection: latestCodeSelection
+      });
+    } catch (error) {
+      console.log("Error sending to side panel:", error);
+    }
+
+    // Also try to open the side panel if not already open
+    try {
+      if (sender.tab && sender.tab.id) {
+        chrome.sidePanel.setOptions({ path: "sidepanel.html" });
+        
+        // Get the current window to open the side panel in
+        chrome.windows.getCurrent().then(currentWindow => {
+          if (currentWindow.id) {
+            chrome.sidePanel.open({ windowId: currentWindow.id });
+            
+            // Tell content script that the side panel is open
+            chrome.tabs.sendMessage(sender.tab!.id!, {
+              action: "openSidePanel"
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.log("Error opening side panel:", error);
+    }
+  }
+
+  return true;
+});
+
+// Listen for side panel requests for the latest selection
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "getLatestSelection") {
+    sendResponse(latestCodeSelection);
+  }
+  return true;
+});
+
 // Export an empty React component to satisfy tsx requirements
 const BackgroundComponent: React.FC = () => {
   // This component doesn't render anything

@@ -89,7 +89,7 @@ export const getHints = async(slug) => {
     });
      const responseObject = await response.json();
      const hints =  JSON.parse(responseObject.body).reply;
-     console.log(hints);
+     //console.log(hints);
      return hints;
   } catch (error) {
     console.error("Error fetching hints:", error);
@@ -107,13 +107,21 @@ export const getCodeSnipets = async(slug) => {
       body: JSON.stringify({ "leetcodeSlug": slug })
     });
      const responseObject = await response.json();
-     console.log(responseObject);
+     //console.log(responseObject);
      const replyJSON =  JSON.parse(responseObject.body).reply;
-     console.log(replyJSON);
+     //console.log(replyJSON);
      const result = JSON.parse(replyJSON).hints;
      return result;
   } catch (error) {
     console.error("Error fetching code snippets:", error);
+  }
+}
+
+export const errorAnalysis = async(code) => {
+  try{
+
+  } catch (e) {
+
   }
 }
 

@@ -8,6 +8,7 @@ import CurrentProblem from "./components/Dashboard/CurrentProblem";
 import { getHints, sendChat } from "./awsFunctions";
 import HintCard  from "./components/HintCard";
 import { ProblemInfo, Message } from "./types";
+import ResourceCard from "./components/ResourceCard";
 
 // Type definitions
 interface NavigateMessage {
@@ -100,6 +101,7 @@ const SidePanel: React.FC = () => {
   const [currentHint, setCurrentHint] = useState<string>("");
   const [currentCodeSnipets, setCurrentCodeSnipets] = useState<JSX.Element[]>([]);
   const [currentProblemTitle, setCurrentProblemTitle] = useState<string>("");
+  const [currentDiscussions, setCurrentDiscussions] = useState<JSX.Element[]>([]);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -3614,6 +3616,22 @@ const SidePanel: React.FC = () => {
           setCurrentCodeSnipets([]);
         }
         console.log(message.hint);
+      } else if (message.type === "displayDiscussions"){
+        console.log("message.data: ", message.data);
+        const selectedQuestions: any[] = message.data;
+        const discussionCards: any[] = selectedQuestions.map( (item, index, array) => {
+          return (
+              <ResourceCard
+                  key={index}
+                  title={item.title}
+                  link={item.link}
+                  description={"Resource tags: \n" + item.tags.join("  ") || "No description available."}
+                  difficulty="Easy"
+                  type="Article"
+              />
+          );
+      })
+        setCurrentDiscussions(discussionCards);
       }
     });
 
@@ -4370,6 +4388,7 @@ const SidePanel: React.FC = () => {
                   <i className="fas fa-book"></i> Recommended Resources
                 </motion.h3>
                 <div className="resource-grid">
+                  {currentDiscussions}
                   <motion.div
                     className="resource-card"
                     initial={{ opacity: 0, y: 20 }}

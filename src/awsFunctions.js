@@ -59,13 +59,15 @@ export const verifyEmail = async(username, confirmationCode) => {
 
 export const sendChat = async(message) => {
   try{
+    const code = await chrome.runtime.sendMessage({type: "getDraft"});
+    console.log("code: " + code);
     console.log("sending chat: " + message);
     const response = await fetch(`https://i27yrfhe70.execute-api.us-east-1.amazonaws.com/dev/chatbot`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message: message })
+      body: JSON.stringify({ message: message, code: code }),
     });
      const responseObject = await response.json();
      console.log(responseObject);
@@ -89,7 +91,7 @@ export const getHints = async(slug) => {
     });
      const responseObject = await response.json();
      const hints =  JSON.parse(responseObject.body).reply;
-     console.log(hints);
+     //console.log(hints);
      return hints;
   } catch (error) {
     console.error("Error fetching hints:", error);
@@ -107,13 +109,21 @@ export const getCodeSnipets = async(slug) => {
       body: JSON.stringify({ "leetcodeSlug": slug })
     });
      const responseObject = await response.json();
-     console.log(responseObject);
+     //console.log(responseObject);
      const replyJSON =  JSON.parse(responseObject.body).reply;
-     console.log(replyJSON);
+     //console.log(replyJSON);
      const result = JSON.parse(replyJSON).hints;
      return result;
   } catch (error) {
     console.error("Error fetching code snippets:", error);
+  }
+}
+
+export const errorAnalysis = async(code) => {
+  try{
+
+  } catch (e) {
+
   }
 }
 

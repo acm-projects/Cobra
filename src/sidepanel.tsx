@@ -9,6 +9,7 @@ import CurrentProblem from "./components/Dashboard/CurrentProblem";
 import { getHints, sendChat } from "./awsFunctions";
 import HintCard from "./components/HintCard";
 import { ProblemInfo, Message } from "./types";
+import ResourceCard from "./components/ResourceCard";
 
 // Type definitions
 interface NavigateMessage {
@@ -58,7 +59,8 @@ const SidePanel: React.FC = () => {
 
   // Chat state
   const [messageText, setMessageText] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>([]);
+    /*[
     {
       id: "1",
       role: "assistant",
@@ -108,13 +110,14 @@ function binarySearch(arr, target) {
 Would you like me to explain the time complexity of this algorithm?`,
       timestamp: new Date(new Date().setHours(10, 33)),
     },
-  ]);
+  ]);*/
   const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
-  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
+    /*[
     "Explain time complexity of binary search",
     "Show me a recursive binary search example",
     "What's the difference between merge sort and quick sort?",
-  ]);
+  ]);*/
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -151,6 +154,7 @@ Would you like me to explain the time complexity of this algorithm?`,
   const [currentHint, setCurrentHint] = useState<string>("");
   const [currentCodeSnipets, setCurrentCodeSnipets] = useState<JSX.Element[]>([]);
   const [currentProblemTitle, setCurrentProblemTitle] = useState<string>("");
+  const [currentDiscussions, setCurrentDiscussions] = useState<JSX.Element[]>([]);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -3559,12 +3563,29 @@ Would you like me to explain the time complexity of this algorithm?`,
           setCurrentHint(message.hint);
           console.log(message.codeSnipets);
           separateCodeSnipets(message.codeSnipets);
+          setCurrentProblemTitle(message.data);
         } catch (e) {
           console.error("Error fetching problem hints: " + e);
-          setCurrentProblem(undefined);
+          setCurrentHint("");
           setCurrentCodeSnipets([]);
         }
         console.log(message.hint);
+      } else if (message.type === "displayDiscussions"){
+        console.log("message.data: ", message.data);
+        const selectedQuestions: any[] = message.data;
+        const discussionCards: any[] = selectedQuestions.map( (item, index, array) => {
+          return (
+              <ResourceCard
+                  key={index}
+                  title={item.title}
+                  link={item.link}
+                  description={"Resource tags: \n" + item.tags.join("  ") || "No description available."}
+                  difficulty="Easy"
+                  type="Article"
+              />
+          );
+      })
+        setCurrentDiscussions(discussionCards);
       }
     });
 
@@ -3975,7 +3996,6 @@ Would you like me to explain the time complexity of this algorithm?`,
                 onViewResources= {() => console.log("clicked view resources")}
                 onRefresh= {() => console.log("clicked refresh")}
                 onOpenExternal= {() => console.log("clicked open external")}
-                onSetProblem={setCurrentProblem}
               ></CurrentProblem>
 
               {/* Quick Actions - Removed section title */}
@@ -4322,6 +4342,7 @@ Would you like me to explain the time complexity of this algorithm?`,
                   <i className="fas fa-book"></i> Recommended Resources
                 </motion.h3>
                 <div className="resource-grid">
+                  {currentDiscussions}
                   <motion.div
                     className="resource-card"
                     initial={{ opacity: 0, y: 20 }}

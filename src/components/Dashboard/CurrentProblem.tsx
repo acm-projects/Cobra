@@ -4,15 +4,17 @@ import { ProblemInfo } from '../../types';
 
 interface CurrentProblemProps {
   problem?: ProblemInfo;
+  title?: string;
   onGetHints: () => void;
   onViewResources: () => void;
   onRefresh: () => void;
   onOpenExternal: () => void;
-  onSetProblem: Dispatch<SetStateAction<ProblemInfo | undefined>>;
+  onSetProblem?: Dispatch<SetStateAction<ProblemInfo | undefined>>;
 }
 
 const CurrentProblem: React.FC<CurrentProblemProps> = ({
   problem,
+  title,
   onGetHints,
   onViewResources,
   onRefresh,
@@ -20,7 +22,7 @@ const CurrentProblem: React.FC<CurrentProblemProps> = ({
   onSetProblem
 }) => {
   // If no problem is detected
-  if (!problem) {
+  if ( !problem) {
     return (
       <motion.div 
         className="dashboard-card"
@@ -82,7 +84,7 @@ const CurrentProblem: React.FC<CurrentProblemProps> = ({
       <div className="card-header">
         <div className="card-header-left">
           <i className="fas fa-code"></i>
-          <h3>{problem.title}</h3>
+          <h3>{title}</h3>
         </div>
         <div className="card-header-right">
           <div className="card-actions">

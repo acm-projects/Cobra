@@ -13,7 +13,11 @@ module.exports = {
     sidepanel: './src/sidepanel.tsx',
     verify: './src/verify.tsx',
     leetcodeUserVerification: './src/leetcodeUserVerification.js',
-    contentGrabCodeDraft: './src/contentGrabCodeDraft.js'
+    contentGrabCodeDraft: './src/contentGrabCodeDraft.js',
+    leetCodeSelectionWidget: './src/leetCodeSelectionWidget.tsx',
+    injectScript: './src/injectScript.js',
+    leetCodeEditorButton: './src/leetCodeEditorButton.js',
+    injectMonacoAccess: './src/injectMonacoAccess.js'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -75,7 +79,8 @@ module.exports = {
         { from: 'images', to: 'images' },
         { from: 'sounds', to: 'sounds' },
         { from: 'styles.css', to: 'styles.css' },
-        { from: 'manifest.json', to: 'manifest.json' }
+        { from: 'manifest.json', to: 'manifest.json' },
+        { from: 'LEETCODE_HELPER_README.md', to: 'README.md' }
       ],
     }),
   ],

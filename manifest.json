@@ -51,8 +51,14 @@
     },
     {
       "matches": ["https://leetcode.com/problems/*"],
-      "js": ["contentGrabCodeDraft.js", "content.js"],
+      "js": ["contentGrabCodeDraft.js", "leetCodeSelectionWidget.js", "injectScript.js", "leetCodeEditorButton.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injectMonacoAccess.js"],
+      "matches": ["https://leetcode.com/*"]
     }
   ]
 }

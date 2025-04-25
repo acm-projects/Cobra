@@ -26,6 +26,9 @@ const defaultSuggestions = [
   "Consider adding a condition to handle edge cases",
 ];
 
+// Different suggestion types for styling purposes
+type SuggestionType = 'warning' | 'improvement' | 'error' | 'info';
+
 const CodeSuggestionWidget: React.FC<CodeSuggestionProps> = ({
   selectedText,
   onDismiss,
@@ -35,6 +38,7 @@ const CodeSuggestionWidget: React.FC<CodeSuggestionProps> = ({
 }) => {
   const widgetRef = useRef<HTMLDivElement>(null);
   const [displayedSuggestion, setDisplayedSuggestion] = useState<string>("");
+  const [suggestionType, setSuggestionType] = useState<SuggestionType>('improvement');
 
   // Get a suggestion based on the selected text
   useEffect(() => {
@@ -42,10 +46,41 @@ const CodeSuggestionWidget: React.FC<CodeSuggestionProps> = ({
       if (suggestion) {
         // Use provided suggestion if available
         setDisplayedSuggestion(suggestion);
+        
+        // Determine suggestion type based on content
+        if (suggestion.toLowerCase().includes('error') || 
+            suggestion.toLowerCase().includes('exception')) {
+          setSuggestionType('error');
+        } else if (suggestion.toLowerCase().includes('warning') || 
+                  suggestion.toLowerCase().includes('check')) {
+          setSuggestionType('warning');
+        } else if (suggestion.toLowerCase().includes('consider') || 
+                  suggestion.toLowerCase().includes('improvement') ||
+                  suggestion.toLowerCase().includes('optimize')) {
+          setSuggestionType('improvement');
+        } else {
+          setSuggestionType('info');
+        }
       } else {
         // Fallback to random suggestion
         const randomIndex = Math.floor(Math.random() * defaultSuggestions.length);
-        setDisplayedSuggestion(defaultSuggestions[randomIndex]);
+        const randomSuggestion = defaultSuggestions[randomIndex];
+        setDisplayedSuggestion(randomSuggestion);
+        
+        // Determine suggestion type for random suggestions
+        if (randomSuggestion.toLowerCase().includes('error') || 
+            randomSuggestion.toLowerCase().includes('exception')) {
+          setSuggestionType('error');
+        } else if (randomSuggestion.toLowerCase().includes('warning') || 
+                  randomSuggestion.toLowerCase().includes('check')) {
+          setSuggestionType('warning');
+        } else if (randomSuggestion.toLowerCase().includes('consider') || 
+                  randomSuggestion.toLowerCase().includes('improvement') ||
+                  randomSuggestion.toLowerCase().includes('optimize')) {
+          setSuggestionType('improvement');
+        } else {
+          setSuggestionType('info');
+        }
       }
     }
   }, [selectedText, isVisible, suggestion]);
@@ -78,35 +113,56 @@ const CodeSuggestionWidget: React.FC<CodeSuggestionProps> = ({
 
   if (!isVisible || !selectedText) return null;
 
+  // Helper function to get icon based on suggestion type
+  const getIconForType = (type: SuggestionType) => {
+    switch (type) {
+      case 'error':
+        return '⚠️';
+      case 'warning':
+        return '⚠️';
+      case 'improvement':
+        return '💡';
+      case 'info':
+        return 'ℹ️';
+      default:
+        return '💡';
+    }
+  };
+
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
           ref={widgetRef}
-          className="code-suggestion-widget"
+          className={`code-suggestion-widget type-${suggestionType}`}
           style={{
             top: position.top,
             left: position.left,
           }}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.2 }}
+          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+          transition={{ 
+            type: "spring", 
+            stiffness: 500, 
+            damping: 30,
+            duration: 0.2 
+          }}
         >
           <div className="widget-content">
-            <div className="widget-icon">
-              <i className="fas fa-lightbulb"></i>
+            <div className={`widget-icon type-${suggestionType}`}>
+              {getIconForType(suggestionType)}
             </div>
             <div className="widget-suggestion">
               {displayedSuggestion}
             </div>
           </div>
           <div className="widget-actions">
-            <button className="action-button apply">
-              Apply suggestion
+            <button className={`action-button apply type-${suggestionType}`}>
+              Fix this issue
             </button>
             <button className="action-button dismiss" onClick={onDismiss}>
-              Dismiss
+              Ignore
             </button>
           </div>
         </motion.div>

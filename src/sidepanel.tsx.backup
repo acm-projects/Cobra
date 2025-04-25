@@ -9,8 +9,6 @@ import CurrentProblem from "./components/Dashboard/CurrentProblem";
 import { getHints, sendChat } from "./awsFunctions";
 import HintCard from "./components/HintCard";
 import { ProblemInfo, Message } from "./types";
-import ResourceCard from "./components/ResourceCard";
-import Settings from "./components/Settings";
 
 // Type definitions
 interface NavigateMessage {
@@ -60,8 +58,7 @@ const SidePanel: React.FC = () => {
 
   // Chat state
   const [messageText, setMessageText] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([]);
-    /*[
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       role: "assistant",
@@ -111,14 +108,13 @@ function binarySearch(arr, target) {
 Would you like me to explain the time complexity of this algorithm?`,
       timestamp: new Date(new Date().setHours(10, 33)),
     },
-  ]);*/
+  ]);
   const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
-  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
-    /*[
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
     "Explain time complexity of binary search",
     "Show me a recursive binary search example",
     "What's the difference between merge sort and quick sort?",
-  ]);*/
+  ]);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -155,7 +151,6 @@ Would you like me to explain the time complexity of this algorithm?`,
   const [currentHint, setCurrentHint] = useState<string>("");
   const [currentCodeSnipets, setCurrentCodeSnipets] = useState<JSX.Element[]>([]);
   const [currentProblemTitle, setCurrentProblemTitle] = useState<string>("");
-  const [currentDiscussions, setCurrentDiscussions] = useState<JSX.Element[]>([]);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -3564,29 +3559,12 @@ Would you like me to explain the time complexity of this algorithm?`,
           setCurrentHint(message.hint);
           console.log(message.codeSnipets);
           separateCodeSnipets(message.codeSnipets);
-          setCurrentProblemTitle(message.data);
         } catch (e) {
           console.error("Error fetching problem hints: " + e);
-          setCurrentHint("");
+          setCurrentProblem(undefined);
           setCurrentCodeSnipets([]);
         }
         console.log(message.hint);
-      } else if (message.type === "displayDiscussions"){
-        console.log("message.data: ", message.data);
-        const selectedQuestions: any[] = message.data;
-        const discussionCards: any[] = selectedQuestions.map( (item, index, array) => {
-          return (
-              <ResourceCard
-                  key={index}
-                  title={item.title}
-                  link={item.link}
-                  description={"Resource tags: \n" + item.tags.join("  ") || "No description available."}
-                  difficulty="Easy"
-                  type="Article"
-              />
-          );
-      })
-        setCurrentDiscussions(discussionCards);
       }
     });
 
@@ -3758,14 +3736,12 @@ Would you like me to explain the time complexity of this algorithm?`,
         isError: false,
       };
       
-      // Add the assistant's response and hide loading indicators
+      // Add the assistant's response and hide typing indicator
       setMessages(prevMessages => [...prevMessages, assistantResponse]);
       setIsTyping(false);
-      setIsMessagesLoading(false); // Turn off loading animation
     } catch (error) {
       console.error("Error sending message:", error);
       setIsTyping(false);
-      setIsMessagesLoading(false); // Make sure to turn off loading animation even on error
     }
   };
 
@@ -3999,6 +3975,7 @@ Would you like me to explain the time complexity of this algorithm?`,
                 onViewResources= {() => console.log("clicked view resources")}
                 onRefresh= {() => console.log("clicked refresh")}
                 onOpenExternal= {() => console.log("clicked open external")}
+                onSetProblem={setCurrentProblem}
               ></CurrentProblem>
 
               {/* Quick Actions - Removed section title */}
@@ -4345,7 +4322,6 @@ Would you like me to explain the time complexity of this algorithm?`,
                   <i className="fas fa-book"></i> Recommended Resources
                 </motion.h3>
                 <div className="resource-grid">
-                  {currentDiscussions}
                   <motion.div
                     className="resource-card"
                     initial={{ opacity: 0, y: 20 }}
@@ -4651,6 +4627,137 @@ function calculate() {
     return data.items.length;
   }
   return 0; // Default return value
+```
+</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Section */}
+          <div
+            className={`section ${activeSection === "chat" ? "active" : ""}`}
+            id="chat"
+          >
+            <div className="chat-container">
+              <div className="chat-header">
+                <div className="chat-header-left">
+                  <i className="fas fa-comments"></i>
+                  <h3>AI Chat</h3>
+                </div>
+                <div className="chat-header-right">
+                  <div className="chat-actions">
+                    <button className="chat-action-button">
+                      <i className="fas fa-cog"></i>
+                    </button>
+                    <button className="chat-action-button">
+                      <i className="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="chat-messages">
+                <div className="chat-message">
+                  <div className="chat-message-avatar">
+                    <i className="fas fa-user"></i>
+                  </div>
+                  <div className="chat-message-content">
+                    <div className="chat-message-author">You</div>
+                    <div className="chat-message-text">
+                      <p>Hello, how can I help you today?</p>
+                    </div>
+                    <div className="chat-message-timestamp">10:30 AM</div>
+                  </div>
+                </div>
+
+                <div className="chat-message">
+                  <div className="chat-message-avatar">
+                    <i className="fas fa-robot"></i>
+                  </div>
+                  <div className="chat-message-content">
+                    <div className="chat-message-author">AI Assistant</div>
+                    <div className="chat-message-text">
+                      <p>
+                        <span className="highlight">
+                          <i className="fas fa-lightbulb"></i> Insight:
+                        </span>{" "}
+                        <span className="highlight-text">
+                          Remember to always check for edge cases in your code.
+                        </span>
+                      </p>
+                    </div>
+                    <div className="chat-message-timestamp">10:31 AM</div>
+                  </div>
+                </div>
+
+                <div className="chat-message">
+                  <div className="chat-message-avatar">
+                    <i className="fas fa-user"></i>
+                  </div>
+                  <div className="chat-message-content">
+                    <div className="chat-message-author">You</div>
+                    <div className="chat-message-text">
+                      <p>
+                        <span className="highlight">
+                          <i className="fas fa-question-circle"></i> Question:
+                        </span>{" "}
+                        <span className="highlight-text">
+                          Can you explain the concept of dynamic programming?
+                        </span>
+                      </p>
+                    </div>
+                    <div className="chat-message-timestamp">10:32 AM</div>
+                  </div>
+                </div>
+
+                <div className="chat-message">
+                  <div className="chat-message-avatar">
+                    <i className="fas fa-robot"></i>
+                  </div>
+                  <div className="chat-message-content">
+                    <div className="chat-message-author">AI Assistant</div>
+                    <div className="chat-message-text">
+                      <p>
+                        <span className="highlight">
+                          <i className="fas fa-book"></i> Resource:
+                        </span>{" "}
+                        <span className="highlight-text">
+                          <a
+                            href="https://www.geeksforgeeks.org/dynamic-programming/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Dynamic Programming - GeeksforGeeks
+                          </a>
+                        </span>
+                      </p>
+                    </div>
+                    <div className="chat-message-timestamp">10:33 AM</div>
+                  </div>
+                </div>
+              </div>
+              <div className="chat-input">
+                <input
+                  type="text"
+                  placeholder="Type your message..."
+                  className="chat-input-field"
+                />
+                <button className="chat-send-button">
+                  <i className="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SidePanel;
 }`}
                           </code>
                         </pre>
@@ -5222,34 +5329,1190 @@ function calculate() {
           </div>
 
           {/* Settings Section */}
-          {activeSection === "settings" && (
-            <Settings
-              theme={theme}
-              fontSize={fontSize}
-              defaultView={defaultView}
-              animationsEnabled={animationsEnabled}
-              notificationsEnabled={notificationsEnabled}
-              dataCollection={dataCollection}
-              timerSound={timerSound}
-              timerVolume={timerVolume}
-              onThemeToggle={handleThemeToggle}
-              onFontSizeChange={handleFontSizeChange}
-              onDefaultViewChange={handleDefaultViewChange}
-              onAnimationsToggle={handleAnimationsToggle}
-              onNotificationsToggle={handleNotificationsToggle}
-              onDataCollectionToggle={handleDataCollectionToggle}
-              onTimerSoundChange={handleTimerSoundChange}
-              onTimerVolumeChange={handleTimerVolumeChange}
-              onRequestNotifications={requestNotificationPermission}
-            />
-          )}
+          <div
+            className={`section ${
+              activeSection === "settings" ? "active" : ""
+            }`}
+            id="settings"
+```
+</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          {/* Removed CodeAnalysis section */}
-          
-          {/* Toolbar */}
-        </div>
-      </div>
-    </div>
+          {/* Chat Section */}
+          <div
+            className={`section ${activeSection === "chat" ? "active" : ""}`}
+            id="chat"
+          >
+            <div className="chat-container">
+              <motion.div
+                className="chat-header"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                <h3>
+                  <motion.i
+                    className="fas fa-comments"
+                    animate={{
+                      rotate: [0, -10, 10, -5, 5, 0],
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      repeatDelay: 5,
+                    }}
+                  ></motion.i>
+                  Cobra AI
+                  <motion.span
+                    className="status-badge online"
+                    animate={{
+                      opacity: [1, 0.7, 1],
+                      scale: [1, 0.95, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    Online
+                  </motion.span>
+                </h3>
+              </motion.div>
+
+              <div className="chat-messages" ref={chatMessagesRef}>
+                <AnimatePresence>
+                  {messages.map((message) => (
+                    <motion.div
+                      key={message.id}
+                      className={`message ${message.role}`}
+                      initial={{ opacity: 0, x: message.role === "assistant" ? -20 : 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4 }}
+                      layout
+                    >
+                      {message.role === "assistant" && (
+                        <motion.div
+                          className="message-avatar"
+                          whileHover={{ scale: 1.1 }}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 15,
+                          }}
+                        >
+                          <img src="images/icon.png" alt="Cobra Assistant" />
+                        </motion.div>
+                      )}
+                      <motion.div
+                        className="message-content"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.2 }}
+                      >
+                        <div className="message-text">
+                          <p dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, "<br>").replace(/```([\s\S]*?)```/g, (match, code) => {
+                            return `<div class="message-code-block">
+                              <div class="message-code-header">
+                                <div class="message-code-language">
+                                  <i class="fas fa-code"></i>
+                                  <span></span>
+                                </div>
+                                <div class="message-code-actions">
+                                  <button class="message-code-action">
+                                    <i class="fas fa-copy"></i>
+                                    <span>Copy</span>
+                                  </button>
+                                </div>
+                              </div>
+                              <div class="message-code-content">
+                                <pre>${code}</pre>
+                              </div>
+                            </div>`;
+                          }) }} />
+                        </div>
+                        <div className="message-time">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        {message.role === "assistant" && message.id === messages[messages.length - 1].id && (
+                          <motion.div
+                            className="suggestion-chips"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: 0.5 }}
+                          >
+                            {suggestedPrompts.map((prompt, index) => (
+                              <motion.button
+                                key={index}
+                                className="suggestion-chip"
+                                whileHover={{
+                                  scale: 1.05,
+                                  backgroundColor: "rgba(139, 92, 246, 0.2)",
+                                }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  setMessageText(prompt);
+                                  if (chatInputRef.current) {
+                                    chatInputRef.current.focus();
+                                  }
+                                }}
+                              >
+                                {prompt}
+                              </motion.button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </motion.div>
+                      {message.role === "user" && (
+                        <motion.div
+                          className="message-avatar"
+                          whileHover={{ scale: 1.1 }}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 15,
+                          }}
+                        >
+                          <img src="images/cobrapfp.png" alt="User" />
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  ))}
+                  {isMessagesLoading && (
+                    <motion.div
+                      className="message assistant"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                      layout
+                    >
+                      <motion.div
+                        className="message-avatar"
+                        whileHover={{ scale: 1.1 }}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 15,
+                        }}
+                      >
+                        <img src="images/icon.png" alt="Cobra Assistant" />
+                      </motion.div>
+                      <motion.div
+                        className="message-content"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="message-text">
+                          <div className="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <motion.div
+                className="chat-input-container"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 1.5 }}
+              >
+                <div className="chat-input-wrapper">
+                  <input
+                    type="text"
+                    className="chat-input"
+                    placeholder="Type your message here..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    ref={chatInputRef}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && messageText.trim()) {
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  <div className="chat-input-buttons">
+                    <motion.button
+                      className="chat-input-button"
+                      whileHover={{
+                        scale: 1.1,
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <i className="fas fa-microphone"></i>
+                    </motion.button>
+                    <motion.button
+                      className="chat-input-button"
+                      whileHover={{
+                        scale: 1.1,
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <i className="fas fa-code"></i>
+                    </motion.button>
+                  </div>
+                </div>
+                <motion.button
+                  className="chat-send-button"
+                  whileHover={{
+                    scale: 1.1,
+                    boxShadow: "0 5px 15px rgba(139, 92, 246, 0.4)",
+                  }}
+                  whileTap={{ scale: 0.9 }}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1, rotate: [0, 360] }}
+                  transition={{
+                    scale: { duration: 0.3, delay: 1.6 },
+                    rotate: { duration: 0.5, delay: 1.6 },
+                  }}
+                  onClick={() => {
+                    if (messageText.trim()) {
+                      handleSendMessage();
+                    }
+                  }}
+                >
+                  <i className="fas fa-paper-plane"></i>
+                </motion.button>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Stopwatch Section */}
+          <div
+            className={`section ${
+              activeSection === "stopwatch" ? "active" : ""
+            }`}
+            id="stopwatch"
+          >
+            <div className="stopwatch-container">
+              <motion.h2
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                Stopwatch
+              </motion.h2>
+
+              <motion.div
+                className="timer-container"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+              >
+                <div className="timer-type-selector">
+                  <motion.button
+                    className={`timer-type-btn ${
+                      timerType === "stopwatch" ? "active" : ""
+                    }`}
+                    onClick={() => handleTimerTypeChange("stopwatch")}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Stopwatch
+                  </motion.button>
+                  <motion.button
+                    className={`timer-type-btn ${
+                      timerType === "countdown" ? "active" : ""
+                    }`}
+                    onClick={() => handleTimerTypeChange("countdown")}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Countdown
+                  </motion.button>
+                </div>
+
+                <div className="animated-timer-display">
+                  <motion.div
+                    className="timer-circle-container"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <svg width="300" height="300" viewBox="0 0 300 300">
+                      {/* Background Circle */}
+                      <motion.circle
+                        cx="150"
+                        cy="150"
+                        r="120"
+                        fill="rgba(139, 92, 246, 0.05)"
+                        stroke="rgba(139, 92, 246, 0.2)"
+                        strokeWidth="8"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 2, ease: "easeInOut" }}
+                      />
+
+                      {/* Progress Circle */}
+                      <motion.circle
+                        cx="150"
+                        cy="150"
+                        r="120"
+                        fill="transparent"
+                        stroke="#8B5CF6"
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeDasharray="752.4"
+                        initial={{ strokeDashoffset: 752.4 }}
+                        animate={{
+                          strokeDashoffset: isTimerRunning
+                            ? [752.4, 0]
+                            : 752.4 *
+                              (1 -
+                                timerValue /
+                                  (timerType === "countdown"
+                                    ? (countdownMinutes * 60 +
+                                        countdownSeconds) *
+                                      1000
+                                    : 60000)),
+                        }}
+                        transition={{
+                          duration: isTimerRunning
+                            ? timerType === "countdown"
+                              ? countdownMinutes * 60 + countdownSeconds
+                              : 60
+                            : 0.5,
+                          ease: "linear",
+                          repeat:
+                            timerType === "stopwatch" && isTimerRunning
+                              ? Infinity
+                              : 0,
+                        }}
+                      />
+
+                      {/* Pulsing overlay */}
+                      <motion.circle
+                        cx="150"
+                        cy="150"
+                        r="110"
+                        fill="rgba(139, 92, 246, 0.1)"
+                        animate={{
+                          scale: isTimerRunning ? [0.95, 1.05, 0.95] : 1,
+                          opacity: isTimerRunning ? [0.3, 0.1, 0.3] : 0.2,
+                        }}
+                        transition={{
+                          duration: 3,
+                          repeat: Infinity,
+                          repeatType: "reverse",
+                          ease: "easeInOut",
+                        }}
+                      />
+
+                      {/* Display time in center */}
+                      <foreignObject x="50" y="110" width="200" height="80">
+                        <motion.div
+                          className="timer-text"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "48px",
+                            fontWeight: 700,
+                            color: "#fff",
+                            fontFamily: "monospace",
+                          }}
+                          animate={{
+                            scale: [1, 1.02, 1],
+                            opacity: [0.9, 1, 0.9],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            repeatType: "reverse",
+                            ease: "easeInOut",
+                          }}
+                        >
+                          {formatTime(timerValue).split(":").length > 2
+                            ? formatTime(timerValue)
+                                .split(":")
+                                .slice(1)
+                                .join(":")
+                            : formatTime(timerValue)}
+                        </motion.div>
+                      </foreignObject>
+                    </svg>
+                  </motion.div>
+                </div>
+
+                {timerType === "countdown" && (
+                  <motion.div
+                    className="countdown-controls"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <div className="countdown-input">
+                      <label>Minutes</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={countdownMinutes}
+                        onChange={(e) =>
+                          updateCountdownTime(
+                            parseInt(e.target.value) || 0,
+                            countdownSeconds
+                          )
+                        }
+                        disabled={isTimerRunning}
+                      />
+                    </div>
+                    <div className="countdown-input">
+                      <label>Seconds</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={countdownSeconds}
+                        onChange={(e) =>
+                          updateCountdownTime(
+                            countdownMinutes,
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        disabled={isTimerRunning}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+                <motion.div
+                  className="timer-controls"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  {!isTimerRunning ? (
+                    <motion.button
+                      className="timer-btn start"
+                      onClick={startTimer}
+                      whileHover={{ scale: 1.05, backgroundColor: "#15d893" }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
+                    >
+                      <i className="fas fa-play"></i> Start
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      className="timer-btn pause"
+                      onClick={pauseTimer}
+                      whileHover={{ scale: 1.05, backgroundColor: "#ffb84d" }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
+                    >
+                      <i className="fas fa-pause"></i> Pause
+                    </motion.button>
+                  )}
+                  <motion.button
+                    className="timer-btn reset"
+                    onClick={resetTimer}
+                    whileHover={{ scale: 1.05, backgroundColor: "#f43f5e" }}
+                    whileTap={{ scale: 0.95 }}
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                  >
+                    <i className="fas fa-redo"></i> Reset
+                  </motion.button>
+                  {timerType === "stopwatch" && (
+                    <motion.button
+                      className="timer-btn lap"
+                      onClick={addLap}
+                      disabled={!isTimerRunning}
+                      whileHover={{
+                        scale: isTimerRunning ? 1.05 : 1,
+                        backgroundColor: isTimerRunning ? "#8B5CF6" : "#4B5563",
+                      }}
+                      whileTap={{ scale: isTimerRunning ? 0.95 : 1 }}
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1, opacity: isTimerRunning ? 1 : 0.7 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
+                    >
+                      <i className="fas fa-flag"></i> Lap
+                    </motion.button>
+                  )}
+                </motion.div>
+
+                {timerType === "stopwatch" && laps.length > 0 && (
+                  <motion.div
+                    className="laps-container"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <h4>Laps</h4>
+                    <ul className="laps-list">
+                      <AnimatePresence>
+                        {laps.map((lap, index) => (
+                          <motion.li
+                            key={index}
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 20, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <span className="lap-number">
+                              Lap #{laps.length - index}
+                            </span>
+                            <span className="lap-time">{formatTime(lap)}</span>
+                          </motion.li>
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  </motion.div>
+                )}
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Settings Section */}
+          <div
+            className={`section ${
+              activeSection === "settings" ? "active" : ""
+            }`}
+            id="settings"
+```
+</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Section */}
+          <div
+            className={`section ${activeSection === "chat" ? "active" : ""}`}
+            id="chat"
+          >
+            <div className="chat-container">
+              <motion.div
+                className="chat-header"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                <h3>
+                  <motion.i
+                    className="fas fa-comments"
+                    animate={{
+                      rotate: [0, -10, 10, -5, 5, 0],
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      repeatDelay: 5,
+                    }}
+                  ></motion.i>
+                  Cobra AI
+                  <motion.span
+                    className="status-badge online"
+                    animate={{
+                      opacity: [1, 0.7, 1],
+                      scale: [1, 0.95, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    Online
+                  </motion.span>
+                </h3>
+              </motion.div>
+
+              <div className="chat-messages" ref={chatMessagesRef}>
+                <AnimatePresence>
+                  {messages.map((message) => (
+                    <motion.div
+                      key={message.id}
+                      className={`message ${message.role}`}
+                      initial={{ opacity: 0, x: message.role === "assistant" ? -20 : 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4 }}
+                      layout
+                    >
+                      {message.role === "assistant" && (
+                        <motion.div
+                          className="message-avatar"
+                          whileHover={{ scale: 1.1 }}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 15,
+                          }}
+                        >
+                          <img src="images/icon.png" alt="Cobra Assistant" />
+                        </motion.div>
+                      )}
+                      <motion.div
+                        className="message-content"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.2 }}
+                      >
+                        <div className="message-text">
+                          <p dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, "<br>").replace(/```([\s\S]*?)```/g, (match, code) => {
+                            return `<div class="message-code-block">
+                              <div class="message-code-header">
+                                <div class="message-code-language">
+                                  <i class="fas fa-code"></i>
+                                  <span></span>
+                                </div>
+                                <div class="message-code-actions">
+                                  <button class="message-code-action">
+                                    <i class="fas fa-copy"></i>
+                                    <span>Copy</span>
+                                  </button>
+                                </div>
+                              </div>
+                              <div class="message-code-content">
+                                <pre>${code}</pre>
+                              </div>
+                            </div>`;
+                          }) }} />
+                        </div>
+                        <div className="message-time">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        {message.role === "assistant" && message.id === messages[messages.length - 1].id && (
+                          <motion.div
+                            className="suggestion-chips"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: 0.5 }}
+                          >
+                            {suggestedPrompts.map((prompt, index) => (
+                              <motion.button
+                                key={index}
+                                className="suggestion-chip"
+                                whileHover={{
+                                  scale: 1.05,
+                                  backgroundColor: "rgba(139, 92, 246, 0.2)",
+                                }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  setMessageText(prompt);
+                                  if (chatInputRef.current) {
+                                    chatInputRef.current.focus();
+                                  }
+                                }}
+                              >
+                                {prompt}
+                              </motion.button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </motion.div>
+                      {message.role === "user" && (
+                        <motion.div
+                          className="message-avatar"
+                          whileHover={{ scale: 1.1 }}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 15,
+                          }}
+                        >
+                          <img src="images/cobrapfp.png" alt="User" />
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  ))}
+                  {isMessagesLoading && (
+                    <motion.div
+                      className="message assistant"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                      layout
+                    >
+                      <motion.div
+                        className="message-avatar"
+                        whileHover={{ scale: 1.1 }}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 15,
+                        }}
+                      >
+                        <img src="images/icon.png" alt="Cobra Assistant" />
+                      </motion.div>
+                      <motion.div
+                        className="message-content"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="message-text">
+                          <div className="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <motion.div
+                className="chat-input-container"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 1.5 }}
+              >
+                <div className="chat-input-wrapper">
+                  <input
+                    type="text"
+                    className="chat-input"
+                    placeholder="Type your message here..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    ref={chatInputRef}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && messageText.trim()) {
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  <div className="chat-input-buttons">
+                    <motion.button
+                      className="chat-input-button"
+                      whileHover={{
+                        scale: 1.1,
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <i className="fas fa-microphone"></i>
+                    </motion.button>
+                    <motion.button
+                      className="chat-input-button"
+                      whileHover={{
+                        scale: 1.1,
+                        backgroundColor: "rgba(139, 92, 246, 0.2)",
+                      }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <i className="fas fa-code"></i>
+                    </motion.button>
+                  </div>
+                </div>
+                <motion.button
+                  className="chat-send-button"
+                  whileHover={{
+                    scale: 1.1,
+                    boxShadow: "0 5px 15px rgba(139, 92, 246, 0.4)",
+                  }}
+                  whileTap={{ scale: 0.9 }}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1, rotate: [0, 360] }}
+                  transition={{
+                    scale: { duration: 0.3, delay: 1.6 },
+                    rotate: { duration: 0.5, delay: 1.6 },
+                  }}
+                  onClick={() => {
+                    if (messageText.trim()) {
+                      handleSendMessage();
+                    }
+                  }}
+                >
+                  <i className="fas fa-paper-plane"></i>
+                </motion.button>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Stopwatch Section */}
+          <div
+            className={`section ${
+              activeSection === "stopwatch" ? "active" : ""
+            }`}
+            id="stopwatch"
+          >
+            <div className="stopwatch-container">
+              <motion.h2
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                Stopwatch
+              </motion.h2>
+
+              <motion.div
+                className="timer-container"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+              >
+                <div className="timer-type-selector">
+                  <motion.button
+                    className={`timer-type-btn ${
+                      timerType === "stopwatch" ? "active" : ""
+                    }`}
+                    onClick={() => handleTimerTypeChange("stopwatch")}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Stopwatch
+                  </motion.button>
+                  <motion.button
+                    className={`timer-type-btn ${
+                      timerType === "countdown" ? "active" : ""
+                    }`}
+                    onClick={() => handleTimerTypeChange("countdown")}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Countdown
+                  </motion.button>
+                </div>
+
+                <div className="animated-timer-display">
+                  <motion.div
+                    className="timer-circle-container"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <svg width="300" height="300" viewBox="0 0 300 300">
+                      {/* Background Circle */}
+                      <motion.circle
+                        cx="150"
+                        cy="150"
+                        r="120"
+                        fill="rgba(139, 92, 246, 0.05)"
+                        stroke="rgba(139, 92, 246, 0.2)"
+                        strokeWidth="8"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 2, ease: "easeInOut" }}
+                      />
+
+                      {/* Progress Circle */}
+                      <motion.circle
+                        cx="150"
+                        cy="150"
+                        r="120"
+                        fill="transparent"
+                        stroke="#8B5CF6"
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeDasharray="752.4"
+                        initial={{ strokeDashoffset: 752.4 }}
+                        animate={{
+                          strokeDashoffset: isTimerRunning
+                            ? [752.4, 0]
+                            : 752.4 *
+                              (1 -
+                                timerValue /
+                                  (timerType === "countdown"
+                                    ? (countdownMinutes * 60 +
+                                        countdownSeconds) *
+                                      1000
+                                    : 60000)),
+                        }}
+                        transition={{
+                          duration: isTimerRunning
+                            ? timerType === "countdown"
+                              ? countdownMinutes * 60 + countdownSeconds
+                              : 60
+                            : 0.5,
+                          ease: "linear",
+                          repeat:
+                            timerType === "stopwatch" && isTimerRunning
+                              ? Infinity
+                              : 0,
+                        }}
+                      />
+
+                      {/* Pulsing overlay */}
+                      <motion.circle
+                        cx="150"
+                        cy="150"
+                        r="110"
+                        fill="rgba(139, 92, 246, 0.1)"
+                        animate={{
+                          scale: isTimerRunning ? [0.95, 1.05, 0.95] : 1,
+                          opacity: isTimerRunning ? [0.3, 0.1, 0.3] : 0.2,
+                        }}
+                        transition={{
+                          duration: 3,
+                          repeat: Infinity,
+                          repeatType: "reverse",
+                          ease: "easeInOut",
+                        }}
+                      />
+
+                      {/* Display time in center */}
+                      <foreignObject x="50" y="110" width="200" height="80">
+                        <motion.div
+                          className="timer-text"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "48px",
+                            fontWeight: 700,
+                            color: "#fff",
+                            fontFamily: "monospace",
+                          }}
+                          animate={{
+                            scale: [1, 1.02, 1],
+                            opacity: [0.9, 1, 0.9],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            repeatType: "reverse",
+                            ease: "easeInOut",
+                          }}
+                        >
+                          {formatTime(timerValue).split(":").length > 2
+                            ? formatTime(timerValue)
+                                .split(":")
+                                .slice(1)
+                                .join(":")
+                            : formatTime(timerValue)}
+                        </motion.div>
+                      </foreignObject>
+                    </svg>
+                  </motion.div>
+                </div>
+
+                {timerType === "countdown" && (
+                  <motion.div
+                    className="countdown-controls"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <div className="countdown-input">
+                      <label>Minutes</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={countdownMinutes}
+                        onChange={(e) =>
+                          updateCountdownTime(
+                            parseInt(e.target.value) || 0,
+                            countdownSeconds
+                          )
+                        }
+                        disabled={isTimerRunning}
+                      />
+                    </div>
+                    <div className="countdown-input">
+                      <label>Seconds</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={countdownSeconds}
+                        onChange={(e) =>
+                          updateCountdownTime(
+                            countdownMinutes,
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        disabled={isTimerRunning}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
+                <motion.div
+                  className="timer-controls"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  {!isTimerRunning ? (
+                    <motion.button
+                      className="timer-btn start"
+                      onClick={startTimer}
+                      whileHover={{ scale: 1.05, backgroundColor: "#15d893" }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
+                    >
+                      <i className="fas fa-play"></i> Start
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      className="timer-btn pause"
+                      onClick={pauseTimer}
+                      whileHover={{ scale: 1.05, backgroundColor: "#ffb84d" }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
+                    >
+                      <i className="fas fa-pause"></i> Pause
+                    </motion.button>
+                  )}
+                  <motion.button
+                    className="timer-btn reset"
+                    onClick={resetTimer}
+                    whileHover={{ scale: 1.05, backgroundColor: "#f43f5e" }}
+                    whileTap={{ scale: 0.95 }}
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                  >
+                    <i className="fas fa-redo"></i> Reset
+                  </motion.button>
+                  {timerType === "stopwatch" && (
+                    <motion.button
+                      className="timer-btn lap"
+                      onClick={addLap}
+                      disabled={!isTimerRunning}
+                      whileHover={{
+                        scale: isTimerRunning ? 1.05 : 1,
+                        backgroundColor: isTimerRunning ? "#8B5CF6" : "#4B5563",
+                      }}
+                      whileTap={{ scale: isTimerRunning ? 0.95 : 1 }}
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1, opacity: isTimerRunning ? 1 : 0.7 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 10,
+                      }}
+                    >
+                      <i className="fas fa-flag"></i> Lap
+                    </motion.button>
+                  )}
+                </motion.div>
+
+                {timerType === "stopwatch" && laps.length > 0 && (
+                  <motion.div
+                    className="laps-container"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <h4>Laps</h4>
+                    <ul className="laps-list">
+                      <AnimatePresence>
+                        {laps.map((lap, index) => (
+                          <motion.li
+                            key={index}
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 20, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <span className="lap-number">
+                              Lap #{laps.length - index}
+                            </span>
+                            <span className="lap-time">{formatTime(lap)}</span>
+                          </motion.li>
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  </motion.div>
+                )}
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Settings Section */}
+          <div
+            className={`section ${
+              activeSection === "settings" ? "active" : ""
+            }`}
+            id="settings"
+```
+</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Section */}
+          <div
+            className={`section ${activeSection === "chat" ? "active" : ""}`}
+            id="chat"
+          >
+            <div className="chat-container">
+              <motion.div
+                className="chat-header"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                <h3>
+                  <motion.i
+                    className="fas fa-comments"
+                    animate={{
+                      rotate: [0, -10, 10, -5, 5, 0],
+                      scale: [1, 1.1, 1],
+                    }}
   );
 };
 

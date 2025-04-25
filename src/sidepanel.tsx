@@ -3561,9 +3561,10 @@ Would you like me to explain the time complexity of this algorithm?`,
           setCurrentHint(message.hint);
           console.log(message.codeSnipets);
           separateCodeSnipets(message.codeSnipets);
+          setCurrentProblemTitle(message.data);
         } catch (e) {
           console.error("Error fetching problem hints: " + e);
-          setCurrentProblem(undefined);
+          setCurrentHint("");
           setCurrentCodeSnipets([]);
         }
         console.log(message.hint);
@@ -3993,7 +3994,6 @@ Would you like me to explain the time complexity of this algorithm?`,
                 onViewResources= {() => console.log("clicked view resources")}
                 onRefresh= {() => console.log("clicked refresh")}
                 onOpenExternal= {() => console.log("clicked open external")}
-                onSetProblem={setCurrentProblem}
               ></CurrentProblem>
 
               {/* Quick Actions - Removed section title */}

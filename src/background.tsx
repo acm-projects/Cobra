@@ -200,6 +200,7 @@ function getDiscussions(slug: string): Promise<any> {
 let storedLeetCodeUsername = '';
 let loggedInBool = false;
 let username = '';
+let storedCode = '';
 // Handle messages
 const messageHandler: MessageHandler = (message, sender, sendResponse): boolean => {
   //console.log('Background received message:', message);
@@ -244,6 +245,7 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
     console.log("new draft recieved from content script");
     try {
       let code = message.data;
+      storedCode = code;
       const saveDraftPromise = new Promise(async(resolve, reject)=>{
       //console.log(slug);
       await saveDraftToDynamo(username, slug, code);
@@ -254,6 +256,12 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
     } catch (error) {
       console.error(error);
     }
+  }
+
+  if(message.type === 'getDraft'){
+    console.log("getting draft from local storage");
+    sendResponse(storedCode);
+    return true;
   }
   
 

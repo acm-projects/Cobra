@@ -59,13 +59,15 @@ export const verifyEmail = async(username, confirmationCode) => {
 
 export const sendChat = async(message) => {
   try{
+    const code = await chrome.runtime.sendMessage({type: "getDraft"});
+    console.log("code: " + code);
     console.log("sending chat: " + message);
     const response = await fetch(`https://i27yrfhe70.execute-api.us-east-1.amazonaws.com/dev/chatbot`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message: message })
+      body: JSON.stringify({ message: message, code: code }),
     });
      const responseObject = await response.json();
      console.log(responseObject);

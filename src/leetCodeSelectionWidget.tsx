@@ -1,3 +1,4 @@
+/*
 import React from 'react';
 import ReactDOM from 'react-dom';
 import SelectionDetector from './components/CodeSuggestion/SelectionDetector';
@@ -41,3 +42,4 @@ if (window.location.href.includes('leetcode.com/problems/')) {
 } else {
   console.log('COBRA: Not a LeetCode problem page, widget not initialized');
 } 
+  */

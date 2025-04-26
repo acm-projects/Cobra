@@ -1,3 +1,4 @@
+/*
 // Script to inject into the page to access Monaco editor API
 console.log('COBRA: Monaco access script injected');
 
@@ -29,4 +30,4 @@ window.findMonacoEditor = function() {
 };
 
 // Signal to our content script that we're ready
-window.dispatchEvent(new CustomEvent('cobra-monaco-injected')); 
+window.dispatchEvent(new CustomEvent('cobra-monaco-injected')); */

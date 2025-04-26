@@ -6,7 +6,7 @@ export interface NavigateMessage {
 }
 
 export interface WindowSize {
-  size: 'compact' | 'medium' | 'large';
+  size: 'compact' | 'medium' | 'expanded';
   width?: number;
   height?: number;
 }

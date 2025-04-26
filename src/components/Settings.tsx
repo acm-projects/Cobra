@@ -1,8 +1,10 @@
 import React from 'react';
+import { WindowSize } from '../types';
 
 interface SettingsProps {
   theme: string;
   fontSize: string;
+  windowSize: WindowSize['size'];
   defaultView: string;
   animationsEnabled: boolean;
   notificationsEnabled: boolean;
@@ -11,6 +13,7 @@ interface SettingsProps {
   timerVolume: number;
   onThemeToggle: () => void;
   onFontSizeChange: (size: "small" | "medium" | "large") => void;
+  onWindowSizeChange: (size: WindowSize['size']) => void;
   onDefaultViewChange: (view: string) => void;
   onAnimationsToggle: () => void;
   onNotificationsToggle: () => void;
@@ -23,6 +26,7 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({
   theme,
   fontSize,
+  windowSize,
   defaultView,
   animationsEnabled,
   notificationsEnabled,
@@ -31,6 +35,7 @@ const Settings: React.FC<SettingsProps> = ({
   timerVolume,
   onThemeToggle,
   onFontSizeChange,
+  onWindowSizeChange,
   onDefaultViewChange,
   onAnimationsToggle,
   onNotificationsToggle,
@@ -106,6 +111,63 @@ const Settings: React.FC<SettingsProps> = ({
                 onChange={() => onFontSizeChange("large")}
               />
               <label htmlFor="large">Large</label>
+            </div>
+          </div>
+        </div>
+
+        <div className="setting-item">
+          <label>Window Size</label>
+          <div className="window-size-options">
+            <div
+              className={`radio-option ${windowSize === "compact" ? "selected" : ""}`}
+              onClick={() => onWindowSizeChange("compact")}
+            >
+              <div className="size-preview compact">
+                <i className="fas fa-compress-alt"></i>
+              </div>
+              <input
+                type="radio"
+                id="compact"
+                name="windowSize"
+                value="compact"
+                checked={windowSize === "compact"}
+                onChange={() => onWindowSizeChange("compact")}
+              />
+              <label htmlFor="compact">Compact</label>
+            </div>
+            <div
+              className={`radio-option ${windowSize === "medium" ? "selected" : ""}`}
+              onClick={() => onWindowSizeChange("medium")}
+            >
+              <div className="size-preview medium">
+                <i className="fas fa-expand-alt"></i>
+              </div>
+              <input
+                type="radio"
+                id="medium-size"
+                name="windowSize"
+                value="medium"
+                checked={windowSize === "medium"}
+                onChange={() => onWindowSizeChange("medium")}
+              />
+              <label htmlFor="medium-size">Medium</label>
+            </div>
+            <div
+              className={`radio-option ${windowSize === "expanded" ? "selected" : ""}`}
+              onClick={() => onWindowSizeChange("expanded")}
+            >
+              <div className="size-preview">
+                <i className="fas fa-expand"></i>
+              </div>
+              <input
+                type="radio"
+                id="expanded"
+                name="windowSize"
+                value="expanded"
+                checked={windowSize === "expanded"}
+                onChange={() => onWindowSizeChange("expanded")}
+              />
+              <label htmlFor="expanded">Expanded</label>
             </div>
           </div>
         </div>

@@ -13,7 +13,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ onVerificationCompl
   const [resendCountdown, setResendCountdown] = useState<number>(60);
   const [email, setEmail] = useState<string>('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
-
+  console.log("verification page LOADED IN")
   // Get the email from localStorage
   useEffect(() => {
     const storedEmail = localStorage.getItem('pendingVerificationEmail');

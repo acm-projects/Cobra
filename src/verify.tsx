@@ -155,7 +155,7 @@ const VerificationPage: React.FC = () => {
       
         // Set flag to show loading screen in sidepanel after verification
         localStorage.setItem('showLoadingOnSidepanel', 'true');
-        
+        console.log(localStorage.getItem('showLoadingOnSidepanel'));
         // Show success message
         setSuccess('Verification successful! Redirecting...');
         

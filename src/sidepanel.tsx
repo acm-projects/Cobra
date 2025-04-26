@@ -176,7 +176,8 @@ Would you like me to explain the time complexity of this algorithm?`,
         // Check URL parameters first
         const urlParams = new URLSearchParams(window.location.search);
         const verifiedParam = urlParams.get("verified") === "true";
-
+        console.log("verifiedParam: ", verifiedParam);
+        console.log("urlParams: ", urlParams.toString());
         // If verified via URL parameter, make sure it's set in localStorage
         if (verifiedParam) {
           localStorage.setItem("isVerified", "true");
@@ -189,7 +190,6 @@ Would you like me to explain the time complexity of this algorithm?`,
           !verifiedParam &&
           (localStorage.getItem("needsVerification") === "true" ||
             localStorage.getItem("showVerificationInSidepanel") === "true");
-
         // If verification is needed, show the verification page
         if (needsVerification) {
           console.log("User needs verification, showing verification page");
@@ -3741,6 +3741,9 @@ Would you like me to explain the time complexity of this algorithm?`,
     
     // Add user message to chat
     setMessages(prevMessages => [...prevMessages, newUserMessage]);
+    const history = messages.map((message) => {
+      return JSON.stringify({role: message.role, text: message.content});
+    });
     
     // Clear input field
     setMessageText("");
@@ -3749,7 +3752,7 @@ Would you like me to explain the time complexity of this algorithm?`,
     setIsMessagesLoading(true);
     
     try {
-      const response = await sendChat(messageText);
+      const response = await sendChat(messageText, history);
       const assistantResponse: Message = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
@@ -4242,7 +4245,7 @@ Would you like me to explain the time complexity of this algorithm?`,
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3, duration: 0.5 }}
                 >
-                  <i className="fas fa-layer-group"></i> Array Techniques
+                  <i className="fas fa-layer-group"></i> Hints Section
                 </motion.h3>
                 <div className="hint-grid">
                   <HintCard

@@ -8,7 +8,9 @@ import VerificationPage from "./components/VerificationPage";
 import CurrentProblem from "./components/Dashboard/CurrentProblem";
 import { getHints, sendChat } from "./awsFunctions";
 import HintCard from "./components/HintCard";
-import { ProblemInfo, Message } from "./types";
+import HintCardContainer from "./components/HintCardContainer";
+import ConceptualHintContainer from "./components/ConceptualHintContainer";
+import { ProblemInfo, Message, WindowSize } from "./types";
 import ResourceCard from "./components/ResourceCard";
 import Settings from "./components/Settings";
 
@@ -17,12 +19,6 @@ interface NavigateMessage {
   type: "navigate";
   windowId?: number;
   path: string;
-}
-
-interface WindowSize {
-  size: "compact" | "medium" | "expanded";
-  width?: number;
-  height?: number;
 }
 
 // Extending Chrome Window interface
@@ -60,65 +56,24 @@ const SidePanel: React.FC = () => {
 
   // Chat state
   const [messageText, setMessageText] = useState<string>("");
-  const [messages, setMessages] = useState<Message[]>([]);
-    /*[
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       role: "assistant",
-      content: "Hello! I'm your coding assistant. How can I help you today?",
-      timestamp: new Date(new Date().setHours(10, 30)),
-    },
-    {
-      id: "2",
-      role: "user",
-      content: "I'm having trouble with a binary search algorithm. Can you explain how it works?",
-      timestamp: new Date(new Date().setHours(10, 32)),
-    },
-    {
-      id: "3",
-      role: "assistant",
-      content: `Binary search is an efficient algorithm for finding an item in a sorted array. Here's how it works:
-
-1. Compare the target value to the middle element of the array.
-2. If they match, return the index of the middle element.
-3. If the target is less than the middle element, continue searching in the left half.
-4. If the target is greater, continue searching in the right half.
-5. Repeat until the item is found or the subarray size becomes zero.
-
-\`\`\`javascript
-function binarySearch(arr, target) {
-  let left = 0;
-  let right = arr.length - 1;
-  
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    
-    if (arr[mid] === target) {
-      return mid; // Target found
+      content: "👋 Hello! I'm your Cobra AI coding assistant. How can I help you today?",
+      timestamp: new Date(),
     }
-    
-    if (arr[mid] < target) {
-      left = mid + 1; // Search in the right half
-    } else {
-      right = mid - 1; // Search in the left half
-    }
-  }
-  
-  return -1; // Target not found
-}
-\`\`\`
-
-Would you like me to explain the time complexity of this algorithm?`,
-      timestamp: new Date(new Date().setHours(10, 33)),
-    },
-  ]);*/
+  ]);
+  const [showInitialSuggestions, setShowInitialSuggestions] = useState<boolean>(true);
   const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
-  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
-    /*[
-    "Explain time complexity of binary search",
-    "Show me a recursive binary search example",
-    "What's the difference between merge sort and quick sort?",
-  ]);*/
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
+    "Help me debug my code",
+    "Explain a coding concept",
+    "Review my code for best practices",
+    "Help me optimize my algorithm",
+    "Generate code documentation",
+    "Convert code between languages"
+  ]);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -156,6 +111,9 @@ Would you like me to explain the time complexity of this algorithm?`,
   const [currentCodeSnipets, setCurrentCodeSnipets] = useState<JSX.Element[]>([]);
   const [currentProblemTitle, setCurrentProblemTitle] = useState<string>("");
   const [currentDiscussions, setCurrentDiscussions] = useState<JSX.Element[]>([]);
+  const [isHintsLoading, setIsHintsLoading] = useState<boolean>(false);
+  const [currentProblemId, setCurrentProblemId] = useState<string | null>(null);
+  const [codeSnippetsData, setCodeSnippetsData] = useState<any[]>([]);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -636,33 +594,158 @@ Would you like me to explain the time complexity of this algorithm?`,
       
       .tools-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px;
-        margin-bottom: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+        padding: 12px 4px;
       }
       
       .tool-button {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 12px;
-        color: white;
+        border-radius: 12px;
+        padding: 24px 12px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
+        min-height: 120px;
+        justify-content: center;
       }
       
-      .tool-button i {
-        font-size: 18px;
-        color: #8B5CF6;
+      .tool-button:hover {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
       }
       
-      .tool-button span {
-        font-size: 13px;
-        font-weight: 500;
+      .tool-button-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 4px;
+      }
+      
+      .tool-button-icon i {
+        font-size: 28px;
+      }
+      
+      .tool-button-content {
+        text-align: center;
+        width: 100%;
+      }
+      
+      .tool-button-title {
+        font-weight: 600;
+        font-size: 16px;
+        white-space: nowrap;
+        color: #fff;
+      }
+      
+      .tool-button-description {
+        display: none;
+      }
+      
+      .tool-button.hints .tool-button-icon {
+        background: rgba(251, 191, 36, 0.1);
+      }
+      
+      .tool-button.hints .tool-button-icon i {
+        color: #fbbf24;
+      }
+      
+      .tool-button.resources .tool-button-icon {
+        background: rgba(16, 185, 129, 0.1);
+      }
+      
+      .tool-button.resources .tool-button-icon i {
+        color: #10b981;
+      }
+      
+      .tool-button.errors .tool-button-icon {
+        background: rgba(239, 68, 68, 0.1);
+      }
+      
+      .tool-button.errors .tool-button-icon i {
+        color: #ef4444;
+      }
+      
+      .tool-button.chat .tool-button-icon {
+        background: rgba(96, 165, 250, 0.1);
+      }
+      
+      .tool-button.chat .tool-button-icon i {
+        color: #60a5fa;
+      }
+      
+      /* Apply the media queries for this section too */
+      @media (max-width: 640px) {
+        .tools-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+      }
+      
+      @media (max-width: 400px) {
+        .tool-button {
+          padding: 12px 8px;
+          min-height: 90px;
+        }
+        
+        .tool-button-icon {
+          width: 32px;
+          height: 32px;
+          margin-bottom: 6px;
+        }
+        
+        .tool-button-icon i {
+          font-size: 16px;
+        }
+        
+        .tool-button-title {
+          font-size: 12px;
+          margin-bottom: 2px;
+        }
+        
+        .tool-button-description {
+          font-size: 11px;
+          line-height: 1.2;
+          max-height: 26px;
+          overflow: hidden;
+        }
+      }
+      
+      @media (max-width: 320px) {
+        .tools-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .tool-button {
+          flex-direction: row;
+          align-items: center;
+          min-height: auto;
+          padding: 10px;
+          gap: 8px;
+        }
+        
+        .tool-button-icon {
+          margin-bottom: 0;
+          min-width: 24px;
+          width: 24px;
+          height: 24px;
+        }
+        
+        .tool-button-content {
+          text-align: left;
+        }
+        
+        .tool-button-description {
+          display: none;
+        }
       }
       
       .dashboard-card {
@@ -1076,9 +1159,9 @@ Would you like me to explain the time complexity of this algorithm?`,
       
       .tools-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 16px;
-        padding: 20px;
+        padding: 12px 4px;
       }
       
       .tool-button {
@@ -3146,6 +3229,79 @@ Would you like me to explain the time complexity of this algorithm?`,
       .icon-larger {
         font-size: 22px !important;
       }
+
+      @media (max-width: 640px) {
+        .tools-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+      }
+      
+      /* Extra narrow screens or sidebar */
+      @media (max-width: 400px) {
+        .tools-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          padding: 0 4px;
+        }
+        
+        .tool-button {
+          padding: 12px 8px;
+          min-height: 90px;
+        }
+        
+        .tool-button-icon {
+          width: 32px;
+          height: 32px;
+          margin-bottom: 6px;
+        }
+        
+        .tool-button-icon i {
+          font-size: 16px;
+        }
+        
+        .tool-button-title {
+          font-size: 12px;
+          margin-bottom: 2px;
+        }
+        
+        .tool-button-description {
+          font-size: 11px;
+          line-height: 1.2;
+          max-height: 26px;
+          overflow: hidden;
+        }
+      }
+      
+      /* Extremely narrow sidebar */
+      @media (max-width: 320px) {
+        .tools-grid {
+          grid-template-columns: repeat(1, 1fr);
+        }
+        
+        .tool-button {
+          flex-direction: row;
+          align-items: center;
+          min-height: auto;
+          padding: 10px;
+          gap: 8px;
+        }
+        
+        .tool-button-icon {
+          margin-bottom: 0;
+          min-width: 24px;
+          width: 24px;
+          height: 24px;
+        }
+        
+        .tool-button-content {
+          text-align: left;
+        }
+        
+        .tool-button-description {
+          display: none;
+        }
+      }
     `;
     document.head.appendChild(styleElement);
   }, []);
@@ -3550,6 +3706,7 @@ Would you like me to explain the time complexity of this algorithm?`,
 
   function separateCodeSnipets(response: any) {
     console.log(response);
+    setCodeSnippetsData(response || []);
     let tempTitle = "";
     const codeSnipetCards = response.map((item: any, index: any, array: any) => {
       return (<HintCard title={item.title} hint={item.code} type="code" description={item.description} key={index} ></HintCard>)});
@@ -3561,14 +3718,30 @@ Would you like me to explain the time complexity of this algorithm?`,
       if (message.type === 'navigatedToProblem') {
         try {
           console.log("fetching problem hints for sidepanel");
+          // Set loading state first
+          setIsHintsLoading(true);
+          
+          // Update problem info
+          setCurrentProblemId(message.problemId || null);
+          setCurrentProblemTitle(message.problemTitle || "");
+          
+          // Process the data
           setCurrentHint(message.hint);
           console.log(message.codeSnipets);
           separateCodeSnipets(message.codeSnipets);
           setCurrentProblemTitle(message.data);
+          
+          // Add a small delay before turning off loading to ensure smooth transitions
+          setTimeout(() => {
+            setIsHintsLoading(false);
+          }, 200);
         } catch (e) {
           console.error("Error fetching problem hints: " + e);
+          setCurrentProblem(undefined);
           setCurrentHint("");
           setCurrentCodeSnipets([]);
+          setCodeSnippetsData([]);
+          setIsHintsLoading(false);
         }
         console.log(message.hint);
       } else if (message.type === "displayDiscussions"){
@@ -3731,6 +3904,9 @@ Would you like me to explain the time complexity of this algorithm?`,
   const handleSendMessage = async() => {
     if (!messageText.trim()) return;
     
+    // Hide initial suggestions when user sends first message
+    setShowInitialSuggestions(false);
+    
     // Create new user message
     const newUserMessage: Message = {
       id: Date.now().toString(),
@@ -3761,11 +3937,11 @@ Would you like me to explain the time complexity of this algorithm?`,
       // Add the assistant's response and hide loading indicators
       setMessages(prevMessages => [...prevMessages, assistantResponse]);
       setIsTyping(false);
-      setIsMessagesLoading(false); // Turn off loading animation
+      setIsMessagesLoading(false);
     } catch (error) {
       console.error("Error sending message:", error);
       setIsTyping(false);
-      setIsMessagesLoading(false); // Make sure to turn off loading animation even on error
+      setIsMessagesLoading(false);
     }
   };
 
@@ -4016,9 +4192,6 @@ Would you like me to explain the time complexity of this algorithm?`,
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Hints</div>
-                    <div className="tool-button-description">
-                      Get problem-specific guidance
-                    </div>
                   </div>
                 </motion.div>
 
@@ -4035,9 +4208,6 @@ Would you like me to explain the time complexity of this algorithm?`,
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Resources</div>
-                    <div className="tool-button-description">
-                      Learning materials and guides
-                    </div>
                   </div>
                 </motion.div>
 
@@ -4054,9 +4224,6 @@ Would you like me to explain the time complexity of this algorithm?`,
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Error Help</div>
-                    <div className="tool-button-description">
-                      Analyze and fix code errors
-                    </div>
                   </div>
                 </motion.div>
 
@@ -4073,9 +4240,6 @@ Would you like me to explain the time complexity of this algorithm?`,
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">AI Chat</div>
-                    <div className="tool-button-description">
-                      Get personalized assistance
-                    </div>
                   </div>
                 </motion.div>
               </div>
@@ -4245,12 +4409,18 @@ Would you like me to explain the time complexity of this algorithm?`,
                   <i className="fas fa-layer-group"></i> Array Techniques
                 </motion.h3>
                 <div className="hint-grid">
-                  <HintCard
-                    title= {currentProblemTitle}
-                    hint= {currentHint}
-                    type= "conceptual"
-                  ></HintCard>
-                  {currentCodeSnipets}
+                  <ConceptualHintContainer
+                    title={currentProblemTitle}
+                    hint={currentHint}
+                    currentProblemId={currentProblemId}
+                    isLoading={isHintsLoading}
+                  />
+                  <HintCardContainer 
+                    hints={codeSnippetsData} 
+                    currentProblemTitle={currentProblemTitle}
+                    currentProblemId={currentProblemId}
+                    isLoading={isHintsLoading} 
+                  />
                 </div>
               </motion.div>
             </motion.div>
@@ -4738,57 +4908,11 @@ function calculate() {
                         transition={{ duration: 0.3, delay: 0.2 }}
                       >
                         <div className="message-text">
-                          <p dangerouslySetInnerHTML={{ __html: message.content.replace(/\n/g, "<br>").replace(/```([\s\S]*?)```/g, (match, code) => {
-                            return `<div class="message-code-block">
-                              <div class="message-code-header">
-                                <div class="message-code-language">
-                                  <i class="fas fa-code"></i>
-                                  <span></span>
-                                </div>
-                                <div class="message-code-actions">
-                                  <button class="message-code-action">
-                                    <i class="fas fa-copy"></i>
-                                    <span>Copy</span>
-                                  </button>
-                                </div>
-                              </div>
-                              <div class="message-code-content">
-                                <pre>${code}</pre>
-                              </div>
-                            </div>`;
-                          }) }} />
+                          <p>{message.content}</p>
                         </div>
                         <div className="message-time">
                           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
-                        {message.role === "assistant" && message.id === messages[messages.length - 1].id && (
-                          <motion.div
-                            className="suggestion-chips"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4, delay: 0.5 }}
-                          >
-                            {suggestedPrompts.map((prompt, index) => (
-                              <motion.button
-                                key={index}
-                                className="suggestion-chip"
-                                whileHover={{
-                                  scale: 1.05,
-                                  backgroundColor: "rgba(139, 92, 246, 0.2)",
-                                }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => {
-                                  setMessageText(prompt);
-                                  if (chatInputRef.current) {
-                                    chatInputRef.current.focus();
-                                  }
-                                }}
-                              >
-                                {prompt}
-                              </motion.button>
-                            ))}
-                          </motion.div>
-                        )}
                       </motion.div>
                       {message.role === "user" && (
                         <motion.div
@@ -4847,8 +4971,39 @@ function calculate() {
                 </AnimatePresence>
               </div>
 
+              {showInitialSuggestions && (
+                <motion.div 
+                  className="sliding-suggestions"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                >
+                  <div className="suggestion-chips">
+                    {suggestedPrompts.map((prompt, index) => (
+                      <motion.button
+                        key={index}
+                        className="suggestion-chip"
+                        whileHover={{
+                          scale: 1.05,
+                          backgroundColor: "rgba(139, 92, 246, 0.2)",
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                          setMessageText(prompt);
+                          if (chatInputRef.current) {
+                            chatInputRef.current.focus();
+                          }
+                        }}
+                      >
+                        {prompt}
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
               <motion.div
-                className="chat-input-container"
+                className={`chat-input-container ${showInitialSuggestions ? 'with-suggestions' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 1.5 }}
@@ -4897,17 +5052,8 @@ function calculate() {
                     boxShadow: "0 5px 15px rgba(139, 92, 246, 0.4)",
                   }}
                   whileTap={{ scale: 0.9 }}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1, rotate: [0, 360] }}
-                  transition={{
-                    scale: { duration: 0.3, delay: 1.6 },
-                    rotate: { duration: 0.5, delay: 1.6 },
-                  }}
-                  onClick={() => {
-                    if (messageText.trim()) {
-                      handleSendMessage();
-                    }
-                  }}
+                  onClick={handleSendMessage}
+                  disabled={!messageText.trim()}
                 >
                   <i className="fas fa-paper-plane"></i>
                 </motion.button>
@@ -5226,6 +5372,7 @@ function calculate() {
             <Settings
               theme={theme}
               fontSize={fontSize}
+              windowSize={windowSize}
               defaultView={defaultView}
               animationsEnabled={animationsEnabled}
               notificationsEnabled={notificationsEnabled}
@@ -5234,6 +5381,7 @@ function calculate() {
               timerVolume={timerVolume}
               onThemeToggle={handleThemeToggle}
               onFontSizeChange={handleFontSizeChange}
+              onWindowSizeChange={handleWindowSizeChange}
               onDefaultViewChange={handleDefaultViewChange}
               onAnimationsToggle={handleAnimationsToggle}
               onNotificationsToggle={handleNotificationsToggle}

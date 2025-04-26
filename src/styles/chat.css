@@ -165,29 +165,38 @@
 .suggestion-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 16px;
+  max-width: 100%;
 }
 
 .suggestion-chip {
   background: rgba(139, 92, 246, 0.1);
   border: 1px solid rgba(139, 92, 246, 0.3);
   color: #8B5CF6;
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .suggestion-chip:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.suggestion-chip:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Chat input styles */
@@ -326,4 +335,44 @@
   font-size: 13px;
   line-height: 1.5;
   white-space: pre;
+}
+
+/* Sliding suggestions container */
+.sliding-suggestions {
+  padding: 16px;
+  border-top: none;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  position: relative;
+}
+
+.sliding-suggestions::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.sliding-suggestions .suggestion-chips {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin: 0;
+  padding-bottom: 4px;
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Update chat input container to remove top padding when suggestions are shown */
+.chat-input-container.with-suggestions {
+  padding-top: 0;
 } 

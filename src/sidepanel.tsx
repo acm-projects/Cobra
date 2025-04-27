@@ -4623,6 +4623,7 @@ const SidePanel: React.FC = () => {
                         backgroundColor: "rgba(139, 92, 246, 0.2)",
                       }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => {window.open("https://blog.algomaster.io/p/20-patterns-to-master-dynamic-programming","_blank");}}
                     >
                       <i className="fas fa-external-link-alt"></i> View Resource
                     </motion.button>
@@ -4662,6 +4663,7 @@ const SidePanel: React.FC = () => {
                         backgroundColor: "rgba(139, 92, 246, 0.2)",
                       }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => {window.open("https://www.youtube.com/watch?v=09_LlHjoEiY", "_blank");}}
                     >
                       <i className="fas fa-external-link-alt"></i> Watch Series
                     </motion.button>
@@ -4718,6 +4720,7 @@ const SidePanel: React.FC = () => {
                         backgroundColor: "rgba(139, 92, 246, 0.2)",
                       }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => {window.open("https://visualgo.net/en/bst", "_blank");}}
                     >
                       <i className="fas fa-play"></i> Launch Tool
                     </motion.button>
@@ -4757,6 +4760,7 @@ const SidePanel: React.FC = () => {
                         backgroundColor: "rgba(139, 92, 246, 0.2)",
                       }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => {window.open("https://algorithm-playground.netlify.app/?algorithm=insertionSort", "_blank");}}
                     >
                       <i className="fas fa-play"></i> Try It Out
                     </motion.button>

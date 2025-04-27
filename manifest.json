@@ -51,13 +51,13 @@
     },
     {
       "matches": ["https://leetcode.com/problems/*"],
-      "js": ["contentGrabCodeDraft.js", "leetCodeSelectionWidget.js", "injectScript.js", "leetCodeEditorButton.js"],
-      "run_at": "document_idle"
+      "js": ["contentGrabCodeDraft.js", "leetCodeSelectionWidget.js", "injectScript.js", "leetCodeEditorButton.js", "leetcode-analyzer.js"],
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["injectMonacoAccess.js"],
+      "resources": ["injectMonacoAccess.js", "leetcode-analyzer-inject.js", "styles.css", "leetcode-analyzer.css"],
       "matches": ["https://leetcode.com/*"]
     }
   ]

@@ -1,3 +1,4 @@
+/*
 // LeetCode Editor Helper Button
 // This script adds a button to the Monaco editor in LeetCode
 
@@ -432,3 +433,4 @@
     initialize();
   }
 })(); 
+*/

@@ -13,7 +13,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ onVerificationCompl
   const [resendCountdown, setResendCountdown] = useState<number>(60);
   const [email, setEmail] = useState<string>('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(6).fill(null));
-
+  console.log("verification page LOADED IN")
   // Get the email from localStorage
   useEffect(() => {
     const storedEmail = localStorage.getItem('pendingVerificationEmail');
@@ -180,8 +180,16 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ onVerificationCompl
   };
 
   return (
-    <div className="verification-container">
-      <div className="verification-card">
+    <div className="auth-container">
+      <div className="bg-decoration">
+        <div className="bg-circle"></div>
+        <div className="bg-circle"></div>
+        <div className="bg-circle"></div>
+      </div>
+      
+      <div className="auth-card">
+        <div className="container-decoration"></div>
+        
         <div className="auth-header">
           <img src="images/icon.png" alt="Cobra Logo" className="auth-logo" />
           <h1>Email Verification</h1>
@@ -215,25 +223,26 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ onVerificationCompl
           {error && <div className="auth-error">{error}</div>}
           {success && <div className="auth-success">{success}</div>}
           
-          <div className="auth-actions">
-            <button 
-              className="primary-button" 
-              onClick={handleVerify} 
-              disabled={isVerifying || code.some(digit => digit === '')}
-            >
-              {isVerifying ? 'Verifying...' : 'Verify'}
-            </button>
-            
-            <div className="resend-link">
-              <span>Didn't receive a code? </span>
-              <button 
-                className="text-button" 
-                onClick={handleResendCode} 
-                disabled={resendCountdown > 0}
-              >
-                {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
-              </button>
-            </div>
+          <button 
+            className="primary-button full-width" 
+            onClick={handleVerify} 
+            disabled={isVerifying || code.includes('') || code.length !== 6}
+          >
+            {isVerifying ? 'Verifying...' : 'Verify'}
+          </button>
+          
+          <div className="resend-link">
+            {resendCountdown > 0 ? (
+              <span>Resend code in {resendCountdown}s</span>
+            ) : (
+              <a href="#" onClick={handleResendCode}>Resend verification code</a>
+            )}
+          </div>
+          
+          <div className="auth-footer">
+            <a href="signup.html" className="back-link">
+              <i className="fas fa-arrow-left"></i> Back to Signup
+            </a>
           </div>
         </div>
       </div>

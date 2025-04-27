@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import ReactDOM from 'react-dom';
 import { Auth } from './utils/auth';
+import { signUpUser } from "./awsFunctions";
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -30,9 +31,9 @@ const SignUp: React.FC = () => {
 
     try {
       // Use the Auth utility for sign up
-      const signUpResponse = await Auth.signUp(username, email, password); 
+      const signUpResponse = await signUpUser(username, email, password); 
       //const userId = signUpResponse;
-      await chrome.runtime.sendMessage({type: "sendUsername", data: username});
+      chrome.runtime.sendMessage({type: "sendUsername", data: username});
       console.log("send auth");
       
       console.log('Sign up successful, redirecting to verification page in sidepanel');
@@ -44,6 +45,7 @@ const SignUp: React.FC = () => {
       // Mark that verification is needed, but don't set duplicate flags
       localStorage.removeItem('isVerified');
       localStorage.setItem('needsVerification', 'true');
+      chrome.storage.local.set({needVerification: true});
       
       // Open verification in sidepanel
       if (chrome && chrome.tabs && chrome.sidePanel) {

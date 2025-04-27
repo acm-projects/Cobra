@@ -1,3 +1,4 @@
+/*
 // This script will be directly injected into the page
 console.log("COBRA INJECT SCRIPT LOADED");
           
@@ -165,3 +166,4 @@ console.log("Editor elements found:", {
   roleCode: editorElements.roleCode.length,
   rolePresentation: editorElements.rolePresentation.length
 }); 
+*/

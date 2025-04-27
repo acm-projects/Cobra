@@ -57,7 +57,8 @@ export const verifyEmail = async(username, confirmationCode) => {
   }
 }
 
-export const sendChat = async(message) => {
+export const sendChat = async(message, history) => {
+  console.log("sending chat with userid: " + currentUserId);
   try{
     const code = await chrome.runtime.sendMessage({type: "getDraft"});
     console.log("code: " + code);
@@ -67,7 +68,7 @@ export const sendChat = async(message) => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message: message, code: code }),
+      body: JSON.stringify({ message: message, code: code, userid: currentUserId, history: history }),
     });
      const responseObject = await response.json();
      console.log(responseObject);
@@ -192,6 +193,7 @@ export const signInUser = async(username, password) => {
 }
 
 export const signUpUser = async(uusername, eemail, ppassword) => {
+  console.log("signing up user: " + uusername + " with email: " + eemail + " and password: " + ppassword);
   const signUpResponse = await signUp({
     "username": uusername, 
     "password": ppassword, 

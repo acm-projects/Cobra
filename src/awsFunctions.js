@@ -50,10 +50,10 @@ export const verifyEmail = async(username, confirmationCode) => {
     await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
     chrome.runtime.sendMessage({type: "linkedLeetCodeLogin"});
     console.log("created tab");
-    return "success";
+    return true;
   } catch (error){
     console.error(error);
-    return "failure";
+    return false;
   }
 }
 
@@ -82,6 +82,8 @@ export const sendChat = async(message, history) => {
 
 export const getHints = async(slug) => {
   try{
+    //console.log("getting problem solutions with slug: " + slug);
+    //const solResponse = await fetch(`https://api.github.com/repos/kamyu104/LeetCode-Solutions/contents/Python/${problemTitle}`);
     console.log("grabbing hints with slug: " + slug);
     const response = await fetch (`https://vmecerx9b2.execute-api.us-east-1.amazonaws.com/dev/hints`, {
       method: "POST",

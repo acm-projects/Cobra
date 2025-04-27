@@ -87,22 +87,22 @@ export class Auth {
     try {
       console.log(`Verifying user ${username} with code ${code}`);
       
-      // Simulate API call
-      await new Promise(async(resolve, reject) => {
-        await verifyEmail(username, code)
-        resolve(true);
+      const result: boolean = await new Promise(async(resolve, reject) => {
+        const result = await verifyEmail(username, code)
+        resolve(result);
       });
       
-      const success = true;
+      const success = result;
       
       if (success) {
         // Save verification status
         localStorage.setItem('username', username);
         localStorage.setItem('isVerified', 'true');
         chrome.storage.local.set({isAuthenticated: true});
-      console.log("returning true success");
+        console.log("returning true success");
+        return true;
       }
-      return success;
+      return false;
     } catch (error) {
       console.error('Email verification error:', error);
       return false;

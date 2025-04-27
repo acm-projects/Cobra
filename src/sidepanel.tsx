@@ -3944,7 +3944,7 @@ const SidePanel: React.FC = () => {
     if (!messageText.trim()) return;
     
     // Hide initial suggestions when user sends first message
-    setShowInitialSuggestions(false);
+    //setShowInitialSuggestions(false);
     
     // Create new user message
     const newUserMessage: Message = {
@@ -5066,7 +5066,7 @@ function calculate() {
                         }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => {
-                          setMessageText(prompt);
+                            setMessageText(prompt);
                           if (chatInputRef.current) {
                             chatInputRef.current.focus();
                           }

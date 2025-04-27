@@ -217,7 +217,7 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
       let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       let response = await chrome.tabs.sendMessage(tab.id!, {action: "getUsername"});
       chrome.runtime.sendMessage({type: "loggedIntoLeetCode"})
-      chrome.tabs.remove(tab.id!);
+      //chrome.tabs.remove(tab.id!);
       console.log(response);
       storedLeetCodeUsername = response;
       let writeResponse = await writeLeetCodeUsername(username.toLowerCase(), storedLeetCodeUsername);
@@ -330,7 +330,7 @@ const messageHandler: MessageHandler = (message, sender, sendResponse): boolean 
   }
   
   if (message.type === 'checkAuth') {
-    chrome.storage.local.get(['isAuthenticated'], (result: { isAuthenticated?: boolean }): void => {
+    chrome.storage.local.get('isAuthenticated', (result: { isAuthenticated?: boolean }): void => {
       console.log('Auth check result:', result);
       
       if (!result.isAuthenticated) {

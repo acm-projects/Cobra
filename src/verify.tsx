@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { Auth } from './utils/auth';
 
 const VerificationPage: React.FC = () => {
@@ -155,7 +155,9 @@ const VerificationPage: React.FC = () => {
       
         // Set flag to show loading screen in sidepanel after verification
         localStorage.setItem('showLoadingOnSidepanel', 'true');
-        console.log(localStorage.getItem('showLoadingOnSidepanel'));
+        console.log("showing loading? (verify.tsx): " + localStorage.getItem('showLoadingOnSidepanel'));
+        chrome.storage.local.set({showLoadingLoc: true});
+        console.log("showing loading? (chrome.storage): " + localStorage.getItem('showLoadingOnSidepanel'));
         // Show success message
         setSuccess('Verification successful! Redirecting...');
         
@@ -163,6 +165,7 @@ const VerificationPage: React.FC = () => {
         setTimeout(() => {
           // In Chrome extension context, try to open the sidepanel
           if (chrome && chrome.tabs && chrome.sidePanel) {
+            console.log('Opening sidepanel after verification... ALL IS WELL');
             chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
           } else {
             // Fallback for non-extension contexts or if chrome API is unavailable
@@ -264,4 +267,8 @@ const VerificationPage: React.FC = () => {
   );
 };
 
-ReactDOM.render(<VerificationPage />, document.getElementById('root')); 
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(<VerificationPage />);
+}

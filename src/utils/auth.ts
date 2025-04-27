@@ -8,7 +8,7 @@ export class Auth {
   static isAuthenticated(): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
-        chrome.storage.local.get(['isAuthenticated'], (result) => {
+        chrome.storage.local.get('isAuthenticated', (result) => {
           if (chrome.runtime.lastError) {
             console.error('Error accessing storage:', chrome.runtime.lastError);
             reject(chrome.runtime.lastError);
@@ -99,8 +99,9 @@ export class Auth {
         // Save verification status
         localStorage.setItem('username', username);
         localStorage.setItem('isVerified', 'true');
-      }
+        chrome.storage.local.set({isAuthenticated: true});
       console.log("returning true success");
+      }
       return success;
     } catch (error) {
       console.error('Email verification error:', error);

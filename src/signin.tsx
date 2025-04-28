@@ -21,6 +21,7 @@ const SignIn: React.FC = () => {
       chrome.runtime.sendMessage({type: "sendUsername", data: username});
       localStorage.setItem("username", username);
       console.log('Authentication successful, redirecting to sidepanel');
+      chrome.storage.local.set({isAuthenticated: true});
       
       // Navigate directly to the sidepanel without showing the loading screen
       const tabs = await chrome.tabs.query({active: true, currentWindow: true});

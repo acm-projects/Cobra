@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Cobra",
+  "name": "CobraDraft",
   "version": "1.0",
   "description": "A Chrome extension for coding assistance",
   "icons": {
@@ -51,13 +51,13 @@
     },
     {
       "matches": ["https://leetcode.com/problems/*"],
-      "js": ["contentGrabCodeDraft.js", "leetCodeSelectionWidget.js", "injectScript.js", "leetCodeEditorButton.js"],
-      "run_at": "document_idle"
+      "js": ["contentGrabCodeDraft.js"],
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["injectMonacoAccess.js"],
+      "resources": ["styles.css"],
       "matches": ["https://leetcode.com/*"]
     }
   ]

@@ -37,7 +37,7 @@ export const ErrorCard: React.FC<ErrorCardProps> = ({ title, error, userCode, so
                     </pre>
             </div>
             <div className="error-fix">
-                <h4>Suggested Fix:</h4>
+                <h4>{solution}</h4>
                 <div className="error-fix-code">
                     <pre>
                         <code>

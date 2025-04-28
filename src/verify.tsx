@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { Auth } from './utils/auth';
 
 const VerificationPage: React.FC = () => {
@@ -48,6 +48,7 @@ const VerificationPage: React.FC = () => {
   }, []);
 
   const handleInputChange = (index: number, value: string) => {
+    console.log("input value from handle input change: " + value);
     // Only allow digits
     if (/^\d*$/.test(value)) {
       const newCode = [...code];
@@ -64,7 +65,10 @@ const VerificationPage: React.FC = () => {
 
       // Check if all inputs are filled to auto-submit
       if (newCode.every(digit => digit) && !newCode.includes('')) {
-        handleVerify();
+        useEffect(() => {
+          console.log("all digits filled: ", code);
+          setTimeout(() => handleVerify(), 300);
+        }, [code]);
       }
     }
   };
@@ -91,39 +95,38 @@ const VerificationPage: React.FC = () => {
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').trim().slice(0, 6);
-    
-    // Check if pasted content only contains digits
+  
     if (/^\d+$/.test(pastedData)) {
       const digits = pastedData.split('');
-      const newCode = [...code];
-      
-      // Fill available slots with pasted digits
-      digits.forEach((digit, index) => {
-        if (index < 6) {
-          newCode[index] = digit;
-        }
-      });
-      
+      const newCode = Array(6).fill('').map((_, i) => digits[i] || '');
+  
+      console.log("pasted digits:", digits);
+      console.log("new code:", newCode);
+  
       setCode(newCode);
-      
-      // Focus the appropriate input after paste
+  
       const nextInputIndex = digits.length < 6 ? digits.length : 5;
       const nextInput = inputRefs.current[nextInputIndex];
+  
       if (nextInput) {
         nextInput.focus();
       }
-
-      // Auto-submit if all digits are filled
-      if (newCode.every(digit => digit) && !newCode.includes('')) {
-        setTimeout(() => handleVerify(), 100);
+  
+      if (digits.length === 6) {
+        useEffect(() => {
+          console.log("all digits filled: ", code);
+          setTimeout(() => handleVerify(), 300);
+        }, [code]);
       }
     }
   };
 
   const handleVerify = async () => {
+    console.log("verifying code: " + code);
+    console.log("length of code: " + code.length); 
     // Explicit null check first as a separate statement
     if (!code) {
       setError('Please enter your verification code.');
@@ -131,7 +134,7 @@ const VerificationPage: React.FC = () => {
     }
     
     if (code.some(digit => digit === '') || code.length === 0) {
-      setError('Please enter your verification code.');
+      setError('Please enter your entire verification code.');
       return;
     }
     
@@ -155,7 +158,9 @@ const VerificationPage: React.FC = () => {
       
         // Set flag to show loading screen in sidepanel after verification
         localStorage.setItem('showLoadingOnSidepanel', 'true');
-        console.log(localStorage.getItem('showLoadingOnSidepanel'));
+        console.log("showing loading? (verify.tsx): " + localStorage.getItem('showLoadingOnSidepanel'));
+        chrome.storage.local.set({showLoadingLoc: true});
+        console.log("showing loading? (chrome.storage): " + localStorage.getItem('showLoadingOnSidepanel'));
         // Show success message
         setSuccess('Verification successful! Redirecting...');
         
@@ -163,6 +168,7 @@ const VerificationPage: React.FC = () => {
         setTimeout(() => {
           // In Chrome extension context, try to open the sidepanel
           if (chrome && chrome.tabs && chrome.sidePanel) {
+            console.log('Opening sidepanel after verification... ALL IS WELL');
             chrome.sidePanel.setOptions({ path: 'sidepanel.html' });
           } else {
             // Fallback for non-extension contexts or if chrome API is unavailable
@@ -264,4 +270,8 @@ const VerificationPage: React.FC = () => {
   );
 };
 
-ReactDOM.render(<VerificationPage />, document.getElementById('root')); 
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(<VerificationPage />);
+}

@@ -1,0 +1,20 @@
+{
+  "name": "leetcode-analyzer-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function for LeetCode code analysis",
+  "main": "lambda.js",
+  "scripts": {
+    "test": "jest",
+    "deploy": "serverless deploy"
+  },
+  "dependencies": {
+    "canvas": "^3.1.0",
+    "jsdom": "^26.1.0",
+    "openai": "^4.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "serverless": "^3.0.0",
+    "serverless-offline": "^14.4.0"
+  }
+}

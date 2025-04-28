@@ -43,6 +43,37 @@
           clearInterval(editorCheckInterval);
         }
       }, 1000);
+
+      // Monitor editor changes
+      window.setupEditorChangeListener = function() {
+        const editor = window.findMonacoEditor();
+        if (editor) {
+          const model = editor.getModel();
+          if (model) {
+            // Create a debounced function for performance
+            let timeout;
+            const debouncedContentChange = (event) => {
+              clearTimeout(timeout);
+              timeout = setTimeout(() => {
+                const code = model.getValue();
+                // Get the problem slug from the URL
+                const problemSlug = window.location.pathname.split('/')[2];
+                
+                window.dispatchEvent(new CustomEvent('cobra-code-changed', {
+                  detail: {
+                    code: code,
+                    problemSlug: problemSlug
+                  }
+                }));
+              }, 1000); // Wait 1 second after typing stops
+            };
+            
+            // Listen for content changes
+            model.onDidChangeContent(debouncedContentChange);
+            console.log('COBRA: Editor change listener set up');
+          }
+        }
+      };
     `;
     document.head.appendChild(script);
   }
@@ -56,6 +87,21 @@
     window.addEventListener('cobra-monaco-found', () => {
       // Recreate the button to ensure it's in the right place
       createToolbarButton();
+      
+      // Run the script to setup editor change listener
+      const setupScript = document.createElement('script');
+      setupScript.textContent = `window.setupEditorChangeListener();`;
+      document.head.appendChild(setupScript);
+    });
+    
+    // Listen for code changes
+    window.addEventListener('cobra-code-changed', (event) => {
+      const { code, problemSlug } = event.detail;
+      // Only update if the widget is visible and we have an API key
+      const widget = document.getElementById('cobra-floating-widget');
+      if (widget && localStorage.getItem('cobra_openai_key')) {
+        analyzeCodeWithAI(code, problemSlug);
+      }
     });
     
     // Inject the script
@@ -87,12 +133,12 @@
     button.id = 'cobra-helper-button';
     button.className = 'cobra-toolbar-button';
     
-    // Directly embed text "Cobra" with appropriate styling
+    // Use a simple purple circle as the logo
     button.innerHTML = `
-      <span style="font-weight: bold; font-size: 16px; color: white; letter-spacing: 0.5px; text-shadow: 0 0 2px #111;">Co<span style="color: #4CAF50;">bra</span></span>
+      <div style="width: 20px; height: 20px; border-radius: 50%; background-color: #8A2BE2; box-shadow: 0 0 4px rgba(138, 43, 226, 0.5);"></div>
     `;
     
-    button.title = 'Cobra Code Helper';
+    button.title = 'Cobra';
     
     // Style the button to match the screenshot
     button.style.display = 'inline-flex';
@@ -101,7 +147,7 @@
     button.style.minWidth = '40px';
     button.style.height = '32px';
     button.style.backgroundColor = '#333333'; // Slightly lighter background for contrast
-    button.style.border = '1px solid #6FCF97'; // Use green border color matching the SVG
+    button.style.border = '1px solid #8A2BE2'; // Purple border to match the circle
     button.style.borderRadius = '4px';
     button.style.cursor = 'pointer';
     button.style.padding = '4px';
@@ -256,17 +302,16 @@
         button.style.backgroundColor = '#444444';
         button.style.transform = 'scale(1.05)';
         button.style.boxShadow = '0 2px 5px rgba(0,0,0,0.4)';
-        const rect = button.getBoundingClientRect();
-        const position = {
-          x: rect.left + (rect.width / 2),
-          y: rect.bottom + 5
-        };
-        showToolbarWidget(position);
+        
+        // Show floating widget
+        toggleFloatingWidget(true);
       } else {
         button.style.backgroundColor = '#333333';
         button.style.transform = 'scale(1)';
         button.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.3)';
-        hideWidget();
+        
+        // Hide floating widget
+        toggleFloatingWidget(false);
       }
     });
   }
@@ -334,88 +379,363 @@
            el.offsetHeight > 0;
   }
   
-  // Show a widget below the toolbar
-  function showToolbarWidget(position) {
-    // Remove existing widget if any
-    hideWidget();
+  // Create or toggle the floating widget
+  function toggleFloatingWidget(show) {
+    // Remove any existing widget
+    const existingWidget = document.getElementById('cobra-floating-widget');
+    if (existingWidget) {
+      existingWidget.remove();
+    }
     
-    // Create the widget
+    if (!show) return;
+    
+    // Create the floating widget
     const widget = document.createElement('div');
-    widget.id = 'cobra-helper-widget';
+    widget.id = 'cobra-floating-widget';
     document.body.appendChild(widget);
     
-    // Style the widget
-    widget.style.position = 'absolute';
-    widget.style.left = `${position.x - 125}px`;
-    widget.style.top = `${position.y}px`;
-    widget.style.width = '250px';
-    widget.style.backgroundColor = '#282828';
-    widget.style.color = '#e0e0e0';
-    widget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.3)';
-    widget.style.borderRadius = '4px';
-    widget.style.zIndex = '9998';
-    widget.style.fontFamily = "'Inter', 'Segoe UI', Arial, sans-serif";
-    widget.style.padding = '10px';
-    widget.style.border = '1px solid #444';
-    widget.style.borderTop = '2px solid #1e88e5';
+    // Style the floating widget
+    Object.assign(widget.style, {
+      position: 'fixed',
+      right: '20px',
+      top: '60px',
+      width: '300px',
+      backgroundColor: '#282828',
+      color: '#e0e0e0',
+      borderRadius: '8px',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+      fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif",
+      padding: '15px',
+      zIndex: '9998',
+      border: '1px solid #444',
+      borderTop: '2px solid #8A2BE2',
+      transition: 'transform 0.3s ease, opacity 0.3s ease',
+      maxHeight: '80vh',
+      overflowY: 'auto'
+    });
     
-    // Add content to the widget with text-based logo matching the button
+    // Check if we have an API key
+    const apiKey = localStorage.getItem('cobra_openai_key');
+    
+    // Add drag handle and content container
     widget.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; cursor: move;" id="cobra-widget-header">
         <div style="font-weight: 500; font-size: 14px; display: flex; align-items: center;">
-          <span style="font-weight: bold; font-size: 14px; color: white; letter-spacing: 0.5px; margin-right: 6px; text-shadow: 0 0 2px #111;">Co<span style="color: #4CAF50;">bra</span></span>
-          <span>Code Helper</span>
+          <div style="width: 14px; height: 14px; border-radius: 50%; background-color: #8A2BE2; margin-right: 8px;"></div>
+          <span>Cobra</span>
         </div>
-        <div id="close-helper-widget" style="cursor: pointer; font-size: 16px; color: #888;">×</div>
+        <div style="display: flex; gap: 8px;">
+          <div id="cobra-widget-minimize" style="cursor: pointer; font-size: 14px; color: #888; padding: 0 4px;">_</div>
+          <div id="cobra-widget-close" style="cursor: pointer; font-size: 14px; color: #888; padding: 0 4px;">×</div>
+        </div>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr; gap: 6px;">
-        <button id="check-code-button" style="width: 100%; padding: 6px 10px; background-color: #333; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 12px; text-align: left;">
-          Check & Fix Code
+      <div id="cobra-widget-content">
+        ${!apiKey ? `
+          <div style="padding: 12px; border-radius: 4px; background-color: #333; margin-bottom: 12px;">
+            <p style="margin: 0 0 8px 0; font-size: 13px;">Please enter your OpenAI API key:</p>
+            <input type="password" id="openai-api-key" style="width: 100%; padding: 8px; margin-bottom: 8px; background: #222; border: 1px solid #555; border-radius: 4px; color: white;">
+            <button id="save-api-key" style="padding: 6px 12px; background-color: #8A2BE2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">Save API Key</button>
+          </div>
+        ` : `
+          <div id="analysis-content" style="padding: 10px; border-radius: 4px; background-color: #333; margin-bottom: 12px;">
+            <p style="margin: 0; font-size: 13px;">Waiting for code changes...</p>
+          </div>
+          <button id="reset-api-key" style="width: 100%; padding: 4px 8px; background-color: #444; color: #aaa; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; text-align: center; margin-top: 8px;">
+            Reset API Key
         </button>
-        <button id="optimize-code-button" style="width: 100%; padding: 6px 10px; background-color: #333; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 12px; text-align: left;">
-          Optimize Solution
-        </button>
-        <button id="explain-code-button" style="width: 100%; padding: 6px 10px; background-color: #333; color: #e0e0e0; border: 1px solid #555; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 12px; text-align: left;">
-          Explain Code
-        </button>
+        `}
       </div>
     `;
     
-    // Add event listeners
-    document.getElementById('close-helper-widget').addEventListener('click', hideWidget);
+    // Make the widget draggable
+    makeWidgetDraggable(widget);
     
-    document.getElementById('check-code-button').addEventListener('click', () => {
-      alert('Checking code with Cobra...');
-      hideWidget();
+    // Add event listeners for the widget buttons
+    document.getElementById('cobra-widget-close').addEventListener('click', () => {
+      toggleFloatingWidget(false);
     });
     
-    document.getElementById('optimize-code-button').addEventListener('click', () => {
-      alert('Optimizing code with Cobra...');
-      hideWidget();
+    document.getElementById('cobra-widget-minimize').addEventListener('click', () => {
+      const content = document.getElementById('cobra-widget-content');
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        widget.style.height = 'auto';
+      } else {
+        content.style.display = 'none';
+        widget.style.height = 'auto';
+      }
     });
     
-    document.getElementById('explain-code-button').addEventListener('click', () => {
-      alert('Explaining code with Cobra...');
-      hideWidget();
-    });
+    // Add API key functionality
+    if (!apiKey) {
+      const saveButton = document.getElementById('save-api-key');
+      if (saveButton) {
+        saveButton.addEventListener('mouseover', () => {
+          saveButton.style.backgroundColor = '#9D4EDD';
+        });
+        saveButton.addEventListener('mouseout', () => {
+          saveButton.style.backgroundColor = '#8A2BE2';
+        });
+        saveButton.addEventListener('click', () => {
+          const keyInput = document.getElementById('openai-api-key');
+          if (keyInput && keyInput.value.trim()) {
+            localStorage.setItem('cobra_openai_key', keyInput.value.trim());
+            // Refresh widget after setting API key
+            toggleFloatingWidget(true);
+          }
+        });
+      }
+    } else {
+      const resetButton = document.getElementById('reset-api-key');
+      if (resetButton) {
+        resetButton.addEventListener('click', () => {
+          localStorage.removeItem('cobra_openai_key');
+          toggleFloatingWidget(true);
+        });
+      }
+    }
     
-    // Add hover effects to the buttons
-    const buttons = widget.querySelectorAll('button');
-    buttons.forEach(btn => {
-      btn.addEventListener('mouseover', () => {
-        btn.style.backgroundColor = '#444';
-      });
-      btn.addEventListener('mouseout', () => {
-        btn.style.backgroundColor = '#333';
-      });
-    });
+    // If we have an API key, try to analyze code right away
+    if (apiKey) {
+      const editor = window.findMonacoEditor ? window.findMonacoEditor() : null;
+      if (editor) {
+        const model = editor.getModel();
+        if (model) {
+          const code = model.getValue();
+          const problemSlug = window.location.pathname.split('/')[2];
+          analyzeCodeWithAI(code, problemSlug);
+        }
+      }
+    }
   }
   
-  // Hide the helper widget
-  function hideWidget() {
-    const widget = document.getElementById('cobra-helper-widget');
-    if (widget) {
-      widget.remove();
+  // Analyze code with OpenAI API
+  async function analyzeCodeWithAI(code, problemSlug) {
+    // Get API key from localStorage
+    const apiKey = localStorage.getItem('cobra_openai_key');
+    if (!apiKey) return;
+    
+    // Set loading state
+    updateWidgetContent(`<div style="padding: 10px; border-radius: 4px; background-color: #333;">
+      <p style="margin: 0; font-size: 13px;">Analyzing your solution...</p>
+    </div>`);
+    
+    try {
+      // Prepare prompts
+      const systemPrompt = "You are an AI coding assistant integrated with LeetCode. Analyze the provided code, offering insights on correctness, efficiency, and potential improvements. Be concise and educational. When mentioning line numbers, use the format 'Line X:'. Focus on being helpful and insightful without being verbose.";
+      const userPrompt = `Analyze this code for the LeetCode problem '${problemSlug}':\n\n${code}`;
+      
+      // Make API call to OpenAI
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: userPrompt
+            }
+          ],
+          temperature: 0.3
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const analysis = data.choices[0].message.content;
+      
+      // Format the analysis for display
+      const formattedAnalysis = formatAnalysis(analysis);
+      
+      // Update widget with the analysis
+      updateWidgetContent(`<div style="padding: 12px; border-radius: 4px; background-color: #333; max-height: 300px; overflow-y: auto;">
+        <div style="font-size: 13px; line-height: 1.5; color: #e0e0e0;">${formattedAnalysis}</div>
+      </div>`);
+      
+      // Highlight lines of code mentioned in the analysis
+      highlightCodeLines(analysis);
+      
+    } catch (error) {
+      console.error('Error analyzing code:', error);
+      updateWidgetContent(`<div style="padding: 10px; border-radius: 4px; background-color: #333;">
+        <p style="margin: 0 0 8px 0; font-size: 13px; color: #ff6b6b;">Error analyzing code:</p>
+        <p style="margin: 0; font-size: 12px;">${error.message || 'Unknown error occurred'}</p>
+      </div>`);
+    }
+  }
+  
+  // Format the analysis text for better display
+  function formatAnalysis(text) {
+    return text
+      // Convert markdown headers
+      .replace(/^# (.*)/gm, '<h4 style="margin: 12px 0 8px 0; color: #8A2BE2;">$1</h4>')
+      .replace(/^## (.*)/gm, '<h5 style="margin: 10px 0 6px 0; color: #9D4EDD;">$1</h5>')
+      
+      // Convert code blocks
+      .replace(/```([\s\S]*?)```/g, '<div style="background: #222; padding: 10px; border-radius: 4px; font-family: monospace; margin: 8px 0; overflow-x: auto;">$1</div>')
+      
+      // Convert inline code
+      .replace(/`([^`]+)`/g, '<code style="background: #222; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>')
+      
+      // Convert line number references
+      .replace(/Line (\d+):/g, '<span style="font-weight: bold; color: #9D4EDD;">Line $1:</span>')
+      
+      // Convert normal line breaks
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+  }
+  
+  // Highlight lines of code in the editor
+  function highlightCodeLines(analysis) {
+    setTimeout(() => {
+      try {
+        // Get the editor
+        const editor = window.findMonacoEditor ? window.findMonacoEditor() : null;
+        if (!editor) return;
+        
+        // Extract line numbers from the analysis
+        const lineRegex = /Line (\d+)/gi;
+        const lineNumbers = [];
+        let match;
+        
+        while ((match = lineRegex.exec(analysis)) !== null) {
+          lineNumbers.push(parseInt(match[1]));
+        }
+        
+        // Apply decorations to highlight lines
+        const model = editor.getModel();
+        if (!model) return;
+        
+        // Remove any existing decorations
+        editor.deltaDecorations([], []);
+        
+        // Create new decorations
+        const decorations = lineNumbers.map(lineNumber => ({
+          range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+          options: {
+            isWholeLine: true,
+            className: 'cobra-highlighted-line',
+            linesDecorationsClassName: 'cobra-line-decoration'
+          }
+        }));
+        
+        // Add a style element if it doesn't exist
+        let styleElement = document.getElementById('cobra-styles');
+        if (!styleElement) {
+          styleElement = document.createElement('style');
+          styleElement.id = 'cobra-styles';
+          document.head.appendChild(styleElement);
+          styleElement.innerHTML = `
+            .cobra-highlighted-line {
+              background-color: rgba(138, 43, 226, 0.1);
+              border-left: 2px solid #8A2BE2 !important;
+            }
+            .cobra-line-decoration {
+              margin-left: 5px;
+              width: 4px !important;
+              background-color: #8A2BE2;
+            }
+          `;
+        }
+        
+        // Apply the decorations
+        editor.deltaDecorations([], decorations);
+      } catch (error) {
+        console.error('Error highlighting code lines:', error);
+      }
+    }, 500); // Delay to ensure editor is ready
+  }
+  
+  // Update the widget content based on code changes
+  function updateFloatingWidget(code, problemSlug) {
+    const widget = document.getElementById('cobra-floating-widget');
+    if (!widget) return;
+    
+    // In a real implementation, this would analyze the code and update the widget
+    updateWidgetContent(`
+      <div style="padding: 10px; border-radius: 4px; background-color: #333; margin-bottom: 12px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 14px;">Analysis for "${problemSlug}"</h4>
+        <p style="margin: 0; font-size: 12px; color: #ccc;">Code length: ${code.length} characters</p>
+      </div>
+    `);
+  }
+  
+  // Update the content of the widget
+  function updateWidgetContent(content) {
+    const contentDiv = document.getElementById('cobra-widget-content');
+    if (contentDiv) {
+      // Keep the buttons section
+      const buttonsSection = contentDiv.querySelector('div:last-child');
+      contentDiv.innerHTML = '';
+      
+      // If content is a string, wrap it in a div
+      if (typeof content === 'string') {
+        const messageDiv = document.createElement('div');
+        messageDiv.style.marginBottom = '12px';
+        messageDiv.innerHTML = content;
+        contentDiv.appendChild(messageDiv);
+      } else {
+        // If it's an element, append it directly
+        contentDiv.appendChild(content);
+      }
+      
+      // Add back the buttons
+      contentDiv.appendChild(buttonsSection);
+    }
+  }
+  
+  // Make the widget draggable
+  function makeWidgetDraggable(widget) {
+    const header = document.getElementById('cobra-widget-header');
+    if (!header) return;
+    
+    let isDragging = false;
+    let offsetX, offsetY;
+    
+    header.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      const widgetRect = widget.getBoundingClientRect();
+      offsetX = e.clientX - widgetRect.left;
+      offsetY = e.clientY - widgetRect.top;
+      
+      // Add temporary event listeners for dragging
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      
+      // Prevent text selection during drag
+      e.preventDefault();
+    });
+    
+    function onMouseMove(e) {
+      if (!isDragging) return;
+      
+      // Calculate new position
+      const x = e.clientX - offsetX;
+      const y = e.clientY - offsetY;
+      
+      // Apply new position
+      widget.style.left = `${x}px`;
+      widget.style.right = 'auto';
+      widget.style.top = `${y}px`;
+    }
+    
+    function onMouseUp() {
+      isDragging = false;
+      
+      // Remove temporary event listeners
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
     }
   }
   

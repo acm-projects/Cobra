@@ -60,7 +60,7 @@ const SidePanel: React.FC = () => {
     {
       id: "1",
       role: "assistant",
-      content: "👋 Hello! I'm your Cobra AI coding assistant. How can I help you today?",
+      content: "Hello! I'm CobraBot, your coding assistant. How can I help you today?",
       timestamp: new Date(),
     }
   ]);
@@ -4857,7 +4857,7 @@ function calculate() {
                       repeatDelay: 5,
                     }}
                   ></motion.i>
-                  Cobra AI
+                  CobraBot
                   <motion.span
                     className="status-badge online"
                     animate={{

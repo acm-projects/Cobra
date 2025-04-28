@@ -1,0 +1,24 @@
+service: leetcode-analyzer
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+
+functions:
+  analyzeCode:
+    handler: lambda.handler
+    events:
+      - http:
+          path: analyze
+          method: post
+          cors: true
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 4000 

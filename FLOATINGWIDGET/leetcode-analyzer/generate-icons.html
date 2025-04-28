@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Icons</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="icon16" width="16" height="16"></canvas>
+    <canvas id="icon48" width="48" height="48"></canvas>
+    <canvas id="icon128" width="128" height="128"></canvas>
+    <script>
+        function drawIcon(canvas) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            
+            // Background
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Code brackets
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = size / 8;
+            
+            // Left bracket
+            ctx.beginPath();
+            ctx.moveTo(size * 0.3, size * 0.2);
+            ctx.lineTo(size * 0.2, size * 0.5);
+            ctx.lineTo(size * 0.3, size * 0.8);
+            ctx.stroke();
+            
+            // Right bracket
+            ctx.beginPath();
+            ctx.moveTo(size * 0.7, size * 0.2);
+            ctx.lineTo(size * 0.8, size * 0.5);
+            ctx.lineTo(size * 0.7, size * 0.8);
+            ctx.stroke();
+            
+            // Center dot
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(size * 0.5, size * 0.5, size * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw icons
+        drawIcon(document.getElementById('icon16'));
+        drawIcon(document.getElementById('icon48'));
+        drawIcon(document.getElementById('icon128'));
+    </script>
+</body>
+</html> 

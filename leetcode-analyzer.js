@@ -373,8 +373,7 @@ function analyzeCode(code, problemSlug) {
 
   // Check if we have the OpenAI API key
   chrome.storage.sync.get(['cobra_openai_key'], function(result) {
-    const apiKey = result.cobra_openai_key || localStorage.getItem('cobra_openai_key');
-    
+    const apiKey = 'OPEN_AI_API_KEY_GOES_HERE';
     if (!apiKey) {
       console.error('[Cobra LeetCode Analyzer] No OpenAI API key found');
       // Update status message with error

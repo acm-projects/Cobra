@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set the OpenAI API key
-export OPENAI_API_KEY="insert-your-openai-api-key-here"
+export OPENAI_API_KEY="OPEN_AI_API_KEY_GOES_HERE"
 
 # Change to the leetcode-analyzer directory
 cd leetcode-analyzer

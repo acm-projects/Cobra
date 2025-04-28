@@ -167,6 +167,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         document.getElementById('errorWidget')?.remove(); // Remove any existing widget
         let currentIndex = 0;
 
+        //let card = <ErrorCard title={errors[currentIndex].title} error={errors[currentIndex].mistakeDescription} userCode={errors[currentIndex].mistakeCode} solution="Suggested Fix:" solutionCode={errors[currentIndex].suggestedFix}/>;
         // Inject custom CSS if not already added
         if (!document.getElementById('cobra-error-styles')) {
           injectCustomCSS();

@@ -4,15 +4,19 @@ import { ProblemInfo } from '../../types';
 
 interface CurrentProblemProps {
   problem?: ProblemInfo;
+  title?: string;
+  description?: string;
   onGetHints: () => void;
   onViewResources: () => void;
   onRefresh: () => void;
   onOpenExternal: () => void;
-  onSetProblem: Dispatch<SetStateAction<ProblemInfo | undefined>>;
+  onSetProblem?: Dispatch<SetStateAction<ProblemInfo | undefined>>;
 }
 
 const CurrentProblem: React.FC<CurrentProblemProps> = ({
   problem,
+  title,
+  description,
   onGetHints,
   onViewResources,
   onRefresh,
@@ -20,7 +24,7 @@ const CurrentProblem: React.FC<CurrentProblemProps> = ({
   onSetProblem
 }) => {
   // If no problem is detected
-  if (!problem) {
+  if ( !title) {
     return (
       <motion.div 
         className="dashboard-card"
@@ -31,7 +35,7 @@ const CurrentProblem: React.FC<CurrentProblemProps> = ({
         <div className="card-header">
           <div className="card-header-left">
             <i className="fas fa-code"></i>
-            <h3>Current Problem</h3>
+            <h3>Welcome to Cobra!</h3>
           </div>
           <div className="card-header-right">
             <div className="card-actions">
@@ -60,6 +64,45 @@ const CurrentProblem: React.FC<CurrentProblemProps> = ({
     );
   }
 
+  if ( !problem) {
+    return (
+      <motion.div 
+        className="dashboard-card"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="card-header">
+          <div className="card-header-left">
+            <i className="fas fa-code"></i>
+            <h3>{title}</h3>
+          </div>
+          <div className="card-header-right">
+            <div className="card-actions">
+              <button className="card-action-button" onClick={onRefresh}>
+                <i className="fas fa-sync-alt"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <motion.div 
+          className="card-content"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <motion.div
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            style={{ fontSize: "13px", padding: "8px 0" }}
+            dangerouslySetInnerHTML={{__html: description?description : "No active problem detected. Navigate to a coding problem to activate."}}
+          />
+        </motion.div>
+      </motion.div>
+    );
+  }
+
   // Format the time elapsed since start
   const getTimeElapsed = () => {
     if (!problem.startTime) return 'Just started';
@@ -82,7 +125,7 @@ const CurrentProblem: React.FC<CurrentProblemProps> = ({
       <div className="card-header">
         <div className="card-header-left">
           <i className="fas fa-code"></i>
-          <h3>{problem.title}</h3>
+          <h3>{title}</h3>
         </div>
         <div className="card-header-right">
           <div className="card-actions">

@@ -1,23 +1,24 @@
 import React, { useEffect, useState, useRef } from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from 'react-dom/client';
 import { Auth } from "./utils/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import "./hints.css";
+import "./styles/chat.css";
 import VerificationPage from "./components/VerificationPage";
 import CurrentProblem from "./components/Dashboard/CurrentProblem";
-import { ProblemInfo } from "./types";
+import { getHints, sendChat } from "./awsFunctions";
+import HintCard from "./components/HintCard";
+import HintCardContainer from "./components/HintCardContainer";
+import ConceptualHintContainer from "./components/ConceptualHintContainer";
+import { ProblemInfo, Message, WindowSize } from "./types";
+import ResourceCard from "./components/ResourceCard";
+import Settings from "./components/Settings";
 
 // Type definitions
 interface NavigateMessage {
   type: "navigate";
   windowId?: number;
   path: string;
-}
-
-interface WindowSize {
-  size: "compact" | "medium" | "expanded";
-  width?: number;
-  height?: number;
 }
 
 // Extending Chrome Window interface
@@ -31,12 +32,6 @@ declare global {
 interface ChromeSidePanel extends chrome.sidePanel.SidePanel {
   close(): Promise<void>;
 }
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "giveUsernameToSidePanel") {
-    console.log("LeetCode username: " + message.data);
-  }
-});
 
 // Main App Component
 const SidePanel: React.FC = () => {
@@ -61,7 +56,28 @@ const SidePanel: React.FC = () => {
 
   // Chat state
   const [messageText, setMessageText] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "1",
+      role: "assistant",
+      content: "Hello! I'm CobraBot, your coding assistant. How can I help you today?",
+      timestamp: new Date(),
+    }
+  ]);
+  const [showInitialSuggestions, setShowInitialSuggestions] = useState<boolean>(true);
+  const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([
+    "Help me debug my code",
+    "Explain a coding concept",
+    "Review my code for best practices",
+    "Help me optimize my algorithm",
+    "Generate code documentation",
+    "Convert code between languages"
+  ]);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isTyping, setIsTyping] = useState<boolean>(false);
 
   // New settings
   const [fontSize, setFontSize] = useState<"small" | "medium" | "large">(
@@ -91,6 +107,14 @@ const SidePanel: React.FC = () => {
   const timerPausedValueRef = useRef<number>(0);
 
   const [currentProblem, setCurrentProblem] = useState<ProblemInfo | undefined>(undefined);
+  const [currentHint, setCurrentHint] = useState<string>("");
+  const [currentCodeSnipets, setCurrentCodeSnipets] = useState<JSX.Element[]>([]);
+  const [currentProblemTitle, setCurrentProblemTitle] = useState<string>("");
+  const [currentDiscussions, setCurrentDiscussions] = useState<JSX.Element[]>([]);
+  const [isHintsLoading, setIsHintsLoading] = useState<boolean>(false);
+  const [currentProblemId, setCurrentProblemId] = useState<string | null>(null);
+  const [codeSnippetsData, setCodeSnippetsData] = useState<any[]>([]);
+  const [currentProblemDescription, setCurrentProblemDescription] = useState<string>("");
 
   // Check authentication on component mount
   useEffect(() => {
@@ -105,13 +129,15 @@ const SidePanel: React.FC = () => {
 
     const checkAuth = async () => {
       try {
-        const isAuthenticated = await Auth.isAuthenticated();
-        setIsAuthenticated(isAuthenticated);
+        const isAuth = await Auth.isAuthenticated();
+        setIsAuthenticated(isAuth);
+        console.log("User is authenticated:", isAuth);
 
         // Check URL parameters first
         const urlParams = new URLSearchParams(window.location.search);
         const verifiedParam = urlParams.get("verified") === "true";
-
+        console.log("verifiedParam: ", verifiedParam);
+        console.log("urlParams: ", urlParams.toString());
         // If verified via URL parameter, make sure it's set in localStorage
         if (verifiedParam) {
           localStorage.setItem("isVerified", "true");
@@ -124,7 +150,6 @@ const SidePanel: React.FC = () => {
           !verifiedParam &&
           (localStorage.getItem("needsVerification") === "true" ||
             localStorage.getItem("showVerificationInSidepanel") === "true");
-
         // If verification is needed, show the verification page
         if (needsVerification) {
           console.log("User needs verification, showing verification page");
@@ -132,7 +157,8 @@ const SidePanel: React.FC = () => {
           return; // Skip other checks if verification is needed
         }
 
-        if (!isAuthenticated) {
+        if (!isAuth) {
+          console.log("User is not authenticated, navigating to signin page");
           // If not authenticated, navigate to signin
           const window = await chrome.windows.getCurrent();
           if (window.id) {
@@ -143,13 +169,25 @@ const SidePanel: React.FC = () => {
             } as NavigateMessage);
           }
         } else {
+          console.log("User is authenticated, checking verification status");
           // Check if we need to show the loading screen (only after verification)
           // Parse URL parameters for loading flag
           const loadingParam = urlParams.get("loading");
           const justVerifiedParam = urlParams.get("justVerified");
+          console.log("loadingParam: ", loadingParam);
+          console.log("justVerifiedParam: ", justVerifiedParam);
+          console.log("showing loading? (sidepanel): " + localStorage.getItem("showLoadingOnSidepanel"));
+          console.log("just verified? (sidepanel): " + localStorage.getItem("justVerified"));
+
+          let loadingLoc = false;
+          chrome.storage.local.get('showLoadingLoc', (result) => {
+            loadingLoc = result.showLoadingLoc;
+            console.log('loadingLoc:', loadingLoc); // Do your work here
+          });
 
           // Also check localStorage as fallback
           const showLoading =
+            loadingLoc  ||
             loadingParam === "true" ||
             justVerifiedParam === "true" ||
             localStorage.getItem("showLoadingOnSidepanel") === "true" ||
@@ -273,2810 +311,3013 @@ const SidePanel: React.FC = () => {
     const sidebarState = localStorage.getItem("sidebarExpanded") === "true";
     setSidebarExpanded(sidebarState);
 
+
+    const messageChatBot = async (message: string) => {
+
+    }
+
     // Apply necessary styles for proper section display
     const styleElement = document.createElement("style");
-    styleElement.textContent = `
-      body {
-        width: 100%;
-        height: 100vh;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background-color: #0A0B1E;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        color: #ffffff;
-      }
-      
-      .container {
-        height: 100vh;
-        display: flex;
-        background-color: #0A0B1E;
-        max-width: 100%;
-        margin: 0;
-        padding: 0;
-        position: relative;
-      }
-      
-      .container.loading .main-content {
-        filter: blur(4px);
-        pointer-events: none;
-      }
-      
-      .container.loading .nav-sidebar {
-        filter: blur(4px);
-        pointer-events: none;
-      }
-      
-      /* LeetCode Loader Styles */
-      .leetcode-loader-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(10, 11, 30, 0.85);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        backdrop-filter: blur(5px);
-      }
-      
-      .leetcode-loader-container {
-        width: 100%;
-        max-width: 460px;
-        padding: 0 20px;
-        box-sizing: border-box;
-      }
-      
-      .leetcode-loader-card {
-        background-color: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-      }
-      
-      .loader-header {
-        display: flex;
-        align-items: center;
-        padding: 16px 24px;
-        background-color: rgba(139, 92, 246, 0.1);
-        border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-      }
-      
-      .loader-header i {
-        color: #8B5CF6;
-        font-size: 18px;
-        margin-right: 12px;
-      }
-      
-      .loader-header h3 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-        color: white;
-      }
-      
-      .loader-content {
-        padding: 32px 24px;
-        text-align: center;
-      }
-      
-      .spinner-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 24px;
-      }
-      
-      .spinner {
-        width: 48px;
-        height: 48px;
-        border: 3px solid rgba(139, 92, 246, 0.2);
-        border-top-color: #8B5CF6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
+      styleElement.textContent = `
+        body {
+          width: 100%;
+          height: 100vh;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+          background-color: #0A0B1E;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+          color: #ffffff;
         }
-      }
-      
-      .loading-message {
-        font-size: 16px;
-        font-weight: 600;
-        color: white;
-        margin-bottom: 8px;
-      }
-      
-      .loader-disclaimer {
-        font-size: 14px;
-        color: #94a3b8;
-        line-height: 1.5;
-        margin-bottom: 8px;
-      }
-      
-      .completed-message {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        color: #10b981;
-      }
-      
-      .completed-message i {
-        font-size: 48px;
-        margin-bottom: 16px;
-      }
-      
-      .completed-message p {
-        font-size: 16px;
-        font-weight: 600;
-      }
-      
-      .loader-footer {
-        padding: 16px 24px;
-        background-color: rgba(0, 0, 0, 0.1);
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-      }
-      
-      .privacy-note {
-        font-size: 12px;
-        color: #94a3b8;
-        text-align: center;
-        margin: 0;
-      }
-      
-      .nav-sidebar {
-        width: 48px;
-        min-width: 48px;
-        background-color: rgba(255, 255, 255, 0.03);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 12px 6px;
-        transition: all 0.3s ease;
-        position: relative;
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-        height: 100vh;
-      }
-      
-      .nav-sidebar.expanded {
-        width: 200px;
-        min-width: 200px;
-      }
-      
-      .sidebar-logo {
-        width: 100%;
-        height: 36px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-        margin-bottom: 20px;
-      }
-      
-      .icon-logo {
-        width: 28px;
-        height: 28px;
-        opacity: 1;
-        transition: all 0.3s ease;
-        position: absolute;
-      }
-      
-      .full-logo {
-        width: 0;
-        opacity: 0;
-        height: 28px;
-        transition: all 0.3s ease;
-        object-fit: contain;
-      }
-      
-      .nav-sidebar.expanded .icon-logo {
-        opacity: 0;
-        width: 0;
-      }
-      
-      .nav-sidebar.expanded .full-logo {
-        width: 160px;
-        opacity: 1;
-      }
-      
-      .nav-item {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 6px 0;
-        color: #94a3b8;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-size: 14px;
-      }
-      
-      .nav-item:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        color: white;
-      }
-      
-      .nav-item.active {
-        background-color: #8B5CF6;
-        color: white;
-      }
-      
-      .nav-sidebar.expanded .nav-item {
-        width: 160px;
-        justify-content: flex-start;
-        padding-left: 12px;
-      }
-      
-      .nav-label {
-        margin-left: 10px;
-        font-size: 13px;
-      }
-      
-      .main-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        overflow: hidden;
-        padding: 16px;
-        box-sizing: border-box;
-        background-color: rgba(10, 11, 30, 0.4);
-      }
-      
-      .content-section {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        position: relative;
-      }
-      
-      .section {
-        flex: 1;
-        display: none;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-      
-      .section.active {
-        display: flex;
-        flex-direction: column;
-        opacity: 1;
-      }
-      
-      .dashboard-welcome {
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 16px;
-        color: white;
-      }
-      
-      .dashboard-subtitle {
-        font-size: 14px;
-        color: #94a3b8;
-        margin-bottom: 24px;
-        line-height: 1.4;
-      }
-      
-      .tools-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-      
-      .tool-button {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 12px;
-        color: white;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      
-      .tool-button i {
-        font-size: 18px;
-        color: #8B5CF6;
-      }
-      
-      .tool-button span {
-        font-size: 13px;
-        font-weight: 500;
-      }
-      
-      .dashboard-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-      }
-      
-      .card-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-      }
-      
-      .card-header i {
-        color: #8B5CF6;
-        font-size: 16px;
-      }
-      
-      .card-header h3 {
-        font-size: 15px;
-        font-weight: 600;
-        margin: 0;
-      }
-      
-      .problem-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 10px;
-        border-radius: 8px;
-        margin-bottom: 6px;
-        transition: all 0.2s ease;
-      }
-      
-      .problem-title {
-        font-size: 13px;
-        color: #e2e8f0;
-      }
-      
-      .problem-status {
-        font-size: 12px;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-weight: 500;
-      }
-      
-      .problem-status.success {
-        background: rgba(16, 185, 129, 0.1);
-        color: #10b981;
-      }
-      
-      .problem-status.failed {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-      }
-      
-      .section { 
-        display: none; 
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-      
-      .section.active { 
-        display: block; 
-        opacity: 1;
-      }
-      
-      .sidebar-toggle {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.05);
-        color: #94a3b8;
-        cursor: pointer;
-        margin: 10px 0;
-        position: relative;
-        left: 0;
-        transition: all 0.3s ease;
-      }
-      
-      .nav-sidebar.expanded .sidebar-toggle {
-        left: 75px; /* This will position it more to the center when expanded */
-      }
-      
-      .sidebar-toggle:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-      }
-      
-      /* Additional styling for section contents */
-      .settings-container, .hints-container, .resources-container, .errors-container {
-        padding: 16px;
-        overflow-y: auto;
-        max-height: calc(100vh - 120px);
-      }
-      
-      .settings-section {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 24px;
-        transition: all 0.3s ease;
-        width: 100%;
-        box-sizing: border-box;
-      }
-      
-      .setting-item {
-        margin-bottom: 16px;
-      }
-      
-      h3 {
-        margin: 0 0 16px 0;
-        color: white;
-        font-size: 18px;
-        font-weight: 600;
-      }
-      
-      .search-container {
-        position: relative;
-        margin-bottom: 24px;
-      }
-      
-      .search-input {
-        width: 100%;
-        padding: 12px 16px 12px 40px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        color: white;
-        font-size: 14px;
-        transition: all 0.2s ease;
-      }
-      
-      .search-icon {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #94a3b8;
-        font-size: 16px;
-      }
-      
-      .difficulty-tabs {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 20px;
-      }
-      
-      .tab-button {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 8px 16px;
-        color: #94a3b8;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      
-      .tab-button.active {
-        background: rgba(139, 92, 246, 0.15);
-        border-color: #8B5CF6;
-        color: white;
-      }
-      
-      .timer-container {
-        padding: 16px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-      }
-      
-      .timer-type-selector {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 16px;
-      }
-      
-      .timer-type-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 8px 16px;
-        color: #94a3b8;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      
-      .timer-type-btn.active {
-        background: rgba(139, 92, 246, 0.15);
-        border-color: #8B5CF6;
-        color: white;
-      }
-      
-      .timer-display {
-        font-size: 32px;
-        text-align: center;
-        margin: 20px 0;
-        font-weight: 600;
-      }
-      
-      .btn-primary {
-        background: #8B5CF6;
-        color: white;
-        border: none;
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .btn-primary:hover {
-        background: #7c4dff;
-        transform: translateY(-2px);
-      }
-      
-      .window-size-options, .countdown-controls, .timer-controls {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 16px;
-      }
-      
-      .theme-toggle {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        padding: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        transition: all 0.2s ease;
-      }
-      
-      .theme-toggle:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-      
-      .timer-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 8px 16px;
-        color: white;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      
-      .timer-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-      
-      .timer-btn.start {
-        background: #10b981;
-        border-color: #059669;
-      }
-      
-      .timer-btn.pause {
-        background: #f59e0b;
-        border-color: #d97706;
-      }
-      
-      .timer-btn.reset {
-        background: #ef4444;
-        border-color: #dc2626;
-      }
-      
-      .radio-option {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      
-      input[type="number"] {
-        width: 60px;
-        padding: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-        color: white;
-      }
-      
-      /* Dashboard Styles */
-      .dashboard {
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-        max-width: 1000px;
-        margin: 0 auto;
-        position: relative;
-      }
-      
-      .dashboard::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 400px;
-        height: 400px;
-        background: radial-gradient(circle, rgba(139, 92, 246, 0.05), transparent 70%);
-        z-index: 0;
-        pointer-events: none;
-      }
-      
-      .dashboard-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        position: relative;
-        z-index: 1;
-        backdrop-filter: blur(10px);
-        transition: all 0.3s ease;
-      }
-      
-      .dashboard-card:hover {
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
-        border-color: rgba(139, 92, 246, 0.3);
-      }
-      
-      .card-header {
-        padding: 20px;
-        background: rgba(20, 20, 40, 0.5);
-        border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      
-      .card-header i {
-        color: #8B5CF6;
-        font-size: 20px;
-      }
-      
-      .card-header h3 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 600;
-        color: white;
-      }
-      
-      .card-content {
-        padding: 20px;
-      }
-      
-      .current-problem.dashboard-card {
-        background: linear-gradient(180deg, rgba(20, 20, 40, 0.5) 0%, rgba(30, 30, 60, 0.5) 100%);
-        border-left: 4px solid #8B5CF6;
-      }
-      
-      .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-      }
-      
-      .stat-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 24px;
-        text-align: center;
-        transition: all 0.3s ease;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-        position: relative;
-        overflow: hidden;
-      }
-      
-      .stat-card::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: linear-gradient(90deg, #8B5CF6, #6D28D9);
-        border-radius: 2px;
-      }
-      
-      .stat-value {
-        font-size: 36px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        background: linear-gradient(90deg, #8B5CF6, #6D28D9);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-      
-      .stat-label {
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.7);
-      }
-      
-      .tools-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        padding: 20px;
-      }
-      
-      .tool-button {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-      }
-      
-      .tool-button i {
-        font-size: 24px;
-      }
-      
-      .tool-button span {
-        font-size: 14px;
-      }
-      
-      .tool-button.hints i {
-        color: #fbbf24;
-      }
-      
-      .tool-button.resources i {
-        color: #10b981;
-      }
-      
-      .tool-button.errors i {
-        color: #ef4444;
-      }
-      
-      .tool-button.chat i {
-        color: #60a5fa;
-      }
-      
-      .problem-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 16px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        transition: all 0.3s ease;
-      }
-      
-      .problem-item:last-child {
-        border-bottom: none;
-      }
-      
-      .problem-title {
-        font-weight: 500;
-        color: rgba(255, 255, 255, 0.9);
-      }
-      
-      .problem-status {
-        font-size: 13px;
-        font-weight: 600;
-        padding: 4px 10px;
-        border-radius: 20px;
-      }
-      
-      .problem-status.success {
-        background: rgba(16, 185, 129, 0.1);
-        color: #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-      }
-      
-      .problem-status.failed {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-      }
-      
-      /* Hint Card Styles */
-      .hint-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        margin-bottom: 24px;
-        overflow: hidden;
-        transition: all 0.3s ease;
-      }
-      
-      .hint-card.blurred .hint-content {
-        filter: blur(5px);
-        user-select: none;
-        pointer-events: none;
-        position: relative;
-      }
-      
-      .hint-reveal-wrapper {
-        position: relative;
-      }
-      
-      .hint-reveal-button {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(139, 92, 246, 0.2);
-        border: 1px solid rgba(139, 92, 246, 0.4);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        z-index: 2;
-      }
-      
-      .hint-reveal-button:hover {
-        background: rgba(139, 92, 246, 0.3);
-        transform: translate(-50%, -50%) scale(1.05);
-      }
-      
-      .hints-container {
-        padding: 24px;
-        max-width: 900px;
-        margin: 0 auto;
-      }
-      
-      .hints-header {
-        margin-bottom: 24px;
-      }
-      
-      .hints-header h2 {
-        color: white;
-        font-size: 24px;
-        margin-bottom: 8px;
-      }
-      
-      .hints-description {
-        color: #94a3b8;
-        font-size: 14px;
-        line-height: 1.5;
-      }
-      
-      .difficulty-tabs {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 24px;
-        background: rgba(255, 255, 255, 0.03);
-        padding: 8px;
-        border-radius: 12px;
-      }
-      
-      .hint-category {
-        margin-bottom: 32px;
-      }
-      
-      .hint-category h3 {
-        font-size: 20px;
-        margin-bottom: 16px;
-        color: #8B5CF6;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .hint-category h3 i {
-        font-size: 18px;
-      }
-      
-      .hint-cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
-        gap: 24px;
-      }
-      
-      /* Fix the overlapping issues in the hints cards layout */
-      .hint-cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 24px;
-        width: 100%;
-        box-sizing: border-box;
-      }
-      
-      .hint-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px;
-        background: rgba(255, 255, 255, 0.02);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      .hint-title {
-        font-weight: 600;
-        color: white;
-        font-size: 16px;
-      }
-      
-      .hint-badge {
-        background: rgba(139, 92, 246, 0.1);
-        color: #8B5CF6;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 500;
-      }
-      
-      .hint-content {
-        padding: 16px;
-        color: #94a3b8;
-        font-size: 14px;
-        line-height: 1.6;
-      }
-      
-      .hint-code-snippet {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
-        overflow: hidden;
-        margin-top: 12px;
-      }
-      
-      .hint-code-snippet pre {
-        margin: 0;
-        padding: 16px;
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
-        font-family: monospace;
-        font-size: 13px;
-        line-height: 1.5;
-        color: #e2e8f0;
-      }
-      
-      /* Resource Styles */
-      .resource-section {
-        margin-bottom: 32px;
-      }
-      
-      .resource-section-title {
-        font-size: 18px;
-        font-weight: 600;
-        margin: 0 0 16px 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .resource-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 16px;
-      }
-      
-      /* Updated styles for resource grid */
-      .resource-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 16px;
-        width: 100%;
-      }
-      
-      .resource-card {
-        width: 100%;
-        box-sizing: border-box;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 20px;
-        position: relative;
-        transition: all 0.2s ease;
-      }
-      
-      .resource-icon {
-        width: 40px;
-        height: 40px;
-        background: rgba(139, 92, 246, 0.1);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 12px;
-      }
-      
-      .resource-icon i {
-        color: #8B5CF6;
-        font-size: 20px;
-      }
-      
-      .resource-badge {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: rgba(139, 92, 246, 0.1);
-        color: #8B5CF6;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-      }
-      
-      .resource-card h3 {
-        font-size: 16px;
-        margin: 0 0 8px 0;
-      }
-      
-      .resource-meta {
-        display: flex;
-        justify-content: space-between;
-        margin: 12px 0;
-        padding-bottom: 12px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        font-size: 12px;
-        color: #94a3b8;
-      }
-      
-      .resource-action {
-        width: 100%;
-        background: rgba(139, 92, 246, 0.1);
-        border: 1px solid rgba(139, 92, 246, 0.2);
-        border-radius: 8px;
-        color: #8B5CF6;
-        padding: 8px 0;
-        font-size: 14px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-      }
-      
-      /* Error Analysis Styles */
-      .error-filters, .resource-categories {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 20px;
-        padding-bottom: 8px;
-      }
-      
-      .error-filter-btn, .resource-category-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 6px 12px;
-        color: #94a3b8;
-        font-size: 14px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      
-      .error-filter-btn.active, .resource-category-btn.active {
-        background: rgba(139, 92, 246, 0.1);
-        border-color: #8B5CF6;
-        color: white;
-      }
-      
-      .error-summary {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        margin-bottom: 24px;
-        gap: 10px;
-      }
-      
-      .error-stat {
-        flex: 1;
-        min-width: 120px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 16px;
-        text-align: center;
-      }
-      
-      .error-number {
-        font-size: 24px;
-        font-weight: 600;
-        color: #8B5CF6;
-        display: block;
-        margin-bottom: 4px;
-      }
-      
-      .error-item {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        margin-bottom: 16px;
-        overflow: hidden;
-        max-width: 100%;
-        box-sizing: border-box;
-      }
-      
-      .error-header {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px;
-        background: rgba(255, 255, 255, 0.02);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        gap: 8px;
-      }
-      
-      .error-header-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        max-width: 80%;
-      }
-      
-      .error-icon {
-        color: #ef4444;
-      }
-      
-      .error-title {
-        word-break: break-word;
-        overflow-wrap: anywhere;
-        font-weight: 600;
-        color: white;
-      }
-      
-      .error-severity {
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-      }
-      
-      .error-severity.high {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-      }
-      
-      .error-details {
-        padding: 16px;
-        overflow-wrap: break-word;
-        word-wrap: break-word;
-      }
-      
-      .error-location {
-        font-size: 14px;
-        color: #94a3b8;
-        margin-bottom: 12px;
-      }
-      
-      /* Improve code snippets to prevent overflow */
-      .error-code, .error-fix-code {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
-        margin: 12px 0;
-        max-width: 100%;
-        overflow-x: auto;
-        box-sizing: border-box;
-      }
-      
-      .error-code pre, .error-fix-code pre {
-        margin: 0;
-        padding: 12px;
-        white-space: pre-wrap;
-        word-break: break-word;
-        width: 100%;
-        box-sizing: border-box;
-      }
-      
-      .error-code code, .error-fix-code code {
-        display: block;
-        max-width: 100%;
-        overflow-wrap: break-word;
-      }
-      
-      /* Chat Styles */
-      .chat-container {
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - 32px); /* Adjust to account for padding */
-        background-color: rgba(10, 11, 30, 0.4);
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: none;
-        width: 100%;
-        margin: 0 auto;
-      }
-      
-      .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-bottom: 0;
-      }
-      
-      .chat-actions {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 8px;
-        background-color: rgba(255, 255, 255, 0.02);
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      
-      .chat-input {
-        display: flex;
-        gap: 8px;
-        align-items: flex-end;
-        padding: 0 4px;
-      }
-      
-      .input-wrapper {
-        flex: 1;
-        position: relative;
-        background-color: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 8px 8px 8px 12px;
-        transition: all 0.2s ease;
-      }
-      
-      .chat-input-field {
-        width: 100%;
-        background: transparent;
-        border: none;
-        color: white;
-        font-size: 14px;
-        resize: none;
-        outline: none;
-        max-height: 80px;
-        padding-right: 40px;
-        line-height: 1.4;
-      }
-      
-      .input-buttons {
-        position: absolute;
-        right: 8px;
-        bottom: 50%;
-        transform: translateY(50%);
-        display: flex;
-        gap: 6px;
-      }
-      
-      .action-button {
-        background: transparent;
-        border: none;
-        color: #94a3b8;
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        padding: 0;
-      }
-      
-      .chat-send-button {
-        width: 32px;
-        height: 32px;
-        border-radius: 16px;
-        background-color: #8B5CF6;
-        color: white;
-        margin-bottom: 4px;
-      }
-      
-      .chat-send-button:hover {
-        background-color: #7c3aed;
-        transform: translateY(-1px);
-      }
-      
-      .chat-footer {
-        padding: 4px 8px;
-        font-size: 10px;
-        color: #94a3b8;
-        text-align: center;
-      }
-      
-      .chat-header {
-        padding: 12px;
-        background: rgba(20, 20, 40, 0.6);
-        border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-        backdrop-filter: blur(10px);
-        position: relative;
-        z-index: 10;
-      }
-      
-      .chat-header h3 {
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 16px;
-        color: white;
-      }
-      
-      .chat-header i {
-        color: #8B5CF6;
-        font-size: 16px;
-      }
-      
-      .status-badge {
-        font-size: 11px;
-        padding: 3px 8px;
-        border-radius: 20px;
-        margin-left: 10px;
-        font-weight: normal;
-        letter-spacing: 0.5px;
-      }
-      
-      .status-badge.online {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-      }
-      
-      .message {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        max-width: 85%;
-        margin: 2px 0;
-        animation: fadeIn 0.3s ease;
-      }
-      
-      .message.user {
-        margin-left: auto;
-        flex-direction: row-reverse;
-      }
-      
-      .message.assistant {
-        margin-right: auto;
-      }
-      
-      .message-avatar {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        overflow: hidden;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      
-      .message-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      
-      .message-content {
-        padding: 8px 12px;
-        border-radius: 16px;
-        font-size: 14px;
-        line-height: 1.4;
-        position: relative;
-      }
-      
-      .message.user .message-content {
-        background-color: #8B5CF6;
-        color: white;
-        border-bottom-right-radius: 4px;
-        margin-right: 4px;
-      }
-      
-      .message.assistant .message-content {
-        background-color: rgba(255, 255, 255, 0.05);
-        color: #e2e8f0;
-        border-bottom-left-radius: 4px;
-        margin-left: 4px;
-      }
-      
-      .message-text {
-        margin: 0;
-      }
-      
-      .message-time {
-        font-size: 10px;
-        color: rgba(255, 255, 255, 0.5);
-        margin-top: 4px;
-        display: block;
-      }
-      
-      .message.user .message-time {
-        text-align: right;
-      }
-      
-      /* Suggestion chips */
-      .suggestion-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 12px;
-      }
-      
-      .suggestion-chip {
-        background: rgba(139, 92, 246, 0.1);
-        border: 1px solid rgba(139, 92, 246, 0.3);
-        color: #a78bfa;
-        border-radius: 20px;
-        padding: 8px 14px;
-        font-size: 13px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-weight: 500;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      }
-      
-      .chat-input-container {
-        padding: 8px 12px;
-        background: rgba(20, 20, 40, 0.6);
-        border-top: 1px solid rgba(139, 92, 246, 0.2);
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        backdrop-filter: blur(10px);
-        position: relative;
-        z-index: 10;
-        margin-top: auto;
-        margin-bottom: 0;
-        height: 60px;
-      }
-      
-      .chat-input-wrapper {
-        flex: 1;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 24px;
-        padding: 8px 14px;
-        position: relative;
-        transition: all 0.2s ease;
-        max-width: 85%;
-        height: 44px;
-        display: flex;
-        align-items: center;
-      }
-      
-      .chat-input {
-        width: 100%;
-        height: 100%;
-        background: transparent;
-        border: none;
-        color: white;
-        resize: none;
-        outline: none;
-        font-size: 14px;
-        line-height: 1.4;
-        padding-right: 80px;
-      }
-      
-      .chat-input::placeholder {
-        color: rgba(255, 255, 255, 0.4);
-      }
-      
-      .chat-input-buttons {
-        position: absolute;
-        right: 10px;
-        display: flex;
-        gap: 8px;
-        height: 100%;
-        align-items: center;
-      }
-      
-      .chat-input-button {
-        background: transparent;
-        border: none;
-        color: rgba(255, 255, 255, 0.5);
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 14px;
-      }
-      
-      .chat-send-button {
-        width: 46px;
-        height: 46px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #8B5CF6, #6d28d9);
-        border: none;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3);
-        cursor: pointer;
-        transition: all 0.2s ease;
-        flex-shrink: 0;
-        font-size: 18px;
-      }
-      
-      /* Sidebar profile and spacer */
-      .sidebar-spacer {
-        flex-grow: 1;
-      }
-      
-      .sidebar-profile {
-        padding: 10px 0;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      
-      .sidebar-profile img {
-        width: 40px;
-        height: 40px;
-        border-radius: 0;
-        object-fit: cover;
-        border: none;
-      }
-      
-      /* Stopwatch section styles */
-      .stopwatch-container {
-        padding: 20px;
-        max-width: 800px;
-        margin: 0 auto;
-      }
-      
-      .stopwatch-container h2 {
-        color: var(--accent-color);
-        margin-bottom: 20px;
-        font-size: 24px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding-bottom: 10px;
-      }
-      
-      .timer-container {
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      /* Add animated stopwatch styles */
-      .animated-timer-display {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 30px 0;
-      }
-      
-      .timer-circle-container {
-        position: relative;
-        width: 300px;
-        height: 300px;
-      }
-      
-      .timer-text {
-        text-align: center;
-        color: white;
-        font-family: 'monospace', 'Courier New', Courier;
-        text-shadow: 0 0 10px rgba(139, 92, 246, 0.7);
-        letter-spacing: 2px;
-      }
-      
-      .laps-container {
-        margin-top: 20px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding-top: 20px;
-      }
-      
-      .laps-list {
-        list-style-type: none;
-        padding: 0;
-        margin: 0;
-        max-height: 200px;
-        overflow-y: auto;
-      }
-      
-      .laps-list li {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px;
-        margin-bottom: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        border-left: 3px solid #8B5CF6;
-      }
-      
-      .lap-number {
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.8);
-      }
-      
-      .lap-time {
-        font-family: monospace;
-        color: #8B5CF6;
-      }
-      
-      .timer-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 10px 20px;
-        color: white;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .timer-btn.start {
-        background: #10b981;
-        border-color: #059669;
-      }
-      
-      .timer-btn.pause {
-        background: #f59e0b;
-        border-color: #d97706;
-      }
-      
-      .timer-btn.reset {
-        background: #ef4444;
-        border-color: #dc2626;
-      }
-      
-      .timer-btn.lap {
-        background: rgba(139, 92, 246, 0.3);
-        border-color: rgba(139, 92, 246, 0.5);
-      }
-      
-      .timer-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-      
-      .countdown-controls {
-        display: flex;
-        gap: 16px;
-        justify-content: center;
-        margin-bottom: 24px;
-      }
-      
-      .countdown-input {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .countdown-input label {
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.7);
-      }
-      
-      .countdown-input input {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        color: white;
-        font-size: 20px;
-        width: 70px;
-        height: 50px;
-        text-align: center;
-        font-family: monospace;
-      }
-      
-      /* Add settings page specific styles */
-      .settings-container {
-        padding: 24px;
-        max-width: 900px;
-        margin: 0 auto;
-      }
-      
-      .settings-header {
-        margin-bottom: 24px;
-      }
-      
-      .settings-header h2 {
-        color: white;
-        font-size: 24px;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      
-      .settings-header p {
-        color: #94a3b8;
-        font-size: 14px;
-        line-height: 1.5;
-      }
-      
-      .settings-section {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 24px;
-        transition: all 0.3s ease;
-        width: 100%;
-        box-sizing: border-box;
-        position: relative;
-        overflow: hidden;
-      }
-      
-      .settings-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: linear-gradient(90deg, #8B5CF6, #60a5fa, #86efac);
-        opacity: 0.7;
-      }
-      
-      .settings-section h3 {
-        margin: 0 0 20px 0;
-        color: white;
-        font-size: 18px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      
-      .settings-section h3 i {
-        color: #8B5CF6;
-        font-size: 18px;
-      }
-      
-      .setting-item {
-        margin-bottom: 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-      
-      .setting-item:last-child {
-        margin-bottom: 0;
-      }
-      
-      .setting-item label {
-        font-weight: 500;
-        color: #e2e8f0;
-        font-size: 15px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .theme-toggle {
-        display: flex !important;
-        align-items: center !important;
-        gap: 12px !important;
-        cursor: pointer !important;
-        padding: 12px 16px !important;
-        background: rgba(255, 255, 255, 0.05) !important;
-        border-radius: 12px !important;
-        transition: all 0.2s ease !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        width: max-content !important;
-      }
-      
-      /* Replace with this improved style */
-      .theme-toggle {
-        display: flex !important;
-        align-items: center !important;
-        gap: 10px !important;
-        cursor: pointer !important;
-        padding: 10px 14px !important;
-        background: rgba(30, 31, 44, 0.9) !important;
-        border-radius: 10px !important;
-        transition: all 0.2s ease !important;
-        border: 1px solid rgba(77, 91, 206, 0.2) !important;
-        width: max-content !important;
-      }
-      
-      .theme-toggle:hover {
-        background: rgba(30, 31, 44, 0.95) !important;
-        border-color: rgba(77, 91, 206, 0.4) !important;
-      }
-      
-      .theme-toggle i {
-        font-size: 16px !important;
-        color: #f59e0b !important;
-      }
-      
-      .window-size-options {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        margin-bottom: 16px;
-      }
-      
-      .font-size-options {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        margin-bottom: 16px;
-      }
-      
-      .view-options {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        margin-bottom: 16px;
-      }
-      
-      .toggle-switch {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        padding: 10px 14px !important;
-        background: rgba(30, 31, 44, 0.9) !important;
-        border-radius: 10px !important;
-        transition: all 0.2s ease !important;
-        border: 1px solid rgba(77, 91, 206, 0.2) !important;
-        cursor: pointer !important;
-        margin-top: 4px !important;
-      }
-      
-      .toggle-switch:hover {
-        background: rgba(30, 31, 44, 0.95) !important;
-      }
-      
-      .toggle-switch .toggle-label {
-        font-size: 14px !important;
-        font-weight: 500 !important;
-        color: #e2e8f0 !important;
-      }
-      
-      .toggle-switch .switch {
-        position: relative !important;
-        display: inline-block !important;
-        width: 46px !important;
-        height: 24px !important;
-        flex-shrink: 0 !important;
-      }
-      
-      .toggle-switch .switch input {
-        opacity: 0 !important;
-        width: 0 !important;
-        height: 0 !important;
-        position: absolute !important;
-      }
-      
-      .toggle-switch .slider {
-        position: absolute !important;
-        cursor: pointer !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        background-color: rgba(30, 31, 44, 0.9) !important;
-        transition: 0.3s !important;
-        border-radius: 24px !important;
-        border: 1px solid rgba(77, 91, 206, 0.3) !important;
-      }
-      
-      .toggle-switch .slider:before {
-        position: absolute !important;
-        content: "" !important;
-        height: 18px !important;
-        width: 18px !important;
-        left: 3px !important;
-        bottom: 2px !important;
-        background-color: white !important;
-        transition: 0.3s !important;
-        border-radius: 50% !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
-      }
-      
-      .toggle-switch input:checked + .slider {
-        background-color: #8B5CF6 !important;
-        border-color: rgba(139, 92, 246, 0.7) !important;
-      }
-      
-      .toggle-switch input:checked + .slider:before {
-        transform: translateX(22px) !important;
-      }
-      
-      .setting-description {
-        font-size: 13px;
-        color: #94a3b8;
-        margin-top: 8px;
-        line-height: 1.4;
-      }
-      
-      .icon-smaller {
-        font-size: 12px;
-      }
-      
-      .icon-larger {
-        font-size: 20px;
-      }
-      
-      .sound-options {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        margin-bottom: 16px;
-      }
-      
-      .sound-option {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        position: relative;
-      }
-      
-      .sound-option:hover {
-        background: rgba(255, 255, 255, 0.08);
-        transform: translateY(-2px);
-      }
-      
-      .sound-option.selected {
-        background: rgba(139, 92, 246, 0.15);
-        border-color: #8B5CF6;
-      }
-      
-      .sound-option .sound-icon {
-        width: 40px;
-        height: 40px;
-        background: rgba(139, 92, 246, 0.1);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 8px;
-        font-size: 20px;
-        color: #8B5CF6;
-      }
-      
-      .sound-option input[type="radio"] {
-        position: absolute;
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
-      
-      .volume-control {
-        width: 100%;
-        padding: 20px 0;
-      }
-      
-      .volume-slider {
-        width: 100%;
-        height: 10px;
-        -webkit-appearance: none;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-        outline: none;
-        opacity: 0.7;
-        transition: opacity 0.2s;
-      }
-      
-      .volume-slider:hover {
-        opacity: 1;
-      }
-      
-      .volume-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #8B5CF6;
-        cursor: pointer;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-      }
-      
-      .volume-slider::-moz-range-thumb {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #8B5CF6;
-        cursor: pointer;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-      }
-      
-      .volume-label-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 8px;
-      }
-      
-      .volume-label {
-        color: #94a3b8;
-        font-size: 14px;
-      }
-      
-      .volume-value {
-        color: #8B5CF6;
-        font-weight: 600;
-        font-size: 14px;
-      }
-      
-      .radio-option {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        position: relative;
-      }
-      
-      .radio-option:hover {
-        background: rgba(255, 255, 255, 0.08);
-        transform: translateY(-2px);
-      }
-      
-      .radio-option input[type="radio"] {
-        position: absolute;
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
-      
-      .radio-option .size-preview {
-        width: 100%;
-        height: 80px;
-        background: rgba(139, 92, 246, 0.1);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        color: #8B5CF6;
-      }
-      
-      .radio-option .size-preview.compact {
-        width: 40px;
-        height: 40px;
-        margin: 20px auto;
-      }
-      
-      .radio-option .size-preview.medium {
-        width: 60px;
-        height: 60px;
-        margin: 10px auto;
-      }
-      
-      .radio-option label {
-        font-weight: 500;
-        margin-top: 8px;
-        pointer-events: none;
-      }
-      
-      .radio-option.selected {
-        background: rgba(139, 92, 246, 0.15);
-        border-color: #8B5CF6;
-      }
-      
-      .btn-primary {
-        background: #8B5CF6;
-        color: white;
-        border: none;
-        padding: 12px 20px;
-        border-radius: 12px;
-        font-size: 15px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        width: max-content;
-      }
-      
-      .btn-primary:hover {
-        background: #7c4dff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-      }
-      
-      .btn-secondary {
-        background: rgba(139, 92, 246, 0.2);
-        color: #8B5CF6;
-        border: 1px solid rgba(139, 92, 246, 0.3);
-        padding: 10px 16px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        width: max-content;
-      }
-      
-      .btn-secondary:hover {
-        background: rgba(139, 92, 246, 0.3);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
-      }
-      
-      .btn-danger {
-        background: #ef4444;
-        color: white;
-        border: none;
-        padding: 12px 20px;
-        border-radius: 12px;
-        font-size: 15px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        width: max-content;
-      }
-      
-      .btn-danger:hover {
-        background: #dc2626;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-      }
-      
-      .notification-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-      }
-      
-      .toggle-switch {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 26px;
-      }
-      
-      .toggle-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
-      
-      .toggle-slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(255, 255, 255, 0.1);
-        transition: .4s;
-        border-radius: 34px;
-      }
-      
-      .toggle-slider:before {
-        position: absolute;
-        content: "";
-        height: 18px;
-        width: 18px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-      }
-      
-      input:checked + .toggle-slider {
-        background-color: #8B5CF6;
-      }
-      
-      input:checked + .toggle-slider:before {
-        transform: translateX(24px);
-      }
-      
-      .notification-text {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      
-      .notification-title {
-        font-weight: 500;
-      }
-      
-      .notification-desc {
-        font-size: 12px;
-        color: #94a3b8;
-      }
-      
-      .account-info {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 20px;
-        padding: 16px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      .account-avatar {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: rgba(139, 92, 246, 0.1);
-        overflow: hidden;
-        /* Removing the border that creates rings */
-      }
-      
-      .account-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      
-      .account-details {
-        flex: 1;
-      }
-      
-      .account-name {
-        font-weight: 600;
-        font-size: 16px;
-        margin-bottom: 4px;
-      }
-      
-      .account-email {
-        color: #94a3b8;
-        font-size: 14px;
-      }
-      
-      .account-status {
-        font-size: 12px;
-        padding: 4px 8px;
-        border-radius: 12px;
-        background: rgba(134, 239, 172, 0.1);
-        color: #86efac;
-        width: max-content;
-        margin-top: 4px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-      
-      .account-buttons {
-        display: flex;
-        gap: 12px;
-      }
-      
-      /* Make the errors container responsive */
-      .errors-container {
-        padding: 16px;
-        overflow-y: auto;
-        max-height: calc(100vh - 120px);
-        max-width: 100%;
-        box-sizing: border-box;
-      }
-      
-      /* Hints Styles */
-      .hints-container {
-        padding: 16px;
-        overflow-y: auto;
-        max-height: calc(100vh - 120px);
-        width: 100%;
-        box-sizing: border-box;
-      }
-      
-      .hints-header {
-        margin-bottom: 24px;
-      }
-      
-      .hints-header h2 {
-        font-size: 24px;
-        font-weight: 600;
-        color: white;
-        margin: 0 0 8px 0;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      
-      .difficulty-tabs {
-        display: flex;
-        gap: 8px;
-        margin: 16px 0;
-        padding-bottom: 8px;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-      }
-      
-      .difficulty-tabs::-webkit-scrollbar {
-        display: none;
-      }
-      
-      .tab-button {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 8px 16px;
-        color: #94a3b8;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-      }
-      
-      .tab-button.active {
-        background: rgba(139, 92, 246, 0.15);
-        border-color: #8B5CF6;
-        color: white;
-      }
-      
-      .tab-button:hover {
-        background: rgba(255, 255, 255, 0.08);
-        transform: translateY(-1px);
-      }
-      
-      .hint-category {
-        margin-bottom: 32px;
-      }
-      
-      .hint-category h3 {
-        font-size: 18px;
-        font-weight: 600;
-        color: white;
-        margin: 0 0 16px 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .hint-cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 16px;
-        width: 100%;
-      }
-      
-      .hint-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        overflow: hidden;
-        position: relative;
-        transition: all 0.3s ease;
-        height: 100%;
-      }
-      
-      .hint-card:hover {
-        transform: translateY(-5px);
-        background: rgba(255, 255, 255, 0.08);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        border-color: rgba(139, 92, 246, 0.3);
-      }
-      
-      .hint-card.blurred .hint-content {
-        filter: blur(5px);
-        user-select: none;
-        pointer-events: none;
-      }
-      
-      .hint-reveal-button {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(139, 92, 246, 0.2);
-        border: 1px solid rgba(139, 92, 246, 0.4);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        z-index: 2;
-      }
-      
-      .hint-reveal-button:hover {
-        background: rgba(139, 92, 246, 0.3);
-        transform: translate(-50%, -50%) scale(1.05);
-      }
-      
-      .hints-content .hint-cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        width: 100%;
-        box-sizing: border-box;
-        overflow-x: hidden;
-      }
-      
-      .hints-content .hint-card {
-        max-width: 100%;
-        box-sizing: border-box;
-        overflow: hidden;
-      }
-      
-      .hints-content .hint-content {
-        max-width: 100%;
-        overflow-wrap: break-word;
-      }
-      
-      .hints-content .hint-code-snippet {
-        max-width: 100%;
-        overflow-x: auto;
-      }
-      
-      .hints-content .hint-code-snippet pre {
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-      
-      .nav-items-main {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        align-items: center;
-      }
-      
-      .nav-items-bottom {
-        margin-top: auto;
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        align-items: center;
-      }
-      
-      .sidebar-profile {
-        margin-top: 8px;
-      }
-      
-      .chat-input-wrapper:focus-within {
-        border-color: rgba(139, 92, 246, 0.5);
-        box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
-      }
-      
-      .chat-input-buttons {
-        position: absolute;
-        right: 8px;
-        bottom: 6px;
-        display: flex;
-        gap: 6px;
-      }
-      
-      .chat-input-button {
-        background: transparent;
-        border: none;
-        color: rgba(255, 255, 255, 0.5);
-        width: 24px;
-        height: 24px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 12px;
-      }
-      
-      /* Chat Styles (extended) */
-      .message-text code {
-        font-family: monospace;
-        background: rgba(0, 0, 0, 0.3);
-        padding: 2px 4px;
-        border-radius: 4px;
-        font-size: 12px;
-        color: #e2e8f0;
-      }
-      
-      .message-code-block {
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 8px;
-        margin-top: 10px;
-        margin-bottom: 6px;
-        position: relative;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        width: 100%;
-      }
-      
-      .message-code-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 12px;
-        background: rgba(255, 255, 255, 0.05);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px 8px 0 0;
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.7);
-      }
-      
-      .message-code-language {
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      
-      .message-code-actions {
-        display: flex;
-        gap: 8px;
-      }
-      
-      .message-code-action {
-        background: none;
-        border: none;
-        color: rgba(255, 255, 255, 0.6);
-        cursor: pointer;
-        padding: 3px;
-        font-size: 11px;
-        border-radius: 4px;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-      
-      .message-code-action:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-      }
-      
-      .message-code-content {
-        max-height: 300px;
-        overflow-y: auto;
-        position: relative;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(139, 92, 246, 0.3) rgba(0, 0, 0, 0.1);
-      }
-      
-      .message-code-content::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      
-      .message-code-content::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.1);
-        border-radius: 0 0 8px 0;
-      }
-      
-      .message-code-content::-webkit-scrollbar-thumb {
-        background-color: rgba(139, 92, 246, 0.3);
-        border-radius: 10px;
-      }
-      
-      .message-code-content pre {
-        margin: 0;
-        padding: 12px 16px;
-        white-space: pre;
-        overflow-x: auto;
-        font-family: monospace;
-        font-size: 12px;
-        line-height: 1.5;
-        color: #e2e8f0;
-        counter-reset: line;
-        width: 100%;
-        box-sizing: border-box;
-      }
-      
-      .message-code-content pre code {
-        display: block;
-        padding: 0;
-        background: transparent;
-      }
-      
-      .message-code-line-numbers {
-        position: absolute;
-        left: 0;
-        top: 0;
-        padding: 12px 0;
-        text-align: right;
-        color: rgba(255, 255, 255, 0.3);
-        font-family: monospace;
-        font-size: 12px;
-        line-height: 1.5;
-        user-select: none;
-        background: rgba(0, 0, 0, 0.2);
-        width: 30px;
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      .message-code-with-numbers pre {
-        padding-left: 40px;
-      }
+        
+        .container {
+          height: 100vh;
+          display: flex;
+          background-color: #0A0B1E;
+          max-width: 100%;
+          margin: 0;
+          padding: 0;
+          position: relative;
+        }
+        
+        .container.loading .main-content {
+          filter: blur(4px);
+          pointer-events: none;
+        }
+        
+        .container.loading .nav-sidebar {
+          filter: blur(4px);
+          pointer-events: none;
+        }
+        
+        /* LeetCode Loader Styles */
+        .leetcode-loader-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(10, 11, 30, 0.85);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          backdrop-filter: blur(5px);
+        }
+        
+        .leetcode-loader-container {
+          width: 100%;
+          max-width: 460px;
+          padding: 0 20px;
+          box-sizing: border-box;
+        }
+        
+        .leetcode-loader-card {
+          background-color: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        .loader-header {
+          display: flex;
+          align-items: center;
+          padding: 16px 24px;
+          background-color: rgba(139, 92, 246, 0.1);
+          border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        
+        .loader-header i {
+          color: #8B5CF6;
+          font-size: 18px;
+          margin-right: 12px;
+        }
+        
+        .loader-header h3 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: white;
+        }
+        
+        .loader-content {
+          padding: 32px 24px;
+          text-align: center;
+        }
+        
+        .spinner-container {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 24px;
+        }
+        
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 3px solid rgba(139, 92, 246, 0.2);
+          border-top-color: #8B5CF6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        .loading-message {
+          font-size: 16px;
+          font-weight: 600;
+          color: white;
+          margin-bottom: 8px;
+        }
+        
+        .loader-disclaimer {
+          font-size: 14px;
+          color: #94a3b8;
+          line-height: 1.5;
+          margin-bottom: 8px;
+        }
+        
+        .completed-message {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          color: #10b981;
+        }
+        
+        .completed-message i {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+        
+        .completed-message p {
+          font-size: 16px;
+          font-weight: 600;
+        }
+        
+        .loader-footer {
+          padding: 16px 24px;
+          background-color: rgba(0, 0, 0, 0.1);
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .privacy-note {
+          font-size: 12px;
+          color: #94a3b8;
+          text-align: center;
+          margin: 0;
+        }
+        
+        .nav-sidebar {
+          width: 48px;
+          min-width: 48px;
+          background-color: rgba(255, 255, 255, 0.03);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 12px 6px;
+          transition: all 0.3s ease;
+          position: relative;
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+          height: 100vh;
+        }
+        
+        .nav-sidebar.expanded {
+          width: 200px;
+          min-width: 200px;
+        }
+        
+        .sidebar-logo {
+          width: 100%;
+          height: 36px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          position: relative;
+          margin-bottom: 20px;
+        }
+        
+        .icon-logo {
+          width: 28px;
+          height: 28px;
+          opacity: 1;
+          transition: all 0.3s ease;
+          position: absolute;
+        }
+        
+        .full-logo {
+          width: 0;
+          opacity: 0;
+          height: 28px;
+          transition: all 0.3s ease;
+          object-fit: contain;
+        }
+        
+        .nav-sidebar.expanded .icon-logo {
+          opacity: 0;
+          width: 0;
+        }
+        
+        .nav-sidebar.expanded .full-logo {
+          width: 160px;
+          opacity: 1;
+        }
+        
+        .nav-item {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 6px 0;
+          color: #94a3b8;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-size: 14px;
+        }
+        
+        .nav-item:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+        
+        .nav-item.active {
+          background-color: #8B5CF6;
+          color: white;
+        }
+        
+        .nav-sidebar.expanded .nav-item {
+          width: 160px;
+          justify-content: flex-start;
+          padding-left: 12px;
+        }
+        
+        .nav-label {
+          margin-left: 10px;
+          font-size: 13px;
+        }
+        
+        .main-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+          overflow: hidden;
+          padding: 16px;
+          box-sizing: border-box;
+          background-color: rgba(10, 11, 30, 0.4);
+        }
+        
+        .content-section {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          position: relative;
+        }
+        
+        .section {
+          flex: 1;
+          display: none;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        
+        .section.active {
+          display: flex;
+          flex-direction: column;
+          opacity: 1;
+        }
+        
+        .dashboard-welcome {
+          font-size: 20px;
+          font-weight: 600;
+          margin-bottom: 16px;
+          color: white;
+        }
+        
+        .dashboard-subtitle {
+          font-size: 14px;
+          color: #94a3b8;
+          margin-bottom: 24px;
+          line-height: 1.4;
+        }
+        
+        .tools-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 16px;
+          padding: 12px 4px;
+        }
+        
+        .tool-button {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 24px 12px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          min-height: 120px;
+          justify-content: center;
+        }
+        
+        .tool-button:hover {
+          background: rgba(255, 255, 255, 0.07);
+          border-color: rgba(255, 255, 255, 0.2);
+          transform: translateY(-2px);
+        }
+        
+        .tool-button-icon {
+          width: 64px;
+          height: 64px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 4px;
+        }
+        
+        .tool-button-icon i {
+          font-size: 28px;
+        }
+        
+        .tool-button-content {
+          text-align: center;
+          width: 100%;
+        }
+        
+        .tool-button-title {
+          font-weight: 600;
+          font-size: 16px;
+          white-space: nowrap;
+          color: #fff;
+        }
+        
+        .tool-button-description {
+          display: none;
+        }
+        
+        .tool-button.hints .tool-button-icon {
+          background: rgba(251, 191, 36, 0.1);
+        }
+        
+        .tool-button.hints .tool-button-icon i {
+          color: #fbbf24;
+        }
+        
+        .tool-button.resources .tool-button-icon {
+          background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .tool-button.resources .tool-button-icon i {
+          color: #10b981;
+        }
+        
+        .tool-button.errors .tool-button-icon {
+          background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .tool-button.errors .tool-button-icon i {
+          color: #ef4444;
+        }
+        
+        .tool-button.chat .tool-button-icon {
+          background: rgba(96, 165, 250, 0.1);
+        }
+        
+        .tool-button.chat .tool-button-icon i {
+          color: #60a5fa;
+        }
+        
+        /* Apply the media queries for this section too */
+        @media (max-width: 640px) {
+          .tools-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+          }
+        }
+        
+        @media (max-width: 400px) {
+          .tool-button {
+            padding: 12px 8px;
+            min-height: 90px;
+          }
+          
+          .tool-button-icon {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 6px;
+          }
+          
+          .tool-button-icon i {
+            font-size: 16px;
+          }
+          
+          .tool-button-title {
+            font-size: 12px;
+            margin-bottom: 2px;
+          }
+          
+          .tool-button-description {
+            font-size: 11px;
+            line-height: 1.2;
+            max-height: 26px;
+            overflow: hidden;
+          }
+        }
+        
+        @media (max-width: 320px) {
+          .tools-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .tool-button {
+            flex-direction: row;
+            align-items: center;
+            min-height: auto;
+            padding: 10px;
+            gap: 8px;
+          }
+          
+          .tool-button-icon {
+            margin-bottom: 0;
+            min-width: 24px;
+            width: 24px;
+            height: 24px;
+          }
+          
+          .tool-button-content {
+            text-align: left;
+          }
+          
+          .tool-button-description {
+            display: none;
+          }
+        }
+        
+        .dashboard-card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 16px;
+        }
+        
+        .card-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+        
+        .card-header i {
+          color: #8B5CF6;
+          font-size: 16px;
+        }
+        
+        .card-header h3 {
+          font-size: 15px;
+          font-weight: 600;
+          margin: 0;
+        }
+        
+        .problem-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 10px;
+          border-radius: 8px;
+          margin-bottom: 6px;
+          transition: all 0.2s ease;
+        }
+        
+        .problem-title {
+          font-size: 13px;
+          color: #e2e8f0;
+        }
+        
+        .problem-status {
+          font-size: 12px;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-weight: 500;
+        }
+        
+        .problem-status.success {
+          background: rgba(16, 185, 129, 0.1);
+          color: #10b981;
+        }
+        
+        .problem-status.failed {
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+        }
+        
+        .section { 
+          display: none; 
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        
+        .section.active { 
+          display: block; 
+          opacity: 1;
+        }
+        
+        .sidebar-toggle {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.05);
+          color: #94a3b8;
+          cursor: pointer;
+          margin: 10px 0;
+          position: relative;
+          left: 0;
+          transition: all 0.3s ease;
+        }
+        
+        .nav-sidebar.expanded .sidebar-toggle {
+          left: 75px; /* This will position it more to the center when expanded */
+        }
+        
+        .sidebar-toggle:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+        
+        /* Additional styling for section contents */
+        .settings-container, .hints-container, .resources-container, .errors-container {
+          padding: 16px;
+          overflow-y: auto;
+          max-height: calc(100vh - 120px);
+        }
+        
+        .settings-section {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 24px;
+          transition: all 0.3s ease;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .setting-item {
+          margin-bottom: 16px;
+        }
+        
+        h3 {
+          margin: 0 0 16px 0;
+          color: white;
+          font-size: 18px;
+          font-weight: 600;
+        }
+        
+        .search-container {
+          position: relative;
+          margin-bottom: 24px;
+        }
+        
+        .search-input {
+          width: 100%;
+          padding: 12px 16px 12px 40px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          color: white;
+          font-size: 14px;
+          transition: all 0.2s ease;
+        }
+        
+        .search-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          font-size: 16px;
+        }
+        
+        .difficulty-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 20px;
+        }
+        
+        .tab-button {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 8px 16px;
+          color: #94a3b8;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+          background: rgba(139, 92, 246, 0.15);
+          border-color: #8B5CF6;
+          color: white;
+        }
+        
+        .timer-container {
+          padding: 16px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+        }
+        
+        .timer-type-selector {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        
+        .timer-type-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 8px 16px;
+          color: #94a3b8;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .timer-type-btn.active {
+          background: rgba(139, 92, 246, 0.15);
+          border-color: #8B5CF6;
+          color: white;
+        }
+        
+        .timer-display {
+          font-size: 32px;
+          text-align: center;
+          margin: 20px 0;
+          font-weight: 600;
+        }
+        
+        .btn-primary {
+          background: #8B5CF6;
+          color: white;
+          border: none;
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .btn-primary:hover {
+          background: #7c4dff;
+          transform: translateY(-2px);
+        }
+        
+        .window-size-options, .countdown-controls, .timer-controls {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 16px;
+        }
+        
+        .theme-toggle {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          padding: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+          transition: all 0.2s ease;
+        }
+        
+        .theme-toggle:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .timer-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 8px 16px;
+          color: white;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .timer-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .timer-btn.start {
+          background: #10b981;
+          border-color: #059669;
+        }
+        
+        .timer-btn.pause {
+          background: #f59e0b;
+          border-color: #d97706;
+        }
+        
+        .timer-btn.reset {
+          background: #ef4444;
+          border-color: #dc2626;
+        }
+        
+        .radio-option {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        
+        input[type="number"] {
+          width: 60px;
+          padding: 8px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          color: white;
+        }
+        
+        /* Dashboard Styles */
+        .dashboard {
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+          max-width: 1000px;
+          margin: 0 auto;
+          position: relative;
+        }
+        
+        .dashboard::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, rgba(139, 92, 246, 0.05), transparent 70%);
+          z-index: 0;
+          pointer-events: none;
+        }
+        
+        .dashboard-card {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+          position: relative;
+          z-index: 1;
+          backdrop-filter: blur(10px);
+          transition: all 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+          border-color: rgba(139, 92, 246, 0.3);
+        }
+        
+        .card-header {
+          padding: 20px;
+          background: rgba(20, 20, 40, 0.5);
+          border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        
+        .card-header i {
+          color: #8B5CF6;
+          font-size: 20px;
+        }
+        
+        .card-header h3 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: white;
+        }
+        
+        .card-content {
+          padding: 20px;
+        }
+        
+        .current-problem.dashboard-card {
+          background: linear-gradient(180deg, rgba(20, 20, 40, 0.5) 0%, rgba(30, 30, 60, 0.5) 100%);
+          border-left: 4px solid #8B5CF6;
+        }
+        
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+        }
+        
+        .stat-card {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          padding: 24px;
+          text-align: center;
+          transition: all 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .stat-card::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 4px;
+          background: linear-gradient(90deg, #8B5CF6, #6D28D9);
+          border-radius: 2px;
+        }
+        
+        .stat-value {
+          font-size: 36px;
+          font-weight: 700;
+          margin-bottom: 8px;
+          background: linear-gradient(90deg, #8B5CF6, #6D28D9);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .tools-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 16px;
+          padding: 12px 4px;
+        }
+        
+        .tool-button {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        
+        .tool-button i {
+          font-size: 24px;
+        }
+        
+        .tool-button span {
+          font-size: 14px;
+        }
+        
+        .tool-button.hints i {
+          color: #fbbf24;
+        }
+        
+        .tool-button.resources i {
+          color: #10b981;
+        }
+        
+        .tool-button.errors i {
+          color: #ef4444;
+        }
+        
+        .tool-button.chat i {
+          color: #60a5fa;
+        }
+        
+        .problem-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          transition: all 0.3s ease;
+        }
+        
+        .problem-item:last-child {
+          border-bottom: none;
+        }
+        
+        .problem-title {
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .problem-status {
+          font-size: 13px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 20px;
+        }
+        
+        .problem-status.success {
+          background: rgba(16, 185, 129, 0.1);
+          color: #10b981;
+          border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .problem-status.failed {
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Hint Card Styles */
+        .hint-card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          margin-bottom: 24px;
+          overflow: hidden;
+          transition: all 0.3s ease;
+        }
+        
+        .hint-card.blurred .hint-content {
+          filter: blur(5px);
+          user-select: none;
+          pointer-events: none;
+          position: relative;
+        }
+        
+        .hint-reveal-wrapper {
+          position: relative;
+        }
+        
+        .hint-reveal-button {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(139, 92, 246, 0.2);
+          border: 1px solid rgba(139, 92, 246, 0.4);
+          color: white;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          z-index: 2;
+        }
+        
+        .hint-reveal-button:hover {
+          background: rgba(139, 92, 246, 0.3);
+          transform: translate(-50%, -50%) scale(1.05);
+        }
+        
+        .hints-container {
+          padding: 24px;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        
+        .hints-header {
+          margin-bottom: 24px;
+        }
+        
+        .hints-header h2 {
+          color: white;
+          font-size: 24px;
+          margin-bottom: 8px;
+        }
+        
+        .hints-description {
+          color: #94a3b8;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+        
+        .difficulty-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 24px;
+          background: rgba(255, 255, 255, 0.03);
+          padding: 8px;
+          border-radius: 12px;
+        }
+        
+        .hint-category {
+          margin-bottom: 32px;
+        }
+        
+        .hint-category h3 {
+          font-size: 20px;
+          margin-bottom: 16px;
+          color: #8B5CF6;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .hint-category h3 i {
+          font-size: 18px;
+        }
+        
+        .hint-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+          gap: 24px;
+        }
+        
+        /* Fix the overlapping issues in the hints cards layout */
+        .hint-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 24px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .hint-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          background: rgba(255, 255, 255, 0.02);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .hint-title {
+          font-weight: 600;
+          color: white;
+          font-size: 16px;
+        }
+        
+        .hint-badge {
+          background: rgba(139, 92, 246, 0.1);
+          color: #8B5CF6;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        
+        .hint-content {
+          padding: 16px;
+          color: #94a3b8;
+          font-size: 14px;
+          line-height: 1.6;
+        }
+        
+        .hint-code-snippet {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 8px;
+          overflow: hidden;
+          margin-top: 12px;
+        }
+        
+        .hint-code-snippet pre {
+          margin: 0;
+          padding: 16px;
+          overflow-x: auto;
+          white-space: pre-wrap;
+          word-break: break-word;
+          font-family: monospace;
+          font-size: 13px;
+          line-height: 1.5;
+          color: #e2e8f0;
+        }
+        
+        /* Resource Styles */
+        .resource-section {
+          margin-bottom: 32px;
+        }
+        
+        .resource-section-title {
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0 0 16px 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .resource-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 16px;
+        }
+        
+        /* Updated styles for resource grid */
+        .resource-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 16px;
+          width: 100%;
+        }
+        
+        .resource-card {
+          width: 100%;
+          box-sizing: border-box;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 20px;
+          position: relative;
+          transition: all 0.2s ease;
+        }
+        
+        .resource-icon {
+          width: 40px;
+          height: 40px;
+          background: rgba(139, 92, 246, 0.1);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
+        }
+        
+        .resource-icon i {
+          color: #8B5CF6;
+          font-size: 20px;
+        }
+        
+        .resource-badge {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          background: rgba(139, 92, 246, 0.1);
+          color: #8B5CF6;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+        }
+        
+        .resource-card h3 {
+          font-size: 16px;
+          margin: 0 0 8px 0;
+        }
+        
+        .resource-meta {
+          display: flex;
+          justify-content: space-between;
+          margin: 12px 0;
+          padding-bottom: 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          font-size: 12px;
+          color: #94a3b8;
+        }
+        
+        .resource-action {
+          width: 100%;
+          background: rgba(139, 92, 246, 0.1);
+          border: 1px solid rgba(139, 92, 246, 0.2);
+          border-radius: 8px;
+          color: #8B5CF6;
+          padding: 8px 0;
+          font-size: 14px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        
+        /* Error Analysis Styles */
+        .error-filters, .resource-categories {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 20px;
+          padding-bottom: 8px;
+        }
+        
+        .error-filter-btn, .resource-category-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          padding: 6px 12px;
+          color: #94a3b8;
+          font-size: 14px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        
+        .error-filter-btn.active, .resource-category-btn.active {
+          background: rgba(139, 92, 246, 0.1);
+          border-color: #8B5CF6;
+          color: white;
+        }
+        
+        .error-summary {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: space-between;
+          margin-bottom: 24px;
+          gap: 10px;
+        }
+        
+        .error-stat {
+          flex: 1;
+          min-width: 120px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 16px;
+          text-align: center;
+        }
+        
+        .error-number {
+          font-size: 24px;
+          font-weight: 600;
+          color: #8B5CF6;
+          display: block;
+          margin-bottom: 4px;
+        }
+        
+        .error-item {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          margin-bottom: 16px;
+          overflow: hidden;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .error-header {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          background: rgba(255, 255, 255, 0.02);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          gap: 8px;
+        }
+        
+        .error-header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          max-width: 80%;
+        }
+        
+        .error-icon {
+          color: #ef4444;
+        }
+        
+        .error-title {
+          word-break: break-word;
+          overflow-wrap: anywhere;
+          font-weight: 600;
+          color: white;
+        }
+        
+        .error-severity {
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+        }
+        
+        .error-severity.high {
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+        }
+        
+        .error-details {
+          padding: 16px;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+        }
+        
+        .error-location {
+          font-size: 14px;
+          color: #94a3b8;
+          margin-bottom: 12px;
+        }
+        
+        /* Improve code snippets to prevent overflow */
+        .error-code, .error-fix-code {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 8px;
+          margin: 12px 0;
+          max-width: 100%;
+          overflow-x: auto;
+          box-sizing: border-box;
+        }
+        
+        .error-code pre, .error-fix-code pre {
+          margin: 0;
+          padding: 12px;
+          white-space: pre-wrap;
+          word-break: break-word;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .error-code code, .error-fix-code code {
+          display: block;
+          max-width: 100%;
+          overflow-wrap: break-word;
+        }
+        
+        /* Chat Styles */
+        .chat-container {
+          display: flex;
+          flex-direction: column;
+          height: calc(100vh - 32px); /* Adjust to account for padding */
+          background-color: rgba(10, 11, 30, 0.4);
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: none;
+          width: 100%;
+          margin: 0 auto;
+        }
+        
+        .chat-messages {
+          flex: 1;
+          overflow-y: auto;
+          padding: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-bottom: 0;
+        }
+        
+        .chat-actions {
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 8px;
+          background-color: rgba(255, 255, 255, 0.02);
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        
+        .chat-input {
+          display: flex;
+          gap: 8px;
+          align-items: flex-end;
+          padding: 0 4px;
+        }
+        
+        .input-wrapper {
+          flex: 1;
+          position: relative;
+          background-color: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          padding: 8px 8px 8px 12px;
+          transition: all 0.2s ease;
+        }
+        
+        .chat-input-field {
+          width: 100%;
+          background: transparent;
+          border: none;
+          color: white;
+          font-size: 14px;
+          resize: none;
+          outline: none;
+          max-height: 80px;
+          padding-right: 40px;
+          line-height: 1.4;
+        }
+        
+        .input-buttons {
+          position: absolute;
+          right: 8px;
+          bottom: 50%;
+          transform: translateY(50%);
+          display: flex;
+          gap: 6px;
+        }
+        
+        .action-button {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          width: 24px;
+          height: 24px;
+          border-radius: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          padding: 0;
+        }
+        
+        .chat-send-button {
+          width: 32px;
+          height: 32px;
+          border-radius: 16px;
+          background-color: #8B5CF6;
+          color: white;
+          margin-bottom: 4px;
+        }
+        
+        .chat-send-button:hover {
+          background-color: #7c3aed;
+          transform: translateY(-1px);
+        }
+        
+        .chat-footer {
+          padding: 4px 8px;
+          font-size: 10px;
+          color: #94a3b8;
+          text-align: center;
+        }
+        
+        .chat-header {
+          padding: 12px;
+          background: rgba(20, 20, 40, 0.6);
+          border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+          backdrop-filter: blur(10px);
+          position: relative;
+          z-index: 10;
+        }
+        
+        .chat-header h3 {
+          margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 16px;
+          color: white;
+        }
+        
+        .chat-header i {
+          color: #8B5CF6;
+          font-size: 16px;
+        }
+        
+        .status-badge {
+          font-size: 11px;
+          padding: 3px 8px;
+          border-radius: 20px;
+          margin-left: 10px;
+          font-weight: normal;
+          letter-spacing: 0.5px;
+        }
+        
+        .status-badge.online {
+          background: rgba(16, 185, 129, 0.15);
+          color: #10b981;
+          border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .message {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          max-width: 85%;
+          margin: 2px 0;
+          animation: fadeIn 0.3s ease;
+        }
+        
+        .message.user {
+          margin-left: auto;
+          flex-direction: row-reverse;
+        }
+        
+        .message.assistant {
+          margin-right: auto;
+        }
+        
+        .message-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          overflow: hidden;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .message-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .message-content {
+          padding: 8px 12px;
+          border-radius: 16px;
+          font-size: 14px;
+          line-height: 1.4;
+          position: relative;
+        }
+        
+        .message.user .message-content {
+          background-color: #8B5CF6;
+          color: white;
+          border-bottom-right-radius: 4px;
+          margin-right: 4px;
+        }
+        
+        .message.assistant .message-content {
+          background-color: rgba(255, 255, 255, 0.05);
+          color: #e2e8f0;
+          border-bottom-left-radius: 4px;
+          margin-left: 4px;
+        }
+        
+        .message-text {
+          margin: 0;
+        }
+        
+        .message-time {
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.5);
+          margin-top: 4px;
+          display: block;
+        }
+        
+        .message.user .message-time {
+          text-align: right;
+        }
+        
+        /* Suggestion chips */
+        .suggestion-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 12px;
+        }
+        
+        .suggestion-chip {
+          background: rgba(139, 92, 246, 0.1);
+          border: 1px solid rgba(139, 92, 246, 0.3);
+          color: #a78bfa;
+          border-radius: 20px;
+          padding: 8px 14px;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-weight: 500;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chat-input-container {
+          padding: 8px 12px;
+          background: rgba(20, 20, 40, 0.6);
+          border-top: 1px solid rgba(139, 92, 246, 0.2);
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          backdrop-filter: blur(10px);
+          position: relative;
+          z-index: 10;
+          margin-top: auto;
+          margin-bottom: 0;
+          height: 60px;
+        }
+        
+        .chat-input-wrapper {
+          flex: 1;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 24px;
+          padding: 8px 14px;
+          position: relative;
+          transition: all 0.2s ease;
+          max-width: 85%;
+          height: 44px;
+          display: flex;
+          align-items: center;
+        }
+        
+        .chat-input {
+          width: 100%;
+          height: 100%;
+          background: transparent;
+          border: none;
+          color: white;
+          resize: none;
+          outline: none;
+          font-size: 14px;
+          line-height: 1.4;
+          padding-right: 80px;
+        }
+        
+        .chat-input::placeholder {
+          color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .chat-input-buttons {
+          position: absolute;
+          right: 10px;
+          display: flex;
+          gap: 8px;
+          height: 100%;
+          align-items: center;
+        }
+        
+        .chat-input-button {
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.5);
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        
+        .chat-send-button {
+          width: 46px;
+          height: 46px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #8B5CF6, #6d28d9);
+          border: none;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3);
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+          font-size: 18px;
+        }
+        
+        /* Sidebar profile and spacer */
+        .sidebar-spacer {
+          flex-grow: 1;
+        }
+        
+        .sidebar-profile {
+          padding: 10px 0;
+          margin-bottom: 10px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        .sidebar-profile img {
+          width: 40px;
+          height: 40px;
+          border-radius: 0;
+          object-fit: cover;
+          border: none;
+        }
+        
+        /* Stopwatch section styles */
+        .stopwatch-container {
+          padding: 20px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        .stopwatch-container h2 {
+          color: var(--accent-color);
+          margin-bottom: 20px;
+          font-size: 24px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          padding-bottom: 10px;
+        }
+        
+        .timer-container {
+          background-color: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Add animated stopwatch styles */
+        .animated-timer-display {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin: 30px 0;
+        }
+        
+        .timer-circle-container {
+          position: relative;
+          width: 300px;
+          height: 300px;
+        }
+        
+        .timer-text {
+          text-align: center;
+          color: white;
+          font-family: 'monospace', 'Courier New', Courier;
+          text-shadow: 0 0 10px rgba(139, 92, 246, 0.7);
+          letter-spacing: 2px;
+        }
+        
+        .laps-container {
+          margin-top: 20px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          padding-top: 20px;
+        }
+        
+        .laps-list {
+          list-style-type: none;
+          padding: 0;
+          margin: 0;
+          max-height: 200px;
+          overflow-y: auto;
+        }
+        
+        .laps-list li {
+          display: flex;
+          justify-content: space-between;
+          padding: 10px;
+          margin-bottom: 8px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+          border-left: 3px solid #8B5CF6;
+        }
+        
+        .lap-number {
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .lap-time {
+          font-family: monospace;
+          color: #8B5CF6;
+        }
+        
+        .timer-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 10px 20px;
+          color: white;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .timer-btn.start {
+          background: #10b981;
+          border-color: #059669;
+        }
+        
+        .timer-btn.pause {
+          background: #f59e0b;
+          border-color: #d97706;
+        }
+        
+        .timer-btn.reset {
+          background: #ef4444;
+          border-color: #dc2626;
+        }
+        
+        .timer-btn.lap {
+          background: rgba(139, 92, 246, 0.3);
+          border-color: rgba(139, 92, 246, 0.5);
+        }
+        
+        .timer-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        
+        .countdown-controls {
+          display: flex;
+          gap: 16px;
+          justify-content: center;
+          margin-bottom: 24px;
+        }
+        
+        .countdown-input {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .countdown-input label {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .countdown-input input {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          color: white;
+          font-size: 20px;
+          width: 70px;
+          height: 50px;
+          text-align: center;
+          font-family: monospace;
+        }
+        
+        /* Add settings page specific styles */
+        .settings-container {
+          padding: 24px;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        
+        .settings-header {
+          margin-bottom: 24px;
+        }
+        
+        .settings-header h2 {
+          color: white;
+          font-size: 24px;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        
+        .settings-header p {
+          color: #94a3b8;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+        
+        .settings-section {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 24px;
+          transition: all 0.3s ease;
+          width: 100%;
+          box-sizing: border-box;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .settings-section::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 4px;
+          background: linear-gradient(90deg, #8B5CF6, #60a5fa, #86efac);
+          opacity: 0.7;
+        }
+        
+        .settings-section h3 {
+          margin: 0 0 20px 0;
+          color: white;
+          font-size: 18px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        
+        .settings-section h3 i {
+          color: #8B5CF6;
+          font-size: 18px;
+        }
+        
+        .setting-item {
+          margin-bottom: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        
+        .setting-item:last-child {
+          margin-bottom: 0;
+        }
+        
+        .setting-item label {
+          font-weight: 500;
+          color: #e2e8f0;
+          font-size: 15px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .theme-toggle {
+          display: flex !important;
+          align-items: center !important;
+          gap: 12px !important;
+          cursor: pointer !important;
+          padding: 12px 16px !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border-radius: 12px !important;
+          transition: all 0.2s ease !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          width: max-content !important;
+        }
+        
+        /* Replace with this improved style */
+        .theme-toggle {
+          display: flex !important;
+          align-items: center !important;
+          gap: 10px !important;
+          cursor: pointer !important;
+          padding: 10px 14px !important;
+          background: rgba(30, 31, 44, 0.9) !important;
+          border-radius: 10px !important;
+          transition: all 0.2s ease !important;
+          border: 1px solid rgba(77, 91, 206, 0.2) !important;
+          width: max-content !important;
+        }
+        
+        .theme-toggle:hover {
+          background: rgba(30, 31, 44, 0.95) !important;
+          border-color: rgba(77, 91, 206, 0.4) !important;
+        }
+        
+        .theme-toggle i {
+          font-size: 16px !important;
+          color: #f59e0b !important;
+        }
+        
+        .window-size-options {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        
+        .font-size-options {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        
+        .view-options {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        
+        .toggle-switch {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          padding: 10px 14px !important;
+          background: rgba(30, 31, 44, 0.9) !important;
+          border-radius: 10px !important;
+          transition: all 0.2s ease !important;
+          border: 1px solid rgba(77, 91, 206, 0.2) !important;
+          cursor: pointer !important;
+          margin-top: 4px !important;
+        }
+        
+        .toggle-switch:hover {
+          background: rgba(30, 31, 44, 0.95) !important;
+        }
+        
+        .toggle-switch .toggle-label {
+          font-size: 14px !important;
+          font-weight: 500 !important;
+          color: #e2e8f0 !important;
+        }
+        
+        .toggle-switch .switch {
+          position: relative !important;
+          display: inline-block !important;
+          width: 46px !important;
+          height: 24px !important;
+          flex-shrink: 0 !important;
+        }
+        
+        .toggle-switch .switch input {
+          opacity: 0 !important;
+          width: 0 !important;
+          height: 0 !important;
+          position: absolute !important;
+        }
+        
+        .toggle-switch .slider {
+          position: absolute !important;
+          cursor: pointer !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          background-color: rgba(30, 31, 44, 0.9) !important;
+          transition: 0.3s !important;
+          border-radius: 24px !important;
+          border: 1px solid rgba(77, 91, 206, 0.3) !important;
+        }
+        
+        .toggle-switch .slider:before {
+          position: absolute !important;
+          content: "" !important;
+          height: 18px !important;
+          width: 18px !important;
+          left: 3px !important;
+          bottom: 2px !important;
+          background-color: white !important;
+          transition: 0.3s !important;
+          border-radius: 50% !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .toggle-switch input:checked + .slider {
+          background-color: #8B5CF6 !important;
+          border-color: rgba(139, 92, 246, 0.7) !important;
+        }
+        
+        .toggle-switch input:checked + .slider:before {
+          transform: translateX(22px) !important;
+        }
+        
+        .setting-description {
+          font-size: 13px;
+          color: #94a3b8;
+          margin-top: 8px;
+          line-height: 1.4;
+        }
+        
+        .icon-smaller {
+          font-size: 12px;
+        }
+        
+        .icon-larger {
+          font-size: 20px;
+        }
+        
+        .sound-options {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        
+        .sound-option {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 16px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+        }
+        
+        .sound-option:hover {
+          background: rgba(255, 255, 255, 0.08);
+          transform: translateY(-2px);
+        }
+        
+        .sound-option.selected {
+          background: rgba(139, 92, 246, 0.15);
+          border-color: #8B5CF6;
+        }
+        
+        .sound-option .sound-icon {
+          width: 40px;
+          height: 40px;
+          background: rgba(139, 92, 246, 0.1);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 8px;
+          font-size: 20px;
+          color: #8B5CF6;
+        }
+        
+        .sound-option input[type="radio"] {
+          position: absolute;
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        
+        .volume-control {
+          width: 100%;
+          padding: 20px 0;
+        }
+        
+        .volume-slider {
+          width: 100%;
+          height: 10px;
+          -webkit-appearance: none;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 5px;
+          outline: none;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+        }
+        
+        .volume-slider:hover {
+          opacity: 1;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #8B5CF6;
+          cursor: pointer;
+          border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .volume-slider::-moz-range-thumb {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #8B5CF6;
+          cursor: pointer;
+          border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .volume-label-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 8px;
+        }
+        
+        .volume-label {
+          color: #94a3b8;
+          font-size: 14px;
+        }
+        
+        .volume-value {
+          color: #8B5CF6;
+          font-weight: 600;
+          font-size: 14px;
+        }
+        
+        .radio-option {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 16px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+        }
+        
+        .radio-option:hover {
+          background: rgba(255, 255, 255, 0.08);
+          transform: translateY(-2px);
+        }
+        
+        .radio-option input[type="radio"] {
+          position: absolute;
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        
+        .radio-option .size-preview {
+          width: 100%;
+          height: 80px;
+          background: rgba(139, 92, 246, 0.1);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+          color: #8B5CF6;
+        }
+        
+        .radio-option .size-preview.compact {
+          width: 40px;
+          height: 40px;
+          margin: 20px auto;
+        }
+        
+        .radio-option .size-preview.medium {
+          width: 60px;
+          height: 60px;
+          margin: 10px auto;
+        }
+        
+        .radio-option label {
+          font-weight: 500;
+          margin-top: 8px;
+          pointer-events: none;
+        }
+        
+        .radio-option.selected {
+          background: rgba(139, 92, 246, 0.15);
+          border-color: #8B5CF6;
+        }
+        
+        .btn-primary {
+          background: #8B5CF6;
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: max-content;
+        }
+        
+        .btn-primary:hover {
+          background: #7c4dff;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+        
+        .btn-secondary {
+          background: rgba(139, 92, 246, 0.2);
+          color: #8B5CF6;
+          border: 1px solid rgba(139, 92, 246, 0.3);
+          padding: 10px 16px;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: max-content;
+        }
+        
+        .btn-secondary:hover {
+          background: rgba(139, 92, 246, 0.3);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+        }
+        
+        .btn-danger {
+          background: #ef4444;
+          color: white;
+          border: none;
+          padding: 12px 20px;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: max-content;
+        }
+        
+        .btn-danger:hover {
+          background: #dc2626;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .notification-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+        }
+        
+        .toggle-switch {
+          position: relative;
+          display: inline-block;
+          width: 50px;
+          height: 26px;
+        }
+        
+        .toggle-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        
+        .toggle-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(255, 255, 255, 0.1);
+          transition: .4s;
+          border-radius: 34px;
+        }
+        
+        .toggle-slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+          background-color: #8B5CF6;
+        }
+        
+        input:checked + .toggle-slider:before {
+          transform: translateX(24px);
+        }
+        
+        .notification-text {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        
+        .notification-title {
+          font-weight: 500;
+        }
+        
+        .notification-desc {
+          font-size: 12px;
+          color: #94a3b8;
+        }
+        
+        .account-info {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 20px;
+          padding: 16px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .account-avatar {
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background: rgba(139, 92, 246, 0.1);
+          overflow: hidden;
+          /* Removing the border that creates rings */
+        }
+        
+        .account-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .account-details {
+          flex: 1;
+        }
+        
+        .account-name {
+          font-weight: 600;
+          font-size: 16px;
+          margin-bottom: 4px;
+        }
+        
+        .account-email {
+          color: #94a3b8;
+          font-size: 14px;
+        }
+        
+        .account-status {
+          font-size: 12px;
+          padding: 4px 8px;
+          border-radius: 12px;
+          background: rgba(134, 239, 172, 0.1);
+          color: #86efac;
+          width: max-content;
+          margin-top: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .account-buttons {
+          display: flex;
+          gap: 12px;
+        }
+        
+        /* Make the errors container responsive */
+        .errors-container {
+          padding: 16px;
+          overflow-y: auto;
+          max-height: calc(100vh - 120px);
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        
+        /* Hints Styles */
+        .hints-container {
+          padding: 16px;
+          overflow-y: auto;
+          max-height: calc(100vh - 120px);
+          width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .hints-header {
+          margin-bottom: 24px;
+        }
+        
+        .hints-header h2 {
+          font-size: 24px;
+          font-weight: 600;
+          color: white;
+          margin: 0 0 8px 0;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        
+        .difficulty-tabs {
+          display: flex;
+          gap: 8px;
+          margin: 16px 0;
+          padding-bottom: 8px;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        
+        .difficulty-tabs::-webkit-scrollbar {
+          display: none;
+        }
+        
+        .tab-button {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          padding: 8px 16px;
+          color: #94a3b8;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        
+        .tab-button.active {
+          background: rgba(139, 92, 246, 0.15);
+          border-color: #8B5CF6;
+          color: white;
+        }
+        
+        .tab-button:hover {
+          background: rgba(255, 255, 255, 0.08);
+          transform: translateY(-1px);
+        }
+        
+        .hint-category {
+          margin-bottom: 32px;
+        }
+        
+        .hint-category h3 {
+          font-size: 18px;
+          font-weight: 600;
+          color: white;
+          margin: 0 0 16px 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .hint-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 16px;
+          width: 100%;
+        }
+        
+        .hint-card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          overflow: hidden;
+          position: relative;
+          transition: all 0.3s ease;
+          height: 100%;
+        }
+        
+        .hint-card:hover {
+          transform: translateY(-5px);
+          background: rgba(255, 255, 255, 0.08);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          border-color: rgba(139, 92, 246, 0.3);
+        }
+        
+        .hint-card.blurred .hint-content {
+          filter: blur(5px);
+          user-select: none;
+          pointer-events: none;
+        }
+        
+        .hint-reveal-button {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(139, 92, 246, 0.2);
+          border: 1px solid rgba(139, 92, 246, 0.4);
+          color: white;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          z-index: 2;
+        }
+        
+        .hint-reveal-button:hover {
+          background: rgba(139, 92, 246, 0.3);
+          transform: translate(-50%, -50%) scale(1.05);
+        }
+        
+        .hints-content .hint-cards-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+          width: 100%;
+          box-sizing: border-box;
+          overflow-x: hidden;
+        }
+        
+        .hints-content .hint-card {
+          max-width: 100%;
+          box-sizing: border-box;
+          overflow: hidden;
+        }
+        
+        .hints-content .hint-content {
+          max-width: 100%;
+          overflow-wrap: break-word;
+        }
+        
+        .hints-content .hint-code-snippet {
+          max-width: 100%;
+          overflow-x: auto;
+        }
+        
+        .hints-content .hint-code-snippet pre {
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+        
+        .nav-items-main {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          align-items: center;
+        }
+        
+        .nav-items-bottom {
+          margin-top: auto;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          align-items: center;
+        }
+        
+        .sidebar-profile {
+          margin-top: 8px;
+        }
+        
+        .chat-input-wrapper:focus-within {
+          border-color: rgba(139, 92, 246, 0.5);
+          box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+        
+        .chat-input-buttons {
+          position: absolute;
+          right: 8px;
+          bottom: 6px;
+          display: flex;
+          gap: 6px;
+        }
+        
+        .chat-input-button {
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.5);
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 12px;
+        }
+        
+        /* Chat Styles (extended) */
+        .message-text code {
+          font-family: monospace;
+          background: rgba(0, 0, 0, 0.3);
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-size: 12px;
+          color: #e2e8f0;
+        }
+        
+        .message-code-block {
+          background: rgba(0, 0, 0, 0.3);
+          border-radius: 8px;
+          margin-top: 10px;
+          margin-bottom: 6px;
+          position: relative;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          width: 100%;
+        }
+        
+        .message-code-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          background: rgba(255, 255, 255, 0.05);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px 8px 0 0;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .message-code-language {
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        
+        .message-code-actions {
+          display: flex;
+          gap: 8px;
+        }
+        
+        .message-code-action {
+          background: none;
+          border: none;
+          color: rgba(255, 255, 255, 0.6);
+          cursor: pointer;
+          padding: 3px;
+          font-size: 11px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .message-code-action:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+        
+        .message-code-content {
+          max-height: 300px;
+          overflow-y: auto;
+          position: relative;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(139, 92, 246, 0.3) rgba(0, 0, 0, 0.1);
+        }
+        
+        .message-code-content::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        
+        .message-code-content::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: 0 0 8px 0;
+        }
+        
+        .message-code-content::-webkit-scrollbar-thumb {
+          background-color: rgba(139, 92, 246, 0.3);
+          border-radius: 10px;
+        }
+        
+        .message-code-content pre {
+          margin: 0;
+          padding: 12px 16px;
+          white-space: pre;
+          overflow-x: auto;
+          font-family: monospace;
+          font-size: 12px;
+          line-height: 1.5;
+          color: #e2e8f0;
+          counter-reset: line;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .message-code-content pre code {
+          display: block;
+          padding: 0;
+          background: transparent;
+        }
+        
+        .message-code-line-numbers {
+          position: absolute;
+          left: 0;
+          top: 0;
+          padding: 12px 0;
+          text-align: right;
+          color: rgba(255, 255, 255, 0.3);
+          font-family: monospace;
+          font-size: 12px;
+          line-height: 1.5;
+          user-select: none;
+          background: rgba(0, 0, 0, 0.2);
+          width: 30px;
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .message-code-with-numbers pre {
+          padding-left: 40px;
+        }
 
-      /* Option grids - smaller and more consistent */
-      .window-size-options,
-      .font-size-options,
-      .view-options {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px !important;
-        margin-bottom: 12px !important;
-      }
+        /* Option grids - smaller and more consistent */
+        .window-size-options,
+        .font-size-options,
+        .view-options {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px !important;
+          margin-bottom: 12px !important;
+        }
 
-      .radio-option {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 6px !important;
-        background: rgba(30, 31, 44, 0.9) !important;
-        border: 1px solid rgba(77, 91, 206, 0.2) !important;
-        border-radius: 8px !important;
-        padding: 10px 6px !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-        position: relative !important;
-      }
+        .radio-option {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 6px !important;
+          background: rgba(30, 31, 44, 0.9) !important;
+          border: 1px solid rgba(77, 91, 206, 0.2) !important;
+          border-radius: 8px !important;
+          padding: 10px 6px !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          position: relative !important;
+        }
 
-      .radio-option .size-preview {
-        width: 100% !important;
-        height: 48px !important;
-        background: rgba(139, 92, 246, 0.08) !important;
-        border-radius: 6px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 18px !important;
-        color: #8B5CF6 !important;
-      }
+        .radio-option .size-preview {
+          width: 100% !important;
+          height: 48px !important;
+          background: rgba(139, 92, 246, 0.08) !important;
+          border-radius: 6px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 18px !important;
+          color: #8B5CF6 !important;
+        }
 
-      .radio-option .size-preview.compact {
-        width: 30px !important;
-        height: 30px !important;
-        margin: 9px auto !important;
-      }
+        .radio-option .size-preview.compact {
+          width: 30px !important;
+          height: 30px !important;
+          margin: 9px auto !important;
+        }
 
-      .radio-option .size-preview.medium {
-        width: 40px !important;
-        height: 40px !important;
-        margin: 4px auto !important;
-      }
+        .radio-option .size-preview.medium {
+          width: 40px !important;
+          height: 40px !important;
+          margin: 4px auto !important;
+        }
 
-      .settings-section {
-        background: rgba(30, 31, 44, 0.7) !important;
-        border: 1px solid rgba(77, 91, 206, 0.2) !important;
-        border-radius: 10px !important;
-        padding: 14px !important;
-        margin-bottom: 14px !important;
-        transition: all 0.3s ease !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-        position: relative !important;
-        overflow: hidden !important;
-      }
+        .settings-section {
+          background: rgba(30, 31, 44, 0.7) !important;
+          border: 1px solid rgba(77, 91, 206, 0.2) !important;
+          border-radius: 10px !important;
+          padding: 14px !important;
+          margin-bottom: 14px !important;
+          transition: all 0.3s ease !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          position: relative !important;
+          overflow: hidden !important;
+        }
 
-      .settings-section h3 {
-        margin: 0 0 12px 0 !important;
-        color: white !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 6px !important;
-      }
+        .settings-section h3 {
+          margin: 0 0 12px 0 !important;
+          color: white !important;
+          font-size: 15px !important;
+          font-weight: 600 !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+        }
 
-      .settings-section h3 i {
-        color: #8B5CF6 !important;
-        font-size: 15px !important;
-      }
+        .settings-section h3 i {
+          color: #8B5CF6 !important;
+          font-size: 15px !important;
+        }
 
-      .setting-item {
-        margin-bottom: 14px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 6px !important;
-      }
+        .setting-item {
+          margin-bottom: 14px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 6px !important;
+        }
 
-      .sound-options {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
-        gap: 8px !important;
-        margin-bottom: 12px !important;
-      }
+        .sound-options {
+          display: grid !important;
+          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
+          gap: 8px !important;
+          margin-bottom: 12px !important;
+        }
 
-      .sound-option {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 6px !important;
-        background: rgba(30, 31, 44, 0.9) !important;
-        border: 1px solid rgba(77, 91, 206, 0.2) !important;
-        border-radius: 8px !important;
-        padding: 10px 6px !important;
-        cursor: pointer !important;
-        transition: all 0.2s ease !important;
-        position: relative !important;
-      }
+        .sound-option {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          gap: 6px !important;
+          background: rgba(30, 31, 44, 0.9) !important;
+          border: 1px solid rgba(77, 91, 206, 0.2) !important;
+          border-radius: 8px !important;
+          padding: 10px 6px !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          position: relative !important;
+        }
 
-      .sound-option .sound-icon {
-        width: 32px !important;
-        height: 32px !important;
-        background: rgba(139, 92, 246, 0.08) !important;
-        border-radius: 6px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        margin-bottom: 4px !important;
-        font-size: 16px !important;
-        color: #8B5CF6 !important;
-      }
+        .sound-option .sound-icon {
+          width: 32px !important;
+          height: 32px !important;
+          background: rgba(139, 92, 246, 0.08) !important;
+          border-radius: 6px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          margin-bottom: 4px !important;
+          font-size: 16px !important;
+          color: #8B5CF6 !important;
+        }
 
-      .theme-toggle {
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
-        cursor: pointer !important;
-        padding: 8px 12px !important;
-        background: rgba(30, 31, 44, 0.9) !important;
-        border-radius: 8px !important;
-        transition: all 0.2s ease !important;
-        border: 1px solid rgba(77, 91, 206, 0.2) !important;
-        width: max-content !important;
-      }
+        .theme-toggle {
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          cursor: pointer !important;
+          padding: 8px 12px !important;
+          background: rgba(30, 31, 44, 0.9) !important;
+          border-radius: 8px !important;
+          transition: all 0.2s ease !important;
+          border: 1px solid rgba(77, 91, 206, 0.2) !important;
+          width: max-content !important;
+        }
 
-      .radio-option.selected {
-        background: rgba(139, 92, 246, 0.15) !important;
-        border-color: #8B5CF6 !important;
-      }
+        .radio-option.selected {
+          background: rgba(139, 92, 246, 0.15) !important;
+          border-color: #8B5CF6 !important;
+        }
 
-      /* Add additional styles for better appearance */
-      .radio-option label {
-        font-weight: 500 !important;
-        font-size: 13px !important;
-        margin-top: 4px !important;
-        color: #e2e8f0 !important;
-      }
+        /* Add additional styles for better appearance */
+        .radio-option label {
+          font-weight: 500 !important;
+          font-size: 13px !important;
+          margin-top: 4px !important;
+          color: #e2e8f0 !important;
+        }
 
-      .radio-option:hover {
-        background: rgba(77, 91, 206, 0.15) !important;
-        transform: translateY(-2px) !important;
-        border-color: rgba(77, 91, 206, 0.4) !important;
-      }
+        .radio-option:hover {
+          background: rgba(77, 91, 206, 0.15) !important;
+          transform: translateY(-2px) !important;
+          border-color: rgba(77, 91, 206, 0.4) !important;
+        }
 
-      .radio-option.selected:hover {
-        background: rgba(139, 92, 246, 0.2) !important;
-        border-color: rgba(139, 92, 246, 0.7) !important;
-      }
+        .radio-option.selected:hover {
+          background: rgba(139, 92, 246, 0.2) !important;
+          border-color: rgba(139, 92, 246, 0.7) !important;
+        }
 
-      /* Fix alignment for icons */
-      .radio-option i.fas {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-      }
+        /* Fix alignment for icons */
+        .radio-option i.fas {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
 
-      .icon-smaller {
-        font-size: 14px !important; 
-      }
+        .icon-smaller {
+          font-size: 14px !important; 
+        }
 
-      .icon-larger {
-        font-size: 22px !important;
-      }
-    `;
+        .icon-larger {
+          font-size: 22px !important;
+        }
+
+        @media (max-width: 640px) {
+          .tools-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+          }
+        }
+        
+        /* Extra narrow screens or sidebar */
+        @media (max-width: 400px) {
+          .tools-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            padding: 0 4px;
+          }
+          
+          .tool-button {
+            padding: 12px 8px;
+            min-height: 90px;
+          }
+          
+          .tool-button-icon {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 6px;
+          }
+          
+          .tool-button-icon i {
+            font-size: 16px;
+          }
+          
+          .tool-button-title {
+            font-size: 12px;
+            margin-bottom: 2px;
+          }
+          
+          .tool-button-description {
+            font-size: 11px;
+            line-height: 1.2;
+            max-height: 26px;
+            overflow: hidden;
+          }
+        }
+        
+        /* Extremely narrow sidebar */
+        @media (max-width: 320px) {
+          .tools-grid {
+            grid-template-columns: repeat(1, 1fr);
+          }
+          
+          .tool-button {
+            flex-direction: row;
+            align-items: center;
+            min-height: auto;
+            padding: 10px;
+            gap: 8px;
+          }
+          
+          .tool-button-icon {
+            margin-bottom: 0;
+            min-width: 24px;
+            width: 24px;
+            height: 24px;
+          }
+          
+          .tool-button-content {
+            text-align: left;
+          }
+          
+          .tool-button-description {
+            display: none;
+          }
+        }
+      `;
     document.head.appendChild(styleElement);
   }, []);
 
@@ -3374,6 +3615,7 @@ const SidePanel: React.FC = () => {
 
   // Timer functions
   const startTimer = () => {
+    console.log("Starting timer...");
     if (isTimerRunning) return;
 
     const now = Date.now();
@@ -3471,32 +3713,100 @@ const SidePanel: React.FC = () => {
   });
 
 
-  function apiHTMLToPlainText(html: string) {
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    let text = tempDiv.textContent || tempDiv.innerText || "";
-    return text.replace('\\n','').replace('\\t','').replace('&lt;=','');
+  function htmlToCleanText(html: string) {
+      // Create a temporary element to parse the HTML
+      const tempElement = document.createElement('div');
+      tempElement.innerHTML = html;
+      
+      // Extract the plain text from the parsed HTML
+      let text = tempElement.textContent || tempElement.innerText || '';
+      
+      // Clean up text (remove any excess whitespaces)
+      text = text.replace(/\s+/g, ' ').trim();
+      
+      // Format the text for readability
+      text = text.replace(/Example (\d+):/g, '\n\nExample $1:')
+                .replace(/Input:/g, '\nInput:')
+                .replace(/Output:/g, '\nOutput:')
+                .replace(/Constraints:/g, '\nConstraints:')
+                .replace(/\[ /g, '[') // Remove extra space before opening brackets
+                .replace(/ \]/g, ']') // Remove extra space before closing brackets
+                .replace(/\n/g, '\n\n'); // Ensure there's a space between lines
+      
+      return text;
   }
 
-  chrome.runtime.onMessage.addListener(async(message) => {
+  function separateCodeSnipets(response: any) {
+    console.log(response);
+    setCodeSnippetsData(response || []);
+    let tempTitle = "";
+    const codeSnipetCards = response.map((item: any, index: any, array: any) => {
+      return (<HintCard title={item.title} hint={item.code} type="code" description={item.description} key={index} ></HintCard>)});
+    setCurrentCodeSnipets(codeSnipetCards);
+    console.log(codeSnipetCards);
+  }
+  function slugToTitle(slug: string) {
+    return slug
+      .split('-') // Split the slug into words
+      .map(word => word==='ii' ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
+      .join(' '); // Join the words back together with spaces
+  }
+
+  chrome.runtime.onMessage.addListener(async(message, sender, respond) => {
       if (message.type === 'navigatedToProblem') {
         try {
-          console.log("fetching problem info for sidepanel");
-          const response = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${message.data}`);
-          const data = await response.json();
-          let problem = 
-            { id: data.questionId,
-              title: data.questionTitle,
-              difficulty: data.difficulty,
-              description: apiHTMLToPlainText(data.question),
-              tags: data.topicTags.map((tag: { name: string }) => tag.name)
-            }
-          console.log(problem);
-          setCurrentProblem(problem);
+          console.log("fetching problem hints for sidepanel");
+          // Set loading state first
+          setIsHintsLoading(true);
+          
+          // Update problem info
+          setCurrentProblemId(message.problemId || null);
+          setCurrentProblemTitle(slugToTitle(message.data) || "");
+          
+          // Process the data
+          setCurrentHint(message.hint);
+          //console.log(message.codeSnipets);
+          separateCodeSnipets(message.codeSnipets);
+          setCurrentProblemTitle(slugToTitle(message.data));
+          console.log("currentProblemTitle: ", message.data);
+          
+          const descrResponse = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${message.data}`);
+          if (!descrResponse.ok) throw new Error("Problem not found or API error");
+          const data = await descrResponse.json();
+          const description = htmlToCleanText(data.question);
+          setCurrentProblemDescription(description);
+          console.log("currentProblemDescription: ", description);
+  
+          
+          // Add a small delay before turning off loading to ensure smooth transitions
+          setTimeout(() => {
+            setIsHintsLoading(false);
+          }, 200);
         } catch (e) {
-          console.error("Error fetching problem info: " + e);
+          console.error("Error fetching problem hints: " + e);
           setCurrentProblem(undefined);
+          setCurrentHint("");
+          setCurrentCodeSnipets([]);
+          setCodeSnippetsData([]);
+          setIsHintsLoading(false);
         }
+        console.log(message.hint);
+      } else if (message.type === "displayDiscussions"){
+        console.log("message.data: ", message.data);
+        const selectedQuestions: any[] = message.data;
+        const discussionCards: any[] = selectedQuestions.map( (item, index, array) => {
+          return (
+              <ResourceCard
+                  key={index}
+                  title={item.title}
+                  link={item.link}
+                  description={"Resource tags: \n" + item.tags.join("  ") || "No description available."}
+                  difficulty="Easy"
+                  type="Article"
+              />
+          );
+      })
+        setCurrentDiscussions(discussionCards);
       }
     });
 
@@ -3629,14 +3939,90 @@ const SidePanel: React.FC = () => {
     });
   };
 
-  // Check if verification page should be shown
-  if (showVerification) {
-    console.log("COMPLETED VERIFICATION (allegedly)");
-    return (
-      <VerificationPage onVerificationComplete={handleVerificationComplete} />
-    );
-  }
+  // Function to handle sending a new message
+  const handleSendMessage = async() => {
+    if (!messageText.trim()) return;
+    
+    // Hide initial suggestions when user sends first message
+    //setShowInitialSuggestions(false);
+    
+    // Create new user message
+    const newUserMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: messageText,
+      timestamp: new Date(),
+    };
+    
+    // Add user message to chat
+    setMessages(prevMessages => [...prevMessages, newUserMessage]);
+    const history = messages.map((message) => {
+      return JSON.stringify({role: message.role, text: message.content});
+    });
+    
+    // Clear input field
+    setMessageText("");
+    
+    // Show loading state
+    setIsMessagesLoading(true);
+    
+    try {
+      const response = await sendChat(messageText, history);
+      const assistantResponse: Message = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: `${response}`,
+        timestamp: new Date(),
+        isError: false,
+      };
+      
+      // Add the assistant's response and hide loading indicators
+      setMessages(prevMessages => [...prevMessages, assistantResponse]);
+      setIsTyping(false);
+      setIsMessagesLoading(false);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setIsTyping(false);
+      setIsMessagesLoading(false);
+    }
+  };
 
+  // Scroll to the bottom of messages when new ones come in
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+/*
+    // Check if verification page should be shown
+    if (showVerification) {
+      console.log("User is not verified, showing verification page.");
+      return (
+        <div className={`container ${isLoading ? "loading" : ""}`}>
+          <AnimatePresence>
+          <motion.div
+            className="leetcode-loader-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="leetcode-loader-container">
+              <motion.div
+                className="leetcode-loader-card"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <VerificationPage onVerificationComplete={handleVerificationComplete} />
+              </motion.div>
+              </div>
+              </motion.div>
+          </AnimatePresence>
+        </div>
+      );
+    }
+*/
   // Render the sidepanel UI
   return (
     <div className={`container ${isLoading ? "loading" : ""}`}>
@@ -3732,7 +4118,7 @@ const SidePanel: React.FC = () => {
           </div>
           <div
             className={`nav-item ${activeSection === "hints" ? "active" : ""}`}
-            onClick={() => handleNavigation("hints")}
+            onClick={() => {handleNavigation("hints")}}
           >
             <i className="fas fa-lightbulb"></i>
             {sidebarExpanded && <span className="nav-label">Hints</span>}
@@ -3852,19 +4238,19 @@ const SidePanel: React.FC = () => {
             id="home"
           >
             <div className="content">
-              <h2 className="section-title">Dashboard</h2>
+              {/* Removed Dashboard section title */}
 
               <CurrentProblem 
                 problem={currentProblem}
+                title={currentProblemTitle}
+                description={currentProblemDescription}
                 onGetHints= {() => {{console.log("clicked get hints")}}}
                 onViewResources= {() => console.log("clicked view resources")}
                 onRefresh= {() => console.log("clicked refresh")}
                 onOpenExternal= {() => console.log("clicked open external")}
-                onSetProblem={setCurrentProblem}
               ></CurrentProblem>
 
-              {/* Quick Actions */}
-              <h2 className="section-title">Quick Actions</h2>
+              {/* Quick Actions - Removed section title */}
               <div className="tools-grid">
                 <motion.div
                   className="tool-button hints"
@@ -3879,9 +4265,6 @@ const SidePanel: React.FC = () => {
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Hints</div>
-                    <div className="tool-button-description">
-                      Get problem-specific guidance
-                    </div>
                   </div>
                 </motion.div>
 
@@ -3898,9 +4281,6 @@ const SidePanel: React.FC = () => {
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Resources</div>
-                    <div className="tool-button-description">
-                      Learning materials and guides
-                    </div>
                   </div>
                 </motion.div>
 
@@ -3917,9 +4297,6 @@ const SidePanel: React.FC = () => {
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">Error Help</div>
-                    <div className="tool-button-description">
-                      Analyze and fix code errors
-                    </div>
                   </div>
                 </motion.div>
 
@@ -3936,15 +4313,11 @@ const SidePanel: React.FC = () => {
                   </div>
                   <div className="tool-button-content">
                     <div className="tool-button-title">AI Chat</div>
-                    <div className="tool-button-description">
-                      Get personalized assistance
-                    </div>
                   </div>
                 </motion.div>
               </div>
 
-              {/* Recent Activity */}
-              <h2 className="section-title">Recent Activity</h2>
+              {/* Recent Activity - Removed section title */}
               <motion.div
                 className="dashboard-card"
                 initial={{ opacity: 0, y: 20 }}
@@ -4106,660 +4479,21 @@ const SidePanel: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3, duration: 0.5 }}
                 >
-                  <i className="fas fa-layer-group"></i> Array Techniques
+                  <i className="fas fa-layer-group"></i> Hints Section
                 </motion.h3>
                 <div className="hint-grid">
-                  <motion.div
-                    className="hint-card hint-card"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4, duration: 0.5 }}
-                    whileHover={{
-                      y: -5,
-                      boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)",
-                    }}
-                  >
-                    <div className="hint-icon">
-                      <i className="fas fa-code"></i>
-                    </div>
-                    <div className="hint-badge">Basic</div>
-                    <h3>Two Pointers Technique</h3>
-                    <div className="hint-content">
-                      <p>
-                        The two pointers technique uses two pointers to solve
-                        array problems efficiently. Typically used in sorted
-                        arrays to find pairs with a specific sum or to detect
-                        cycles in linked lists.
-                      </p>
-                      <div className="hint-code-snippet blurred">
-                        <pre>
-                          <code>
-                            {`// Example: Find pair with given sum in sorted array`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`function findPair(arr, target) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 1} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  let left = 0;`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 2} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  let right = arr.length - 1;`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 3} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  `.split("\n").map((line, index) => (
-                              <span key={index + 4} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  while (left < right) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 5} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`    if (arr[left] + arr[right] === target) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 6} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`      return [left, right];`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 7} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`    } else if (arr[left] + arr[right] < target) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 8} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`      left++;`.split("\n").map((line, index) => (
-                              <span key={index + 9} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`    } else {`.split("\n").map((line, index) => (
-                              <span key={index + 10} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`      right--;`.split("\n").map((line, index) => (
-                              <span key={index + 11} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`    }`.split("\n").map((line, index) => (
-                              <span key={index + 12} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  }`.split("\n").map((line, index) => (
-                              <span key={index + 13} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  `.split("\n").map((line, index) => (
-                              <span key={index + 14} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  return [-1, -1]; // Pair not found`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 15} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`}`.split("\n").map((line, index) => (
-                              <span key={index + 16} className="line">
-                                {line}
-                              </span>
-                            ))}
-                          </code>
-                        </pre>
-                        <div className="code-reveal-controls">
-                          <button
-                            className="code-reveal-btn"
-                            onClick={(e) => {
-                              const codeSnippet =
-                                e.currentTarget.closest(".hint-code-snippet");
-                              if (codeSnippet) {
-                                const codeLines =
-                                  codeSnippet.querySelectorAll(
-                                    "code > span.line"
-                                  );
-                                const visibleLines =
-                                  codeSnippet.querySelectorAll(
-                                    "code > span.line.visible"
-                                  );
-
-                                // If no lines are visible yet or we've revealed all lines, start over
-                                if (
-                                  visibleLines.length === 0 ||
-                                  visibleLines.length === codeLines.length
-                                ) {
-                                  // Hide all lines first by removing the visible class
-                                  codeLines.forEach((line) =>
-                                    line.classList.remove("visible")
-                                  );
-
-                                  // Show only the first two lines
-                                  if (codeLines.length > 0)
-                                    codeLines[0].classList.add("visible");
-                                  if (codeLines.length > 1)
-                                    codeLines[1].classList.add("visible");
-
-                                  // Remove the blur when we start revealing
-                                  codeSnippet.classList.remove("blurred");
-                                  e.currentTarget.innerHTML =
-                                    '<i class="fas fa-arrow-down"></i> Reveal Next';
-                                } else {
-                                  // Reveal next two lines
-                                  const nextLineIndex = visibleLines.length;
-                                  if (nextLineIndex < codeLines.length)
-                                    codeLines[nextLineIndex].classList.add(
-                                      "visible"
-                                    );
-                                  if (nextLineIndex + 1 < codeLines.length)
-                                    codeLines[nextLineIndex + 1].classList.add(
-                                      "visible"
-                                    );
-
-                                  // If we've revealed all lines, update button text
-                                  if (
-                                    visibleLines.length + 2 >=
-                                    codeLines.length
-                                  ) {
-                                    e.currentTarget.innerHTML =
-                                      '<i class="fas fa-redo"></i> Reset';
-                                  }
-                                }
-                              }
-                            }}
-                          >
-                            <i className="fas fa-eye"></i> Reveal Step-by-Step
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-
-                  <motion.div
-                    className="hint-card"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5, duration: 0.5 }}
-                    whileHover={{
-                      y: -5,
-                      boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)",
-                    }}
-                  >
-                    <div className="hint-icon">
-                      <i className="fas fa-code"></i>
-                    </div>
-                    <div className="hint-badge">Intermediate</div>
-                    <h3>Sliding Window Technique</h3>
-                    <div className="hint-content">
-                      <p>
-                        The sliding window technique is used to perform
-                        operations on a specific window size of an array or
-                        string. It's particularly useful for problems involving
-                        subarrays or substrings.
-                      </p>
-                      <div className="hint-code-snippet blurred">
-                        <pre>
-                          <code>
-                            {`// Example: Find max sum subarray of size k`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`function maxSumSubarray(arr, k) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 1} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  let maxSum = 0;`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 2} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  let windowSum = 0;`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 3} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  let start = 0;`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 4} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  `.split("\n").map((line, index) => (
-                              <span key={index + 5} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  for (let end = 0; end < arr.length; end++) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 6} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`    // Add the next element to the window`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 7} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`    windowSum += arr[end];`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 8} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`    `.split("\n").map((line, index) => (
-                              <span key={index + 9} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`    // If we've hit the window size k`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 10} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`    if (end >= k - 1) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 11} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`      // Update max sum if needed`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 12} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`      maxSum = Math.max(maxSum, windowSum);`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 13} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`      `.split("\n").map((line, index) => (
-                              <span key={index + 14} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`      // Remove the leftmost element as we slide`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 15} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`      windowSum -= arr[start];`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 16} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`      start++;`.split("\n").map((line, index) => (
-                              <span key={index + 17} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`    }`.split("\n").map((line, index) => (
-                              <span key={index + 18} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  }`.split("\n").map((line, index) => (
-                              <span key={index + 19} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  `.split("\n").map((line, index) => (
-                              <span key={index + 20} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  return maxSum;`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 21} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`}`.split("\n").map((line, index) => (
-                              <span key={index + 22} className="line">
-                                {line}
-                              </span>
-                            ))}
-                          </code>
-                        </pre>
-                        <div className="code-reveal-controls">
-                          <button
-                            className="code-reveal-btn"
-                            onClick={(e) => {
-                              const codeSnippet =
-                                e.currentTarget.closest(".hint-code-snippet");
-                              if (codeSnippet) {
-                                const codeLines =
-                                  codeSnippet.querySelectorAll(
-                                    "code > span.line"
-                                  );
-                                const visibleLines =
-                                  codeSnippet.querySelectorAll(
-                                    "code > span.line.visible"
-                                  );
-
-                                // If no lines are visible yet or we've revealed all lines, start over
-                                if (
-                                  visibleLines.length === 0 ||
-                                  visibleLines.length === codeLines.length
-                                ) {
-                                  // Hide all lines first by removing the visible class
-                                  codeLines.forEach((line) =>
-                                    line.classList.remove("visible")
-                                  );
-
-                                  // Show only the first two lines
-                                  if (codeLines.length > 0)
-                                    codeLines[0].classList.add("visible");
-                                  if (codeLines.length > 1)
-                                    codeLines[1].classList.add("visible");
-
-                                  // Remove the blur when we start revealing
-                                  codeSnippet.classList.remove("blurred");
-                                  e.currentTarget.innerHTML =
-                                    '<i class="fas fa-arrow-down"></i> Reveal Next';
-                                } else {
-                                  // Reveal next two lines
-                                  const nextLineIndex = visibleLines.length;
-                                  if (nextLineIndex < codeLines.length)
-                                    codeLines[nextLineIndex].classList.add(
-                                      "visible"
-                                    );
-                                  if (nextLineIndex + 1 < codeLines.length)
-                                    codeLines[nextLineIndex + 1].classList.add(
-                                      "visible"
-                                    );
-
-                                  // If we've revealed all lines, update button text
-                                  if (
-                                    visibleLines.length + 2 >=
-                                    codeLines.length
-                                  ) {
-                                    e.currentTarget.innerHTML =
-                                      '<i class="fas fa-redo"></i> Reset';
-                                  }
-                                }
-                              }
-                            }}
-                          >
-                            <i className="fas fa-eye"></i> Reveal Step-by-Step
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="hint-section"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6, duration: 0.5 }}
-              >
-                <motion.h3
-                  className="hint-section-title"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7, duration: 0.5 }}
-                >
-                  <i className="fas fa-project-diagram"></i> Graph Algorithms
-                </motion.h3>
-                <div className="hint-grid">
-                  <motion.div
-                    className="hint-card blurred"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8, duration: 0.5 }}
-                    whileHover={{
-                      y: -5,
-                      boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-                      borderColor: "rgba(139, 92, 246, 0.5)",
-                    }}
-                  >
-                    <div className="hint-icon">
-                      <i className="fas fa-code"></i>
-                    </div>
-                    <div className="hint-badge">Advanced</div>
-                    <h3>Depth-First Search (DFS)</h3>
-                    <div className="hint-content">
-                      <p>
-                        Depth-First Search explores as far as possible along
-                        each branch before backtracking. It's useful for
-                        problems involving paths, cycles, or topological
-                        sorting.
-                      </p>
-                      <div className="hint-code-snippet blurred">
-                        <pre>
-                          <code>
-                            {`// Example: DFS implementation for a graph`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`function dfs(graph, start, visited = new Set()) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 1} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  // Mark the current node as visited`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 2} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  visited.add(start);`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 3} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  console.log(start);`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 4} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  `.split("\n").map((line, index) => (
-                              <span key={index + 5} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  // Get all adjacent vertices of the node`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 6} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  const neighbors = graph[start] || [];`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 7} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  `.split("\n").map((line, index) => (
-                              <span key={index + 8} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  // Recur for all adjacent vertices`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 9} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`  for (const neighbor of neighbors) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 10} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`    if (!visited.has(neighbor)) {`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 11} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`      dfs(graph, neighbor, visited);`
-                              .split("\n")
-                              .map((line, index) => (
-                                <span key={index + 12} className="line">
-                                  {line}
-                                </span>
-                              ))}
-                            {`    }`.split("\n").map((line, index) => (
-                              <span key={index + 13} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`  }`.split("\n").map((line, index) => (
-                              <span key={index + 14} className="line">
-                                {line}
-                              </span>
-                            ))}
-                            {`}`.split("\n").map((line, index) => (
-                              <span key={index + 15} className="line">
-                                {line}
-                              </span>
-                            ))}
-                          </code>
-                        </pre>
-                        <div className="code-reveal-controls">
-                          <button
-                            className="code-reveal-btn"
-                            onClick={(e) => {
-                              const codeSnippet =
-                                e.currentTarget.closest(".hint-code-snippet");
-                              if (codeSnippet) {
-                                const codeLines =
-                                  codeSnippet.querySelectorAll(
-                                    "code > span.line"
-                                  );
-                                const visibleLines =
-                                  codeSnippet.querySelectorAll(
-                                    "code > span.line.visible"
-                                  );
-
-                                // If no lines are visible yet or we've revealed all lines, start over
-                                if (
-                                  visibleLines.length === 0 ||
-                                  visibleLines.length === codeLines.length
-                                ) {
-                                  // Hide all lines first by removing the visible class
-                                  codeLines.forEach((line) =>
-                                    line.classList.remove("visible")
-                                  );
-
-                                  // Show only the first two lines
-                                  if (codeLines.length > 0)
-                                    codeLines[0].classList.add("visible");
-                                  if (codeLines.length > 1)
-                                    codeLines[1].classList.add("visible");
-
-                                  // Remove the blur when we start revealing
-                                  codeSnippet.classList.remove("blurred");
-                                  e.currentTarget.innerHTML =
-                                    '<i class="fas fa-arrow-down"></i> Reveal Next';
-                                } else {
-                                  // Reveal next two lines
-                                  const nextLineIndex = visibleLines.length;
-                                  if (nextLineIndex < codeLines.length)
-                                    codeLines[nextLineIndex].classList.add(
-                                      "visible"
-                                    );
-                                  if (nextLineIndex + 1 < codeLines.length)
-                                    codeLines[nextLineIndex + 1].classList.add(
-                                      "visible"
-                                    );
-
-                                  // If we've revealed all lines, update button text
-                                  if (
-                                    visibleLines.length + 2 >=
-                                    codeLines.length
-                                  ) {
-                                    e.currentTarget.innerHTML =
-                                      '<i class="fas fa-redo"></i> Reset';
-                                  }
-                                }
-                              }
-                            }}
-                          >
-                            <i className="fas fa-eye"></i> Reveal Step-by-Step
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
+                  <ConceptualHintContainer
+                    title={currentProblemTitle}
+                    hint={currentHint}
+                    currentProblemId={currentProblemId}
+                    isLoading={isHintsLoading}
+                  />
+                  <HintCardContainer 
+                    hints={codeSnippetsData} 
+                    currentProblemTitle={currentProblemTitle}
+                    currentProblemId={currentProblemId}
+                    isLoading={isHintsLoading} 
+                  />
                 </div>
               </motion.div>
             </motion.div>
@@ -4854,6 +4588,7 @@ const SidePanel: React.FC = () => {
                   <i className="fas fa-book"></i> Recommended Resources
                 </motion.h3>
                 <div className="resource-grid">
+                  {currentDiscussions}
                   <motion.div
                     className="resource-card"
                     initial={{ opacity: 0, y: 20 }}
@@ -4888,6 +4623,7 @@ const SidePanel: React.FC = () => {
                         backgroundColor: "rgba(139, 92, 246, 0.2)",
                       }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => {window.open("https://blog.algomaster.io/p/20-patterns-to-master-dynamic-programming","_blank");}}
                     >
                       <i className="fas fa-external-link-alt"></i> View Resource
                     </motion.button>
@@ -4927,6 +4663,7 @@ const SidePanel: React.FC = () => {
                         backgroundColor: "rgba(139, 92, 246, 0.2)",
                       }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => {window.open("https://www.youtube.com/watch?v=09_LlHjoEiY", "_blank");}}
                     >
                       <i className="fas fa-external-link-alt"></i> Watch Series
                     </motion.button>
@@ -4983,6 +4720,7 @@ const SidePanel: React.FC = () => {
                         backgroundColor: "rgba(139, 92, 246, 0.2)",
                       }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => {window.open("https://visualgo.net/en/bst", "_blank");}}
                     >
                       <i className="fas fa-play"></i> Launch Tool
                     </motion.button>
@@ -5022,6 +4760,7 @@ const SidePanel: React.FC = () => {
                         backgroundColor: "rgba(139, 92, 246, 0.2)",
                       }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => {window.open("https://algorithm-playground.netlify.app/?algorithm=insertionSort", "_blank");}}
                     >
                       <i className="fas fa-play"></i> Try It Out
                     </motion.button>
@@ -5195,7 +4934,7 @@ function calculate() {
                       repeatDelay: 5,
                     }}
                   ></motion.i>
-                  Cobra AI
+                  CobraBot
                   <motion.span
                     className="status-badge online"
                     animate={{
@@ -5213,241 +4952,135 @@ function calculate() {
                 </h3>
               </motion.div>
 
-              <div className="chat-messages">
+              <div className="chat-messages" ref={chatMessagesRef}>
                 <AnimatePresence>
-                  <motion.div
-                    className="message assistant"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: 0.1 }}
-                    layout
-                  >
+                  {messages.map((message) => (
                     <motion.div
-                      className="message-avatar"
-                      whileHover={{ scale: 1.1 }}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 15,
-                      }}
+                      key={message.id}
+                      className={`message ${message.role}`}
+                      initial={{ opacity: 0, x: message.role === "assistant" ? -20 : 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4 }}
+                      layout
                     >
-                      <img src="images/icon.png" alt="Cobra Assistant" />
-                    </motion.div>
-                    <motion.div
-                      className="message-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 0.2 }}
-                    >
-                      <div className="message-text">
-                        <p>
-                          Hello! I'm your coding assistant. How can I help you
-                          today?
-                        </p>
-                      </div>
-                      <div className="message-time">10:30 AM</div>
-                    </motion.div>
-                  </motion.div>
-
-                  <motion.div
-                    className="message user"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: 0.6 }}
-                    layout
-                  >
-                    <motion.div
-                      className="message-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 0.7 }}
-                    >
-                      <div className="message-text">
-                        <p>
-                          I'm having trouble with a binary search algorithm. Can
-                          you explain how it works?
-                        </p>
-                      </div>
-                      <div className="message-time">10:32 AM</div>
-                    </motion.div>
-                    <motion.div
-                      className="message-avatar"
-                      whileHover={{ scale: 1.1 }}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 15,
-                        delay: 0.8,
-                      }}
-                    >
-                      <img src="images/cobrapfp.png" alt="User" />
-                    </motion.div>
-                  </motion.div>
-
-                  <motion.div
-                    className="message assistant"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: 1.1 }}
-                    layout
-                  >
-                    <motion.div
-                      className="message-avatar"
-                      whileHover={{ scale: 1.1 }}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 15,
-                        delay: 1.2,
-                      }}
-                    >
-                      <img src="images/icon.png" alt="Cobra Assistant" />
-                    </motion.div>
-                    <motion.div
-                      className="message-content"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 1.3 }}
-                    >
-                      <div className="message-text">
-                        <p>
-                          Binary search is an efficient algorithm for finding an
-                          item in a sorted array. Here's how it works:
-                        </p>
-                        <ol>
-                          <li>
-                            Compare the target value to the middle element of
-                            the array.
-                          </li>
-                          <li>
-                            If they match, return the index of the middle
-                            element.
-                          </li>
-                          <li>
-                            If the target is less than the middle element,
-                            continue searching in the left half.
-                          </li>
-                          <li>
-                            If the target is greater, continue searching in the
-                            right half.
-                          </li>
-                          <li>
-                            Repeat until the item is found or the subarray size
-                            becomes zero.
-                          </li>
-                        </ol>
-
-                        <div className="message-code-block">
-                          <div className="message-code-header">
-                            <div className="message-code-language">
-                              <i className="fas fa-code"></i>
-                              <span></span>
-                            </div>
-                            <div className="message-code-actions">
-                              <button className="message-code-action">
-                                <i className="fas fa-copy"></i>
-                                <span>Copy</span>
-                              </button>
-                            </div>
-                          </div>
-                          <div className="message-code-content">
-                            <pre>{`function binarySearch(arr, target) {
-  let left = 0;
-  let right = arr.length - 1;
-  
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    
-    if (arr[mid] === target) {
-      return mid; // Target found
-    }
-    
-    if (arr[mid] < target) {
-      left = mid + 1; // Search in the right half
-    } else {
-      right = mid - 1; // Search in the left half
-    }
-  }
-  
-  return -1; // Target not found
-}`}</pre>
-                          </div>
-                        </div>
-
-                        <p>
-                          Would you like me to explain the time complexity of
-                          this algorithm?
-                        </p>
-                      </div>
-                      <div className="message-time">10:33 AM</div>
+                      {message.role === "assistant" && (
+                        <motion.div
+                          className="message-avatar"
+                          whileHover={{ scale: 1.1 }}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 15,
+                          }}
+                        >
+                          <img src="images/icon.png" alt="Cobra Assistant" />
+                        </motion.div>
+                      )}
                       <motion.div
-                        className="suggestion-chips"
+                        className="message-content"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 1.7 }}
+                        transition={{ duration: 0.3, delay: 0.2 }}
                       >
-                        <motion.button
-                          className="suggestion-chip"
-                          whileHover={{
-                            scale: 1.05,
-                            backgroundColor: "rgba(139, 92, 246, 0.2)",
-                          }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setMessageText("Yes, explain time complexity");
-                            if (chatInputRef.current) {
-                              chatInputRef.current.focus();
-                            }
-                          }}
-                        >
-                          Yes, explain time complexity
-                        </motion.button>
-                        <motion.button
-                          className="suggestion-chip"
-                          whileHover={{
-                            scale: 1.05,
-                            backgroundColor: "rgba(139, 92, 246, 0.2)",
-                          }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setMessageText("Show me another example");
-                            if (chatInputRef.current) {
-                              chatInputRef.current.focus();
-                            }
+                        <div className="message-text">
+                          <p>{message.content}</p>
+                        </div>
+                        <div className="message-time">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </motion.div>
+                      {message.role === "user" && (
+                        <motion.div
+                          className="message-avatar"
+                          whileHover={{ scale: 1.1 }}
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 15,
                           }}
                         >
-                          Show me another example
-                        </motion.button>
-                        <motion.button
-                          className="suggestion-chip"
-                          whileHover={{
-                            scale: 1.05,
-                            backgroundColor: "rgba(139, 92, 246, 0.2)",
-                          }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setMessageText("No thanks");
-                            if (chatInputRef.current) {
-                              chatInputRef.current.focus();
-                            }
-                          }}
-                        >
-                          No thanks
-                        </motion.button>
+                          <img src="images/cobrapfp.png" alt="User" />
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  ))}
+                  {isMessagesLoading && (
+                    <motion.div
+                      className="message assistant"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                      layout
+                    >
+                      <motion.div
+                        className="message-avatar"
+                        whileHover={{ scale: 1.1 }}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 15,
+                        }}
+                      >
+                        <img src="images/icon.png" alt="Cobra Assistant" />
+                      </motion.div>
+                      <motion.div
+                        className="message-content"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="message-text">
+                          <div className="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                          </div>
+                        </div>
                       </motion.div>
                     </motion.div>
-                  </motion.div>
+                  )}
                 </AnimatePresence>
               </div>
 
+              {showInitialSuggestions && (
+                <motion.div 
+                  className="sliding-suggestions"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                >
+                  <div className="suggestion-chips">
+                    {suggestedPrompts.map((prompt, index) => (
+                      <motion.button
+                        key={index}
+                        className="suggestion-chip"
+                        whileHover={{
+                          scale: 1.05,
+                          backgroundColor: "rgba(139, 92, 246, 0.2)",
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                            setMessageText(prompt);
+                          if (chatInputRef.current) {
+                            chatInputRef.current.focus();
+                          }
+                        }}
+                      >
+                        {prompt}
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
               <motion.div
-                className="chat-input-container"
+                className={`chat-input-container ${showInitialSuggestions ? 'with-suggestions' : ''}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 1.5 }}
@@ -5462,9 +5095,7 @@ function calculate() {
                     ref={chatInputRef}
                     onKeyPress={(e) => {
                       if (e.key === "Enter" && messageText.trim()) {
-                        // Handle send message logic here
-                        console.log("Sending message:", messageText);
-                        setMessageText("");
+                        handleSendMessage();
                       }
                     }}
                   />
@@ -5498,19 +5129,8 @@ function calculate() {
                     boxShadow: "0 5px 15px rgba(139, 92, 246, 0.4)",
                   }}
                   whileTap={{ scale: 0.9 }}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1, rotate: [0, 360] }}
-                  transition={{
-                    scale: { duration: 0.3, delay: 1.6 },
-                    rotate: { duration: 0.5, delay: 1.6 },
-                  }}
-                  onClick={() => {
-                    if (messageText.trim()) {
-                      // Handle send message logic here
-                      console.log("Sending message:", messageText);
-                      setMessageText("");
-                    }
-                  }}
+                  onClick={handleSendMessage}
+                  disabled={!messageText.trim()}
                 >
                   <i className="fas fa-paper-plane"></i>
                 </motion.button>
@@ -5825,326 +5445,33 @@ function calculate() {
           </div>
 
           {/* Settings Section */}
-          <div
-            className={`section ${
-              activeSection === "settings" ? "active" : ""
-            }`}
-            id="settings"
-          >
-            <div className="settings-container">
-              <div className="settings-section">
-                <h3>
-                  <i className="fas fa-palette"></i> Appearance
-                </h3>
-                <div className="setting-item">
-                  <label>Theme</label>
-                  <div className="theme-toggle" onClick={handleThemeToggle}>
-                    <i
-                      className={`fas fa-${theme === "dark" ? "sun" : "moon"}`}
-                    ></i>
-                    {theme === "dark"
-                      ? "Switch to Light Mode"
-                      : "Switch to Dark Mode"}
-                  </div>
-                </div>
+          {activeSection === "settings" && (
+            <Settings
+              theme={theme}
+              fontSize={fontSize}
+              windowSize={windowSize}
+              defaultView={defaultView}
+              animationsEnabled={animationsEnabled}
+              notificationsEnabled={notificationsEnabled}
+              dataCollection={dataCollection}
+              timerSound={timerSound}
+              timerVolume={timerVolume}
+              onThemeToggle={handleThemeToggle}
+              onFontSizeChange={handleFontSizeChange}
+              onWindowSizeChange={handleWindowSizeChange}
+              onDefaultViewChange={handleDefaultViewChange}
+              onAnimationsToggle={handleAnimationsToggle}
+              onNotificationsToggle={handleNotificationsToggle}
+              onDataCollectionToggle={handleDataCollectionToggle}
+              onTimerSoundChange={handleTimerSoundChange}
+              onTimerVolumeChange={handleTimerVolumeChange}
+              onRequestNotifications={requestNotificationPermission}
+            />
+          )}
 
-                <div className="setting-item">
-                  <label>Font Size</label>
-                  <div className="font-size-options">
-                    <div
-                      className={`radio-option ${
-                        fontSize === "small" ? "selected" : ""
-                      }`}
-                      onClick={() => handleFontSizeChange("small")}
-                    >
-                      <div className="size-preview">
-                        <i className="fas fa-font icon-smaller"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="small"
-                        name="fontSize"
-                        value="small"
-                        checked={fontSize === "small"}
-                        onChange={() => handleFontSizeChange("small")}
-                      />
-                      <label htmlFor="small">Small</label>
-                    </div>
-                    <div
-                      className={`radio-option ${
-                        fontSize === "medium" ? "selected" : ""
-                      }`}
-                      onClick={() => handleFontSizeChange("medium")}
-                    >
-                      <div className="size-preview">
-                        <i className="fas fa-font"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="medium-font"
-                        name="fontSize"
-                        value="medium"
-                        checked={fontSize === "medium"}
-                        onChange={() => handleFontSizeChange("medium")}
-                      />
-                      <label htmlFor="medium-font">Medium</label>
-                    </div>
-                    <div
-                      className={`radio-option ${
-                        fontSize === "large" ? "selected" : ""
-                      }`}
-                      onClick={() => handleFontSizeChange("large")}
-                    >
-                      <div className="size-preview">
-                        <i className="fas fa-font icon-larger"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="large"
-                        name="fontSize"
-                        value="large"
-                        checked={fontSize === "large"}
-                        onChange={() => handleFontSizeChange("large")}
-                      />
-                      <label htmlFor="large">Large</label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="setting-item">
-                  <label>Window Size</label>
-                  <div className="window-size-options">
-                    <div
-                      className={`radio-option ${
-                        windowSize === "compact" ? "selected" : ""
-                      }`}
-                      onClick={() => handleWindowSizeChange("compact")}
-                    >
-                      <div className="size-preview compact">
-                        <i className="fas fa-compress-alt"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="compact"
-                        name="windowSize"
-                        value="compact"
-                        checked={windowSize === "compact"}
-                        onChange={() => handleWindowSizeChange("compact")}
-                      />
-                      <label htmlFor="compact">Compact</label>
-                    </div>
-                    <div
-                      className={`radio-option ${
-                        windowSize === "medium" ? "selected" : ""
-                      }`}
-                      onClick={() => handleWindowSizeChange("medium")}
-                    >
-                      <div className="size-preview medium">
-                        <i className="fas fa-expand-alt"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="medium"
-                        name="windowSize"
-                        value="medium"
-                        checked={windowSize === "medium"}
-                        onChange={() => handleWindowSizeChange("medium")}
-                      />
-                      <label htmlFor="medium">Medium</label>
-                    </div>
-                    <div
-                      className={`radio-option ${
-                        windowSize === "expanded" ? "selected" : ""
-                      }`}
-                      onClick={() => handleWindowSizeChange("expanded")}
-                    >
-                      <div className="size-preview">
-                        <i className="fas fa-expand"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="expanded"
-                        name="windowSize"
-                        value="expanded"
-                        checked={windowSize === "expanded"}
-                        onChange={() => handleWindowSizeChange("expanded")}
-                      />
-                      <label htmlFor="expanded">Expanded</label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="settings-section">
-                <h3>
-                  <i className="fas fa-home"></i> Preferences
-                </h3>
-                <div className="setting-item">
-                  <label>Default View</label>
-                  <div className="view-options">
-                    <div
-                      className={`radio-option ${
-                        defaultView === "home" ? "selected" : ""
-                      }`}
-                      onClick={() => handleDefaultViewChange("home")}
-                    >
-                      <div className="size-preview">
-                        <i className="fas fa-home"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="home-view"
-                        name="defaultView"
-                        value="home"
-                        checked={defaultView === "home"}
-                        onChange={() => handleDefaultViewChange("home")}
-                      />
-                      <label htmlFor="home-view">Home</label>
-                    </div>
-                    <div
-                      className={`radio-option ${
-                        defaultView === "resources" ? "selected" : ""
-                      }`}
-                      onClick={() => handleDefaultViewChange("resources")}
-                    >
-                      <div className="size-preview">
-                        <i className="fas fa-book"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="resources-view"
-                        name="defaultView"
-                        value="resources"
-                        checked={defaultView === "resources"}
-                        onChange={() => handleDefaultViewChange("resources")}
-                      />
-                      <label htmlFor="resources-view">Resources</label>
-                    </div>
-                    <div
-                      className={`radio-option ${
-                        defaultView === "hints" ? "selected" : ""
-                      }`}
-                      onClick={() => handleDefaultViewChange("hints")}
-                    >
-                      <div className="size-preview">
-                        <i className="fas fa-lightbulb"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="hints-view"
-                        name="defaultView"
-                        value="hints"
-                        checked={defaultView === "hints"}
-                        onChange={() => handleDefaultViewChange("hints")}
-                      />
-                      <label htmlFor="hints-view">Hints</label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="setting-item">
-                  <label>Timer Sound</label>
-                  <div className="sound-options">
-                    <div
-                      className={`sound-option ${
-                        timerSound === "bell" ? "selected" : ""
-                      }`}
-                      onClick={() => handleTimerSoundChange("bell")}
-                    >
-                      <div className="sound-icon">
-                        <i className="fas fa-bell"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="bell-sound"
-                        name="timerSound"
-                        value="bell"
-                        checked={timerSound === "bell"}
-                        onChange={() => handleTimerSoundChange("bell")}
-                      />
-                      <label htmlFor="bell-sound">Bell</label>
-                    </div>
-                    <div
-                      className={`sound-option ${
-                        timerSound === "digital" ? "selected" : ""
-                      }`}
-                      onClick={() => handleTimerSoundChange("digital")}
-                    >
-                      <div className="sound-icon">
-                        <i className="fas fa-clock"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="digital-sound"
-                        name="timerSound"
-                        value="digital"
-                        checked={timerSound === "digital"}
-                        onChange={() => handleTimerSoundChange("digital")}
-                      />
-                      <label htmlFor="digital-sound">Digital</label>
-                    </div>
-                    <div
-                      className={`sound-option ${
-                        timerSound === "gentle" ? "selected" : ""
-                      }`}
-                      onClick={() => handleTimerSoundChange("gentle")}
-                    >
-                      <div className="sound-icon">
-                        <i className="fas fa-music"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="gentle-sound"
-                        name="timerSound"
-                        value="gentle"
-                        checked={timerSound === "gentle"}
-                        onChange={() => handleTimerSoundChange("gentle")}
-                      />
-                      <label htmlFor="gentle-sound">Gentle</label>
-                    </div>
-                    <div
-                      className={`sound-option ${
-                        timerSound === "alarm" ? "selected" : ""
-                      }`}
-                      onClick={() => handleTimerSoundChange("alarm")}
-                    >
-                      <div className="sound-icon">
-                        <i className="fas fa-volume-up"></i>
-                      </div>
-                      <input
-                        type="radio"
-                        id="alarm-sound"
-                        name="timerSound"
-                        value="alarm"
-                        checked={timerSound === "alarm"}
-                        onChange={() => handleTimerSoundChange("alarm")}
-                      />
-                      <label htmlFor="alarm-sound">Alarm</label>
-                    </div>
-                  </div>
-
-                  <div className="volume-control">
-                    <label>Volume</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={timerVolume}
-                      className="volume-slider"
-                      onChange={(e) =>
-                        handleTimerVolumeChange(parseInt(e.target.value))
-                      }
-                    />
-                    <div className="volume-label-container">
-                      <span className="volume-label">Min</span>
-                      <span className="volume-value">{timerVolume}%</span>
-                      <span className="volume-label">Max</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Removed CodeAnalysis section */}
+          
+          {/* Toolbar */}
         </div>
       </div>
     </div>
@@ -6155,7 +5482,8 @@ function calculate() {
 const renderApp = () => {
   const container = document.getElementById("app");
   if (container) {
-    ReactDOM.render(<SidePanel />, container);
+    const root = createRoot(container);
+    root.render(<SidePanel />);
   }
 };
 

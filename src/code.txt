@@ -1,0 +1,449 @@
+// Add this code to your content.js file
+
+// Get the Monaco editor instance
+function getMonacoEditor() {
+  // Wait for Monaco to be fully loaded
+  if (typeof monaco === 'undefined') {
+    setTimeout(getMonacoEditor, 300);
+    return;
+  }
+  
+  // Get all editor instances
+  const editors = monaco.editor.getEditors();
+  if (editors.length === 0) {
+    setTimeout(getMonacoEditor, 300);
+    return;
+  }
+  
+  // We have an editor, now add our functionality
+  const editor = editors[0];
+  console.log("Monaco editor found:", editor);
+  
+  // Create a global button that will be visible regardless of implementation details
+  createGlobalHelperButton(editor);
+  
+  // Continue with other functionality
+  setupInlineButton(editor);
+  setupFloatingToggleButton(editor);
+}
+
+// Create a guaranteed visible button for testing
+function createGlobalHelperButton(editor) {
+  console.log("Creating global helper button");
+  const globalButton = document.createElement('button');
+  globalButton.className = 'global-helper-button';
+  globalButton.textContent = '?';
+  globalButton.title = 'Code Helper';
+  document.body.appendChild(globalButton);
+  
+  // Style it to be very visible
+  globalButton.style.position = 'fixed';
+  globalButton.style.top = '10px';
+  globalButton.style.right = '10px';
+  globalButton.style.width = '30px';
+  globalButton.style.height = '30px';
+  globalButton.style.borderRadius = '50%';
+  globalButton.style.backgroundColor = '#e91e63'; // Bright pink to be easily spotted
+  globalButton.style.color = 'white';
+  globalButton.style.border = 'none';
+  globalButton.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+  globalButton.style.cursor = 'pointer';
+  globalButton.style.zIndex = '10000'; // Very high z-index
+  globalButton.style.display = 'flex';
+  globalButton.style.alignItems = 'center';
+  globalButton.style.justifyContent = 'center';
+  globalButton.style.fontSize = '16px';
+  globalButton.style.fontWeight = 'bold';
+  
+  // Add click handler
+  globalButton.addEventListener('click', () => {
+    console.log("Global helper button clicked");
+    const position = editor.getPosition();
+    if (position) {
+      console.log(`Current position: Line ${position.lineNumber}, Column ${position.column}`);
+      showGlobalWidget(editor, { x: parseInt(globalButton.style.right) + 40, y: parseInt(globalButton.style.top) + 40 });
+    } else {
+      console.log("Editor position not available");
+    }
+  });
+  
+  console.log("Global helper button created and styled");
+}
+
+// Show a global widget
+function showGlobalWidget(editor, position) {
+  console.log("Showing global widget at position:", position);
+  // Create widget element
+  let widget = document.getElementById('global-helper-widget');
+  if (widget) {
+    widget.remove(); // Remove existing widget
+  }
+  
+  widget = document.createElement('div');
+  widget.id = 'global-helper-widget';
+  document.body.appendChild(widget);
+  
+  // Style the widget
+  widget.style.position = 'fixed';
+  widget.style.top = '50px';
+  widget.style.right = '10px';
+  widget.style.width = '250px';
+  widget.style.padding = '12px';
+  widget.style.backgroundColor = 'white';
+  widget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
+  widget.style.borderRadius = '8px';
+  widget.style.zIndex = '9999';
+  widget.style.fontSize = '14px';
+  
+  // Get current editor info if available
+  let lineInfo = "No line selected";
+  const editorPosition = editor.getPosition();
+  if (editorPosition) {
+    const model = editor.getModel();
+    if (model) {
+      const lineNumber = editorPosition.lineNumber;
+      const line = model.getLineContent(lineNumber);
+      lineInfo = `Line ${lineNumber}: ${line.slice(0, 30)}${line.length > 30 ? '...' : ''}`;
+    }
+  }
+  
+  // Add content to the widget
+  widget.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h3 style="margin: 0; font-size: 16px;">LeetCode Helper</h3>
+      <button id="close-global-widget" style="background: none; border: none; cursor: pointer; font-size: 18px;">×</button>
+    </div>
+    <p style="margin: 8px 0; font-size: 13px;">${lineInfo}</p>
+    <div style="margin: 12px 0;">
+      <button id="global-check-button" style="padding: 6px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-right: 8px;">Check Code</button>
+      <button id="global-docs-button" style="padding: 6px 12px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">View Docs</button>
+    </div>
+  `;
+  
+  // Add event listeners
+  setTimeout(() => {
+    document.getElementById('close-global-widget').addEventListener('click', () => {
+      widget.remove();
+    });
+    
+    document.getElementById('global-check-button').addEventListener('click', () => {
+      console.log("Global check button clicked");
+      alert("Checking code...");
+    });
+    
+    document.getElementById('global-docs-button').addEventListener('click', () => {
+      console.log("Global docs button clicked");
+      alert("Opening documentation...");
+    });
+  }, 0);
+  
+  console.log("Global widget created and displayed");
+}
+
+// Setup the inline button functionality
+function setupInlineButton(editor) {
+  console.log("Setting up inline button");
+  // Create our button element
+  const actionButton = document.createElement('button');
+  actionButton.className = 'leetcode-action-button';
+  actionButton.textContent = '✓';
+  actionButton.title = 'Check syntax';
+  actionButton.style.display = 'none';
+  document.body.appendChild(actionButton);
+  
+  // Track cursor position changes
+  editor.onDidChangeCursorPosition((e) => {
+    const model = editor.getModel();
+    if (!model) return;
+    
+    // Get the current line
+    const lineNumber = e.position.lineNumber;
+    const line = model.getLineContent(lineNumber);
+    
+    // Show button only if the line has content
+    if (line.trim().length > 0) {
+      // Get position info for the current line
+      const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+      const scrollTop = editor.getScrollTop();
+      
+      // Calculate position in viewport
+      const domNode = editor.getDomNode();
+      if (!domNode) return;
+      
+      const editorRect = domNode.getBoundingClientRect();
+      const lineTop = (lineNumber * lineHeight) - scrollTop;
+      
+      // Position the button
+      actionButton.style.display = 'block';
+      actionButton.style.position = 'absolute';
+      actionButton.style.left = `${editorRect.right - 40}px`;
+      actionButton.style.top = `${editorRect.top + lineTop - lineHeight/2}px`;
+      
+      console.log("Inline button positioned at:", {
+        left: actionButton.style.left,
+        top: actionButton.style.top
+      });
+    } else {
+      actionButton.style.display = 'none';
+    }
+  });
+  
+  // Handle button click
+  actionButton.addEventListener('click', () => {
+    // Implement your button functionality here
+    const position = editor.getPosition();
+    const lineNumber = position.lineNumber;
+    const model = editor.getModel();
+    const line = model.getLineContent(lineNumber);
+    
+    // Example: Show a notification with the current line content
+    console.log(`Button clicked on line ${lineNumber}: ${line}`);
+    alert(`Button clicked on line ${lineNumber}: ${line.substring(0, 30)}...`);
+    // You can implement your custom logic here
+  });
+  
+  // Handle scrolling
+  editor.onDidScrollChange(() => {
+    // Hide button when scrolling
+    actionButton.style.display = 'none';
+  });
+  
+  console.log("Inline button setup complete");
+}
+
+// Setup a floating toggle button that appears next to user's cursor
+function setupFloatingToggleButton(editor) {
+  console.log("Setting up floating toggle button");
+  // Create floating toggle button
+  const toggleButton = document.createElement('button');
+  toggleButton.className = 'floating-toggle-button';
+  toggleButton.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"></path></svg>';
+  toggleButton.title = 'Toggle helper widget';
+  toggleButton.style.display = 'none';
+  document.body.appendChild(toggleButton);
+  
+  // Style the button similar to Grammarly's button but smaller to be less intrusive
+  toggleButton.style.position = 'absolute';
+  toggleButton.style.width = '24px';
+  toggleButton.style.height = '24px';
+  toggleButton.style.borderRadius = '50%';
+  toggleButton.style.backgroundColor = '#4CAF50';
+  toggleButton.style.color = 'white';
+  toggleButton.style.border = 'none';
+  toggleButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  toggleButton.style.cursor = 'pointer';
+  toggleButton.style.zIndex = '9999';
+  toggleButton.style.display = 'none';
+  toggleButton.style.alignItems = 'center';
+  toggleButton.style.justifyContent = 'center';
+  toggleButton.style.transition = 'transform 0.2s, background-color 0.2s';
+  toggleButton.style.fontSize = '12px';
+  
+  // Add hover effect
+  toggleButton.addEventListener('mouseover', () => {
+    toggleButton.style.transform = 'scale(1.1)';
+  });
+  
+  toggleButton.addEventListener('mouseout', () => {
+    toggleButton.style.transform = 'scale(1)';
+  });
+  
+  // Variables to track state
+  let isWidgetVisible = false;
+  let lastClickPosition = { x: 0, y: 0 };
+  
+  // Listen for cursor position changes
+  editor.onDidChangeCursorPosition((e) => {
+    const model = editor.getModel();
+    if (!model) return;
+    
+    // Get the current line
+    const lineNumber = e.position.lineNumber;
+    const columnNumber = e.position.column;
+    const line = model.getLineContent(lineNumber);
+    
+    if (line.trim().length > 0) {
+      // Get position info
+      const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+      const scrollTop = editor.getScrollTop();
+      const fontInfo = editor.getOption(monaco.editor.EditorOption.fontInfo);
+      const characterWidth = fontInfo.typicalFullwidthCharacterWidth;
+      
+      // Calculate position in viewport
+      const domNode = editor.getDomNode();
+      if (!domNode) return;
+      
+      const editorRect = domNode.getBoundingClientRect();
+      const lineTop = (lineNumber * lineHeight) - scrollTop;
+      
+      // Calculate horizontal position based on column number
+      const horizontalOffset = columnNumber * characterWidth / 2;
+      
+      // Position the button near the cursor
+      toggleButton.style.display = 'flex';
+      toggleButton.style.left = `${editorRect.left + horizontalOffset + 10}px`;
+      toggleButton.style.top = `${editorRect.top + lineTop - lineHeight/2}px`;
+      
+      // Store position for widget placement
+      lastClickPosition = {
+        x: parseInt(toggleButton.style.left),
+        y: parseInt(toggleButton.style.top)
+      };
+      
+      console.log("Floating button positioned at:", {
+        left: toggleButton.style.left,
+        top: toggleButton.style.top
+      });
+    }
+  });
+  
+  // Handle mouse click in the editor
+  editor.onMouseDown((e) => {
+    // Show the button near the click
+    if (e.target.type === monaco.editor.MouseTargetType.CONTENT_TEXT) {
+      const editorRect = editor.getDomNode().getBoundingClientRect();
+      const x = e.event.posx - editorRect.left;
+      const y = e.event.posy - editorRect.top;
+      
+      toggleButton.style.display = 'flex';
+      toggleButton.style.left = `${editorRect.left + x + 10}px`;
+      toggleButton.style.top = `${editorRect.top + y - 5}px`;
+      
+      // Store position for widget placement
+      lastClickPosition = {
+        x: parseInt(toggleButton.style.left),
+        y: parseInt(toggleButton.style.top)
+      };
+      
+      console.log("Floating button positioned after click at:", {
+        left: toggleButton.style.left,
+        top: toggleButton.style.top
+      });
+    }
+  });
+  
+  // Handle button click
+  toggleButton.addEventListener('click', (e) => {
+    console.log("Floating toggle button clicked");
+    e.stopPropagation(); // Prevent editor from getting this click
+    isWidgetVisible = !isWidgetVisible;
+    
+    if (isWidgetVisible) {
+      toggleButton.style.backgroundColor = '#3d8b40';
+      showWidget(editor, lastClickPosition);
+    } else {
+      toggleButton.style.backgroundColor = '#4CAF50';
+      hideWidget();
+    }
+  });
+  
+  // Handle scrolling - move the button with scroll
+  editor.onDidScrollChange(() => {
+    if (toggleButton.style.display !== 'none') {
+      // Update button position based on new scroll position
+      const scrollTop = editor.getScrollTop();
+      const position = editor.getPosition();
+      const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+      const lineTop = (position.lineNumber * lineHeight) - scrollTop;
+      const editorRect = editor.getDomNode().getBoundingClientRect();
+      
+      toggleButton.style.top = `${editorRect.top + lineTop - lineHeight/2}px`;
+      
+      // Update widget position if visible
+      if (isWidgetVisible) {
+        const widget = document.getElementById('helper-widget');
+        if (widget) {
+          widget.style.top = `${parseInt(toggleButton.style.top) - 5 - widget.offsetHeight}px`;
+        }
+      }
+    }
+  });
+  
+  // Hide button when clicking outside editor
+  document.addEventListener('click', (e) => {
+    if (!editor.getDomNode().contains(e.target) && e.target !== toggleButton) {
+      toggleButton.style.display = 'none';
+      hideWidget();
+      isWidgetVisible = false;
+    }
+  });
+  
+  console.log("Floating toggle button setup complete");
+}
+
+// Show the helper widget at the specified position
+function showWidget(editor, position) {
+  console.log("Showing widget at position:", position);
+  // Create widget element if it doesn't exist
+  let widget = document.getElementById('helper-widget');
+  if (!widget) {
+    widget = document.createElement('div');
+    widget.id = 'helper-widget';
+    document.body.appendChild(widget);
+  }
+  
+  // Style the widget
+  widget.style.position = 'absolute';
+  widget.style.left = `${position.x}px`;
+  widget.style.top = `${position.y - 120}px`; // Position above the button
+  widget.style.width = '200px';
+  widget.style.padding = '10px';
+  widget.style.backgroundColor = 'white';
+  widget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+  widget.style.borderRadius = '8px';
+  widget.style.zIndex = '9998';
+  widget.style.fontSize = '14px';
+  
+  // Add content to the widget
+  const editorPosition = editor.getPosition();
+  const lineNumber = editorPosition.lineNumber;
+  const model = editor.getModel();
+  const line = model.getLineContent(lineNumber);
+  
+  widget.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <h3 style="margin: 0; font-size: 14px;">Code Helper</h3>
+      <button id="close-widget" style="background: none; border: none; cursor: pointer; font-size: 16px;">×</button>
+    </div>
+    <p style="margin: 5px 0; font-size: 12px;">Current line: ${lineNumber}</p>
+    <div style="margin: 8px 0;">
+      <button id="widget-action-button" style="padding: 5px 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">Check</button>
+      <button id="widget-docs-button" style="padding: 5px 8px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Docs</button>
+    </div>
+  `;
+  
+  // Add event listeners
+  setTimeout(() => {
+    document.getElementById('close-widget').addEventListener('click', () => {
+      console.log("Close widget button clicked");
+      hideWidget();
+    });
+    
+    document.getElementById('widget-action-button').addEventListener('click', () => {
+      console.log(`Action performed on line ${lineNumber}: ${line}`);
+      alert(`Action performed on line ${lineNumber}`);
+      // Add your custom action here
+    });
+    
+    document.getElementById('widget-docs-button').addEventListener('click', () => {
+      console.log(`Showing docs for content on line ${lineNumber}`);
+      alert(`Showing docs for line ${lineNumber}`);
+      // Add your docs functionality here
+    });
+  }, 0);
+  
+  console.log("Widget created and displayed");
+}
+
+// Hide the helper widget
+function hideWidget() {
+  console.log("Hiding widget");
+  const widget = document.getElementById('helper-widget');
+  if (widget) {
+    widget.remove();
+  }
+}
+
+// Start the process
+console.log("Starting Monaco editor integration");
+setTimeout(getMonacoEditor, 500);

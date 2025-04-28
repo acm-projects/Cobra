@@ -12,8 +12,16 @@ const documentObserver = new MutationObserver((mutations, obs) => {
                 console.log(mutation.addedNodes[0].innerText);
             }
             let userCode = "";
+            let n = 1;
+            let lineObjects = [];
             for(const line of document.querySelector(target).childNodes){
-                userCode += line.innerText + "\n";
+                lineObjects.push(line);
+            }
+            lineObjects = lineObjects.sort((a,b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+            console.log(lineObjects);
+            for(const lineObj of lineObjects){
+                userCode += `line ${n}: ` + lineObj.innerText + "\n";
+                n++;
             }
             chrome.runtime.sendMessage({type: "sendDraft", data:  userCode});
 
@@ -25,3 +33,4 @@ const documentObserver = new MutationObserver((mutations, obs) => {
     }
 });
 documentObserver.observe(document, {childList: true, subtree: true});
+

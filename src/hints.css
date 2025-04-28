@@ -260,3 +260,121 @@
   max-width: 70%;
   word-break: break-word;
 } 
+
+/* Skeleton Loading Animation for Hint Cards */
+.hint-card-skeleton {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  /* Add opacity transition for fading out */
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Fade-in animation for actual hint cards */
+.hint-card:not(.hint-card-skeleton) {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.skeleton-pulse {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  height: 100%;
+  width: 100%;
+  border-radius: 4px;
+}
+
+.skeleton-pulse::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%, 
+    rgba(255, 255, 255, 0.06) 50%, 
+    rgba(255, 255, 255, 0) 100%);
+  animation: shimmer 1.5s infinite;
+  /* Ensure the animation stops when we start transitioning out */
+  will-change: transform;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.skeleton-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 60px;
+  height: 20px;
+  border-radius: 20px;
+}
+
+.skeleton-title {
+  height: 24px;
+  margin: 16px 0 10px;
+  width: 70%;
+}
+
+.skeleton-description {
+  margin: 12px 0;
+}
+
+.skeleton-description .skeleton-pulse {
+  height: 14px;
+  margin-bottom: 8px;
+}
+
+.skeleton-code {
+  margin: 16px 0;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.skeleton-code-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 14px;
+}
+
+.skeleton-button {
+  margin-top: 16px;
+  height: 36px;
+  width: 160px;
+  border-radius: 6px;
+} 

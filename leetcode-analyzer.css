@@ -1,0 +1,366 @@
+/* LeetCode Analyzer Styles */
+
+/* Main container */
+.leetcode-analyzer-ui {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 320px;
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  padding: 0;
+  z-index: 10000;
+  max-height: 80vh;
+  overflow-y: auto;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  border: 1px solid #333;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Widget header */
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #252525;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid #333;
+  cursor: move;
+}
+
+.widget-content {
+  padding: 16px;
+}
+
+/* Toggle button */
+.toggle-button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #888;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.toggle-button:hover {
+  color: #fff;
+}
+
+/* Close button */
+.close-button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #888;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.close-button:hover {
+  color: #fff;
+}
+
+/* Header */
+.leetcode-analyzer-ui h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.analyzer-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #8A2BE2;
+  margin-right: 10px;
+  box-shadow: 0 0 6px rgba(138, 43, 226, 0.4);
+}
+
+/* Status message */
+.status-message {
+  font-size: 13px;
+  color: #bbb;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background-color: #252525;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.status-icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #8A2BE2;
+  margin-right: 8px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(138, 43, 226, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(138, 43, 226, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(138, 43, 226, 0);
+  }
+}
+
+/* Analysis content */
+.analysis-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #e0e0e0;
+  padding: 14px;
+  background-color: #252525;
+  border-radius: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.analysis-text {
+  padding: 5px;
+}
+
+/* Placeholder for empty analysis */
+.analysis-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 10px;
+  text-align: center;
+  color: #888;
+}
+
+.analysis-placeholder svg {
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.analysis-placeholder p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 240px;
+}
+
+/* Enhanced Highlight style for code lines mentioned in analysis */
+.leetcode-analyzer-highlight {
+  background-color: rgba(138, 43, 226, 0.15) !important;
+  border-left: 3px solid #8A2BE2 !important;
+  box-shadow: inset 0 0 0 1px rgba(138, 43, 226, 0.3) !important;
+  transition: background-color 0.3s ease;
+}
+
+/* Add specific highlighting for Monaco editor */
+.monaco-editor .view-line.leetcode-analyzer-highlight {
+  background-color: rgba(138, 43, 226, 0.2) !important;
+  border-left: 3px solid #8A2BE2 !important;
+}
+
+/* Add more specific rules to override LeetCode styles */
+.monaco-editor .view-lines .view-line.leetcode-analyzer-highlight {
+  background-color: rgba(138, 43, 226, 0.2) !important;
+  border-left: 3px solid #8A2BE2 !important;
+}
+
+/* Additional styling for CodeMirror editor */
+.CodeMirror-line.leetcode-analyzer-highlight {
+  background-color: rgba(138, 43, 226, 0.2) !important;
+  border-left: 3px solid #8A2BE2 !important;
+}
+
+/* General rule for any editor line */
+div[role="presentation"] > div.leetcode-analyzer-highlight {
+  background-color: rgba(138, 43, 226, 0.2) !important;
+  border-left: 3px solid #8A2BE2 !important;
+}
+
+/* Analysis content styling */
+.analysis-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+.analysis-subtitle {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 12px 0 8px 0;
+  color: #ddd;
+}
+
+.analysis-section-title {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 16px 0 10px 0;
+  color: #bbb;
+  border-bottom: 1px solid #333;
+  padding-bottom: 6px;
+}
+
+.analysis-item {
+  margin: 8px 0 8px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.item-number {
+  color: #8A2BE2;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.paragraph-break {
+  height: 8px;
+}
+
+/* Line references in analysis */
+.line-reference {
+  color: #8A2BE2;
+  font-weight: bold;
+  position: relative;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 2px 4px;
+  background-color: rgba(138, 43, 226, 0.1);
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.line-reference:hover {
+  text-decoration: none;
+  background-color: rgba(138, 43, 226, 0.2);
+}
+
+/* Lists in analysis */
+.analysis-content ul {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.analysis-content li {
+  margin-bottom: 6px;
+  list-style-type: none;
+  position: relative;
+}
+
+.analysis-content li::before {
+  content: "•";
+  color: #8A2BE2;
+  font-weight: bold;
+  display: inline-block;
+  width: 1em;
+  margin-left: -1em;
+}
+
+/* Code blocks */
+.analysis-content pre {
+  background-color: #1a1a1a;
+  padding: 10px 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 10px 0;
+  border-left: 2px solid #8A2BE2;
+}
+
+.analysis-content code {
+  background-color: #1a1a1a;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: Menlo, Monaco, 'Courier New', monospace;
+  font-size: 13px;
+}
+
+/* Buttons */
+.leetcode-analyzer-button {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #8A2BE2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  margin-top: 12px;
+  transition: background-color 0.2s;
+  text-align: center;
+  font-weight: 500;
+}
+
+.leetcode-analyzer-button:hover {
+  background-color: #9D4EDD;
+}
+
+/* Scrollbar styling */
+.analysis-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.analysis-content::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.analysis-content::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+.analysis-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Reset API key button */
+.reset-api-key {
+  width: 100%;
+  padding: 4px 8px;
+  background-color: #444;
+  color: #aaa;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.reset-api-key:hover {
+  background-color: #555;
+  color: #ccc;
+}
+
+/* API Key input */
+.api-key-input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: white;
+} 

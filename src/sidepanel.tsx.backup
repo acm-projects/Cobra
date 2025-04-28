@@ -4794,7 +4794,7 @@ export default SidePanel;
                       repeatDelay: 5,
                     }}
                   ></motion.i>
-                  Cobra AI
+                  CobraBot
                   <motion.span
                     className="status-badge online"
                     animate={{
@@ -5944,7 +5944,7 @@ export default SidePanel;
                       repeatDelay: 5,
                     }}
                   ></motion.i>
-                  Cobra AI
+                  CobraBot
                   <motion.span
                     className="status-badge online"
                     animate={{

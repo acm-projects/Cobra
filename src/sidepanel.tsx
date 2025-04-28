@@ -6,7 +6,7 @@ import "./hints.css";
 import "./styles/chat.css";
 import VerificationPage from "./components/VerificationPage";
 import CurrentProblem from "./components/Dashboard/CurrentProblem";
-import { getHints, sendChat } from "./awsFunctions";
+import { getHints, sendChat, getErrorAnalysis } from "./awsFunctions";
 import HintCard from "./components/HintCard";
 import HintCardContainer from "./components/HintCardContainer";
 import ConceptualHintContainer from "./components/ConceptualHintContainer";
@@ -60,7 +60,7 @@ const SidePanel: React.FC = () => {
     {
       id: "1",
       role: "assistant",
-      content: "👋 Hello! I'm your Cobra AI coding assistant. How can I help you today?",
+      content: "Hello! I'm CobraBot, your coding assistant. How can I help you today?",
       timestamp: new Date(),
     }
   ]);
@@ -115,6 +115,9 @@ const SidePanel: React.FC = () => {
   const [currentProblemId, setCurrentProblemId] = useState<string | null>(null);
   const [codeSnippetsData, setCodeSnippetsData] = useState<any[]>([]);
   const [currentProblemDescription, setCurrentProblemDescription] = useState<string>("");
+  const [currentDraft, setCurrentDraft] = useState<string>("");
+  const [currentSlug, setCurrentSlug] = useState<string>("");
+  const [scanForErrors, setScanForErrors] = useState<boolean>(true);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -310,11 +313,6 @@ const SidePanel: React.FC = () => {
     // Load sidebar expanded state
     const sidebarState = localStorage.getItem("sidebarExpanded") === "true";
     setSidebarExpanded(sidebarState);
-
-
-    const messageChatBot = async (message: string) => {
-
-    }
 
     // Apply necessary styles for proper section display
     const styleElement = document.createElement("style");
@@ -3340,6 +3338,37 @@ const SidePanel: React.FC = () => {
     }
   };
 
+
+  const useDebouncedEffect = (callback: any, delay: number, deps: any) => {
+    const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+    useEffect(() => {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        callback();
+      }, delay);
+  
+      return () => clearTimeout(timeoutRef.current);
+    }, deps);
+  }
+
+  useDebouncedEffect(async() => {
+    console.log('No draft sent for 5 seconds.');
+    //console.log('sent draft:\n', currentDraft);
+    //console.log('sent slug: ', currentSlug);
+    const analysis = await getErrorAnalysis(currentSlug, currentDraft);
+    console.log('Analysis: ', analysis);
+    try {
+      const res = JSON.parse(analysis);
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id!, { type: 'showErrorWidget', errors: res });
+      });
+    } catch (e) {
+      console.error('Error parsing JSON:', e);
+      return;
+    }
+  }, 10000, [[currentDraft], [currentSlug]]);
+
   // Handle navigation
   const handleNavigation = (sectionId: string) => {
     console.log("Navigation requested to section:", sectionId);
@@ -3762,6 +3791,7 @@ const SidePanel: React.FC = () => {
           // Update problem info
           setCurrentProblemId(message.problemId || null);
           setCurrentProblemTitle(slugToTitle(message.data) || "");
+          setCurrentSlug(message.data);
           
           // Process the data
           setCurrentHint(message.hint);
@@ -3770,12 +3800,12 @@ const SidePanel: React.FC = () => {
           setCurrentProblemTitle(slugToTitle(message.data));
           console.log("currentProblemTitle: ", message.data);
           
-          const descrResponse = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${message.data}`);
-          if (!descrResponse.ok) throw new Error("Problem not found or API error");
-          const data = await descrResponse.json();
-          const description = htmlToCleanText(data.question);
-          setCurrentProblemDescription(description);
-          console.log("currentProblemDescription: ", description);
+          //const descrResponse = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${message.data}`);
+          //if (!descrResponse.ok) throw new Error("Problem not found or API error");
+          //const data = await descrResponse.json();
+          //const description = htmlToCleanText(data.question);
+          //setCurrentProblemDescription(description);
+          //console.log("currentProblemDescription: ", description);
   
           
           // Add a small delay before turning off loading to ensure smooth transitions
@@ -3807,6 +3837,8 @@ const SidePanel: React.FC = () => {
           );
       })
         setCurrentDiscussions(discussionCards);
+      } else if (message.type === "sendDraft"){
+        setCurrentDraft(message.data);
       }
     });
 
@@ -3907,6 +3939,13 @@ const SidePanel: React.FC = () => {
     }
   };
 
+  
+  const handleErrorToggle = () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.tabs.sendMessage(tabs[0].id!, { type: 'toggleErrorWidget', value: !scanForErrors });
+    setScanForErrors(!scanForErrors);
+  });}
+
   // Handle sidebar toggle
   const handleSidebarToggle = () => {
     const newState = !sidebarExpanded;
@@ -3944,7 +3983,7 @@ const SidePanel: React.FC = () => {
     if (!messageText.trim()) return;
     
     // Hide initial suggestions when user sends first message
-    setShowInitialSuggestions(false);
+    //setShowInitialSuggestions(false);
     
     // Create new user message
     const newUserMessage: Message = {
@@ -4784,6 +4823,11 @@ const SidePanel: React.FC = () => {
                   className="search-input"
                 />
               </div>
+              
+              <div><button 
+                className="error-filter-btn"
+                onClick={handleErrorToggle}
+                >Scan for Syntax Errors: {scanForErrors ? 'Enabled' : 'Disabled'}</button></div>
 
               <div className="error-filters">
                 <button className="error-filter-btn active">All Errors</button>
@@ -4934,7 +4978,7 @@ function calculate() {
                       repeatDelay: 5,
                     }}
                   ></motion.i>
-                  Cobra AI
+                  CobraBot
                   <motion.span
                     className="status-badge online"
                     animate={{
@@ -5066,7 +5110,7 @@ function calculate() {
                         }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => {
-                          setMessageText(prompt);
+                            setMessageText(prompt);
                           if (chatInputRef.current) {
                             chatInputRef.current.focus();
                           }

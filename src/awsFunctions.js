@@ -50,10 +50,10 @@ export const verifyEmail = async(username, confirmationCode) => {
     await chrome.tabs.create({ url: "https://leetcode.com/accounts/login/" });
     chrome.runtime.sendMessage({type: "linkedLeetCodeLogin"});
     console.log("created tab");
-    return "success";
+    return true;
   } catch (error){
     console.error(error);
-    return "failure";
+    return false;
   }
 }
 
@@ -82,6 +82,8 @@ export const sendChat = async(message, history) => {
 
 export const getHints = async(slug) => {
   try{
+    //console.log("getting problem solutions with slug: " + slug);
+    //const solResponse = await fetch(`https://api.github.com/repos/kamyu104/LeetCode-Solutions/contents/Python/${problemTitle}`);
     console.log("grabbing hints with slug: " + slug);
     const response = await fetch (`https://vmecerx9b2.execute-api.us-east-1.amazonaws.com/dev/hints`, {
       method: "POST",
@@ -96,6 +98,36 @@ export const getHints = async(slug) => {
      return hints;
   } catch (error) {
     console.error("Error fetching hints:", error);
+  }
+}
+
+export const getErrorAnalysis = async(slug, code) => {
+  try{
+    if(!code){
+      throw new Error("No code provided for error analysis.");
+    }
+    //console.log("code before call to geterroranalysis: " + code);
+    //console.log("getting problem solutions with slug: " + slug);
+    //const solResponse = await fetch(`https://api.github.com/repos/kamyu104/LeetCode-Solutions/contents/Python/${problemTitle}`);
+    //console.log("grabbing error analysis with slug: " + slug);
+    const bodyObject = { leetcodeSlug: slug, code: code };
+    //console.log("bodyObject: " + JSON.stringify(bodyObject));
+    const response = await fetch (`https://vmecerx9b2.execute-api.us-east-1.amazonaws.com/dev/analysis`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(bodyObject),
+    });
+     const responseObject = await response.json();
+     //console.log(responseObject);
+     const analysis = JSON.parse(responseObject.body).reply;
+     const whatGPTreads = JSON.parse(responseObject.body).code;
+     //console.log(analysis);
+     //console.log(whatGPTreads);
+     return analysis;
+  } catch (error) {
+    console.error("Error fetching analysis:", error);
   }
 }
 

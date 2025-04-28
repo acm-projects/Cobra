@@ -111,7 +111,7 @@ export const getErrorAnalysis = async(slug, code) => {
     //const solResponse = await fetch(`https://api.github.com/repos/kamyu104/LeetCode-Solutions/contents/Python/${problemTitle}`);
     //console.log("grabbing error analysis with slug: " + slug);
     const bodyObject = { leetcodeSlug: slug, code: code };
-    //console.log("bodyObject: " + JSON.stringify(bodyObject));
+    console.log("bodyObject: " + JSON.stringify(bodyObject));
     const response = await fetch (`https://vmecerx9b2.execute-api.us-east-1.amazonaws.com/dev/analysis`, {
       method: "POST",
       headers: {
@@ -120,10 +120,10 @@ export const getErrorAnalysis = async(slug, code) => {
       body: JSON.stringify(bodyObject),
     });
      const responseObject = await response.json();
-     //console.log(responseObject);
+     console.log(responseObject);
      const analysis = JSON.parse(responseObject.body).reply;
      const whatGPTreads = JSON.parse(responseObject.body).code;
-     //console.log(analysis);
+     console.log(analysis);
      //console.log(whatGPTreads);
      return analysis;
   } catch (error) {

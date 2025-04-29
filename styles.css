@@ -19,6 +19,12 @@ body.auth-page {
     max-width: 400px;
     padding: 24px;
     margin: 0 auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Updated Container */
@@ -1930,7 +1936,7 @@ body.auth-page {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     padding: 24px;
     width: 100%;
-    max-width: 460px;
+    max-width: 520px;
     margin: 0 auto;
 }
 
@@ -1970,12 +1976,12 @@ body.auth-page {
 .code-input-container {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: 12px;
     margin-bottom: 24px;
 }
 
 .code-input {
-    width: 48px;
+    width: 52px;
     height: 56px;
     border: 1px solid rgba(77, 91, 206, 0.3);
     background-color: rgba(30, 31, 44, 0.6);

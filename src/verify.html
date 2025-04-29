@@ -40,14 +40,17 @@
             min-height: 100vh;
             height: auto;
             width: 100%;
-            max-width: 420px;
+            max-width: 520px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             box-sizing: border-box;
-            position: relative;
-            margin: 0 auto;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
             padding: 20px;
         }
 
@@ -91,7 +94,7 @@
         /* Additional verification page specific styles */
         .auth-card {
             width: 100%;
-            max-width: 360px;
+            max-width: 460px;
             background: var(--container-bg);
             border: 1px solid var(--container-border);
             border-radius: 16px;
@@ -157,13 +160,13 @@
         .code-input-container {
             display: flex;
             justify-content: center;
-            gap: 8px;
+            gap: 12px;
             margin: 24px 0;
             width: 100%;
         }
         
         .code-input {
-            width: 42px;
+            width: 52px;
             height: 50px;
             border-radius: 10px;
             background: var(--input-bg);
@@ -267,13 +270,13 @@
             cursor: not-allowed;
         }
 
-        @media (max-width: 420px) {
+        @media (max-width: 520px) {
             .auth-card {
                 padding: 30px 20px;
             }
             
             .code-input {
-                width: 38px;
+                width: 42px;
                 height: 46px;
             }
         }

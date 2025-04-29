@@ -3359,10 +3359,8 @@ const SidePanel: React.FC = () => {
     //console.log('sent slug: ', currentSlug);
     const analysis = await getErrorAnalysis(currentSlug, currentDraft);
     console.log('Analysis: ', analysis);
-    const cleanedAnalysis =  analysis.replace(/\u00A0/g, ' ');
-    console.log('Cleaned Analysis: ' + cleanedAnalysis);
     try {
-      const res = JSON.parse(cleanedAnalysis);
+      const res = JSON.parse(analysis);
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         chrome.tabs.sendMessage(tabs[0].id!, { type: 'showErrorWidget', errors: res });
       });
@@ -3370,7 +3368,7 @@ const SidePanel: React.FC = () => {
       console.error('Error parsing JSON:', e);
       return;
     }
-  }, 3000, [[currentDraft], [currentSlug]]);
+  }, 10000, [[currentDraft], [currentSlug]]);
 
   // Handle navigation
   const handleNavigation = (sectionId: string) => {
@@ -4036,35 +4034,6 @@ const SidePanel: React.FC = () => {
     }
   }, [messages]);
 
-/*
-    // Check if verification page should be shown
-    if (showVerification) {
-      console.log("User is not verified, showing verification page.");
-      return (
-        <div className={`container ${isLoading ? "loading" : ""}`}>
-          <AnimatePresence>
-          <motion.div
-            className="leetcode-loader-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="leetcode-loader-container">
-              <motion.div
-                className="leetcode-loader-card"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <VerificationPage onVerificationComplete={handleVerificationComplete} />
-              </motion.div>
-              </div>
-              </motion.div>
-          </AnimatePresence>
-        </div>
-      );
-    }
-*/
   // Render the sidepanel UI
   return (
     <div className={`container ${isLoading ? "loading" : ""}`}>

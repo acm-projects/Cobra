@@ -167,7 +167,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         document.getElementById('errorWidget')?.remove(); // Remove any existing widget
         let currentIndex = 0;
 
-        //let card = <ErrorCard title={errors[currentIndex].title} error={errors[currentIndex].mistakeDescription} userCode={errors[currentIndex].mistakeCode} solution="Suggested Fix:" solutionCode={errors[currentIndex].suggestedFix}/>;
         // Inject custom CSS if not already added
         if (!document.getElementById('cobra-error-styles')) {
           injectCustomCSS();
@@ -199,13 +198,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             <div id="errorCardContainer"></div>
           </div>
         `;
-        const color = rgba(159, 91, 255, 0.25)
+        
+        const color = rgba(159, 91, 255, 0.25);
         // Position the widget relative to the target element
         let rect = targetElement.getBoundingClientRect();
         widget.style.position = 'absolute';
         widget.style.left = `${rect.left}px`;
         widget.style.top = `${rect.top+((18*(errors[0].lineNumber))+8)}px`;
         widget.style.zIndex = '9999';
+
         const line = Array.from(document.querySelector(target)!.children).find((line) => {
             return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex].lineNumber-1))+8}px`;
         });
@@ -346,22 +347,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               });
                           
               if (oldLine) {
-                  (oldLine as HTMLElement).style.backgroundColor = ''; // Highlight the line
+                  (oldLine as HTMLElement).style.backgroundColor = ''; // Unhighlight the previous line
               }
-                currentIndex = 0; // Reset to the first error
+              currentIndex = 0; // Reset to the first error
             } else {
               const oldLine = Array.from(document.querySelector(target)!.children).find((line) => {
                 return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex-1].lineNumber-1))+8}px`;
               });
                           
               if (oldLine) {
-                  (oldLine as HTMLElement).style.backgroundColor = ''; // Highlight the line
+                  (oldLine as HTMLElement).style.backgroundColor = ''; // Unhighlight the previous line
               }
             }
             console.log(errors[currentIndex]);
             // Update the widget position and content based on the current error
             widget.style.left = `${rect.left}px`;
             widget.style.top = `${rect.top+(18*(errors[currentIndex].lineNumber))+8}px`;  // Adjust to position the widget above the target
+            
             const line = Array.from(document.querySelector(target)!.children).find((line) => {
                 return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex].lineNumber-1))+8}px`;
             });
@@ -382,18 +384,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             
             root.render(updatedErrorCard);
         });
+        
         document.getElementById('closeBtn')!.addEventListener('click', () => {
-            console.log('Next error clicked');
+            console.log('Close button clicked');
             console.log("closing widget...");
             widget.style.left = `${rect.left}px`;
             widget.style.top = `${rect.top+(18*(errors[currentIndex].lineNumber))+8}px`;  // Adjust to position the widget above the target
             widget.remove();
+            
             const line = Array.from(document.querySelector(target)!.children).find((line) => {
                 return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex].lineNumber-1))+8}px`;
             });
                         
             if (line) {
-                (line as HTMLElement).style.backgroundColor = ''; // Highlight the line
+                (line as HTMLElement).style.backgroundColor = ''; // Unhighlight the line
             }
             currentIndex=0;
         });

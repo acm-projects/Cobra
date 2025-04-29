@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 import { createRoot } from 'react-dom/client';
 import { Auth } from "./utils/auth";
 import { motion, AnimatePresence } from "framer-motion";
@@ -5029,7 +5030,7 @@ function calculate() {
                         transition={{ duration: 0.3, delay: 0.2 }}
                       >
                         <div className="message-text">
-                          <p>{message.content}</p>
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                         <div className="message-time">
                           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

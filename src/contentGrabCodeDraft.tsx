@@ -339,18 +339,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         document.getElementById('nextErrorBtn')!.addEventListener('click', () => {
             console.log('Next error clicked');
-            if (currentIndex >= errors.length) {
-                currentIndex = 0; // Reset to the first error
-            }
-            const oldLine = Array.from(document.querySelector(target)!.children).find((line) => {
-                return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex].lineNumber-1))+8}px`;
-            });
-                        
-            if (oldLine) {
-                (oldLine as HTMLElement).style.backgroundColor = ''; // Highlight the line
-            }
             currentIndex++;
-
+            if (currentIndex >= errors.length) {
+              const oldLine = Array.from(document.querySelector(target)!.children).find((line) => {
+                  return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex-1].lineNumber-1))+8}px`;
+              });
+                          
+              if (oldLine) {
+                  (oldLine as HTMLElement).style.backgroundColor = ''; // Highlight the line
+              }
+                currentIndex = 0; // Reset to the first error
+            } else {
+              const oldLine = Array.from(document.querySelector(target)!.children).find((line) => {
+                return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex-1].lineNumber-1))+8}px`;
+              });
+                          
+              if (oldLine) {
+                  (oldLine as HTMLElement).style.backgroundColor = ''; // Highlight the line
+              }
+            }
             console.log(errors[currentIndex]);
             // Update the widget position and content based on the current error
             widget.style.left = `${rect.left}px`;
@@ -385,7 +392,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
                         
             if (line) {
-                (line as HTMLElement).style.backgroundColor = color; // Highlight the line
+                (line as HTMLElement).style.backgroundColor = ''; // Highlight the line
             }
             currentIndex=0;
             widget.remove();

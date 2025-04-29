@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CobraDraft",
+  "name": "Cobra",
   "version": "1.0",
   "description": "A Chrome extension for coding assistance",
   "icons": {

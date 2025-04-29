@@ -387,6 +387,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.log("closing widget...");
             widget.style.left = `${rect.left}px`;
             widget.style.top = `${rect.top+(18*(errors[currentIndex].lineNumber))+8}px`;  // Adjust to position the widget above the target
+            widget.remove();
             const line = Array.from(document.querySelector(target)!.children).find((line) => {
                 return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex].lineNumber-1))+8}px`;
             });
@@ -395,7 +396,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 (line as HTMLElement).style.backgroundColor = ''; // Highlight the line
             }
             currentIndex=0;
-            widget.remove();
         });
         // Append widget to the body
         }

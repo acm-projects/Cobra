@@ -93,14 +93,14 @@ const SidePanel: React.FC = () => {
   const [timerVolume, setTimerVolume] = useState<number>(80);
 
   // Timer state
-  const [timerType, setTimerType] = useState<"stopwatch" | "countdown">(
-    "stopwatch"
+  const [timerType, setTimerType] = useState<"countdown" | "stopwatch">(
+    "countdown"
   );
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [timerValue, setTimerValue] = useState<number>(0);
   const [laps, setLaps] = useState<number[]>([]);
-  const [countdownMinutes, setCountdownMinutes] = useState<number>(0);
-  const [countdownSeconds, setCountdownSeconds] = useState<number>(5);
+  const [countdownMinutes, setCountdownMinutes] = useState<number>(30);
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(0);
 
   // Refs
   const timerIntervalRef = useRef<number | null>(null);
@@ -3359,8 +3359,10 @@ const SidePanel: React.FC = () => {
     //console.log('sent slug: ', currentSlug);
     const analysis = await getErrorAnalysis(currentSlug, currentDraft);
     console.log('Analysis: ', analysis);
+    const cleanedAnalysis =  analysis.replace(/\u00A0/g, ' ');
+    console.log('Cleaned Analysis: ' + cleanedAnalysis);
     try {
-      const res = JSON.parse(analysis);
+      const res = JSON.parse(cleanedAnalysis);
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         chrome.tabs.sendMessage(tabs[0].id!, { type: 'showErrorWidget', errors: res });
       });
@@ -3368,7 +3370,7 @@ const SidePanel: React.FC = () => {
       console.error('Error parsing JSON:', e);
       return;
     }
-  }, 10000, [[currentDraft], [currentSlug]]);
+  }, 3000, [[currentDraft], [currentSlug]]);
 
   // Handle navigation
   const handleNavigation = (sectionId: string) => {

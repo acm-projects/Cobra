@@ -96,7 +96,7 @@ const CurrentProblem: React.FC<CurrentProblemProps> = ({
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             style={{ fontSize: "13px", padding: "8px 0" }}
-            dangerouslySetInnerHTML={{__html: description?description : "No active problem detected. Navigate to a coding problem to activate."}}
+            dangerouslySetInnerHTML={{__html: description?description : "Let's get started!"}}
           />
         </motion.div>
       </motion.div>

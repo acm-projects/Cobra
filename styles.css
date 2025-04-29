@@ -1708,6 +1708,32 @@ body.auth-page {
     gap: 12px;
     margin-bottom: 0;
     min-height: 0; /* This is important for flex containers to scroll properly */
+    
+    pre {
+        overflow-x: auto;
+        white-space: pre;
+        padding: 0px 0px;
+        background: rgba(20, 20, 40, 0.6);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+        color: #e0e7ff;
+        font-family: 'Fira Code', monospace;
+        font-size: 13px;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin: 12px 0;
+      }
+      
+      pre code {
+        padding: 12px 16px;
+        display: inline-block;
+        min-width: 100%;
+        white-space: pre;
+        word-break: normal;
+        overflow-wrap: normal;
+        color: inherit;
+      }
 }
 
 .chat-input-container {

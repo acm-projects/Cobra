@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 import { createRoot } from 'react-dom/client';
 import { Auth } from "./utils/auth";
 import { motion, AnimatePresence } from "framer-motion";
@@ -92,14 +93,14 @@ const SidePanel: React.FC = () => {
   const [timerVolume, setTimerVolume] = useState<number>(80);
 
   // Timer state
-  const [timerType, setTimerType] = useState<"stopwatch" | "countdown">(
-    "stopwatch"
+  const [timerType, setTimerType] = useState<"countdown" | "stopwatch">(
+    "countdown"
   );
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [timerValue, setTimerValue] = useState<number>(0);
   const [laps, setLaps] = useState<number[]>([]);
-  const [countdownMinutes, setCountdownMinutes] = useState<number>(0);
-  const [countdownSeconds, setCountdownSeconds] = useState<number>(5);
+  const [countdownMinutes, setCountdownMinutes] = useState<number>(30);
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(0);
 
   // Refs
   const timerIntervalRef = useRef<number | null>(null);
@@ -4033,35 +4034,6 @@ const SidePanel: React.FC = () => {
     }
   }, [messages]);
 
-/*
-    // Check if verification page should be shown
-    if (showVerification) {
-      console.log("User is not verified, showing verification page.");
-      return (
-        <div className={`container ${isLoading ? "loading" : ""}`}>
-          <AnimatePresence>
-          <motion.div
-            className="leetcode-loader-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="leetcode-loader-container">
-              <motion.div
-                className="leetcode-loader-card"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <VerificationPage onVerificationComplete={handleVerificationComplete} />
-              </motion.div>
-              </div>
-              </motion.div>
-          </AnimatePresence>
-        </div>
-      );
-    }
-*/
   // Render the sidepanel UI
   return (
     <div className={`container ${isLoading ? "loading" : ""}`}>
@@ -5029,7 +5001,7 @@ function calculate() {
                         transition={{ duration: 0.3, delay: 0.2 }}
                       >
                         <div className="message-text">
-                          <p>{message.content}</p>
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
                         <div className="message-time">
                           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

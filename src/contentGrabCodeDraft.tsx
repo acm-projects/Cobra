@@ -199,12 +199,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           </div>
         `;
         
+        const color = rgba(159, 91, 255, 0.25);
         // Position the widget relative to the target element
         let rect = targetElement.getBoundingClientRect();
         widget.style.position = 'absolute';
         widget.style.left = `${rect.left}px`;
         widget.style.top = `${rect.top+((18*(errors[0].lineNumber))+8)}px`;
         widget.style.zIndex = '9999';
+
+        const line = Array.from(document.querySelector(target)!.children).find((line) => {
+            return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex].lineNumber-1))+8}px`;
+        });
+                    
+        if (line) {
+            (line as HTMLElement).style.backgroundColor = color; // Highlight the line
+        }
 
         document.body.appendChild(widget);
         const errorCardContainer = document.getElementById('errorCardContainer');
@@ -333,13 +342,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             console.log('Next error clicked');
             currentIndex++;
             if (currentIndex >= errors.length) {
-                currentIndex = 0; // Reset to the first error
+              const oldLine = Array.from(document.querySelector(target)!.children).find((line) => {
+                  return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex-1].lineNumber-1))+8}px`;
+              });
+                          
+              if (oldLine) {
+                  (oldLine as HTMLElement).style.backgroundColor = ''; // Unhighlight the previous line
+              }
+              currentIndex = 0; // Reset to the first error
+            } else {
+              const oldLine = Array.from(document.querySelector(target)!.children).find((line) => {
+                return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex-1].lineNumber-1))+8}px`;
+              });
+                          
+              if (oldLine) {
+                  (oldLine as HTMLElement).style.backgroundColor = ''; // Unhighlight the previous line
+              }
             }
             console.log(errors[currentIndex]);
             // Update the widget position and content based on the current error
             widget.style.left = `${rect.left}px`;
             widget.style.top = `${rect.top+(18*(errors[currentIndex].lineNumber))+8}px`;  // Adjust to position the widget above the target
             
+            const line = Array.from(document.querySelector(target)!.children).find((line) => {
+                return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex].lineNumber-1))+8}px`;
+            });
+                        
+            if (line) {
+                (line as HTMLElement).style.backgroundColor = color; // Highlight the line
+            }
+
             // Update with enhanced error card
             const updatedErrorCard = 
               <EnhancedErrorCard 
@@ -352,13 +384,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             
             root.render(updatedErrorCard);
         });
+        
         document.getElementById('closeBtn')!.addEventListener('click', () => {
-            console.log('Next error clicked');
-            currentIndex=0;
+            console.log('Close button clicked');
             console.log("closing widget...");
             widget.style.left = `${rect.left}px`;
             widget.style.top = `${rect.top+(18*(errors[currentIndex].lineNumber))+8}px`;  // Adjust to position the widget above the target
             widget.remove();
+            
+            const line = Array.from(document.querySelector(target)!.children).find((line) => {
+                return line instanceof HTMLElement && line.style.top ===`${(18*(errors[currentIndex].lineNumber-1))+8}px`;
+            });
+                        
+            if (line) {
+                (line as HTMLElement).style.backgroundColor = ''; // Unhighlight the line
+            }
+            currentIndex=0;
         });
         // Append widget to the body
         }
@@ -366,3 +407,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 documentObserver.observe(document, {childList: true, subtree: true});
+
+function rgba(r: number, g: number, b: number, a: number): string {
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+}

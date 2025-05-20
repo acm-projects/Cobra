@@ -236,6 +236,18 @@ Mastering coding challenges on platforms like LeetCode and HackerRank can be dau
     - <a href="https://www.youtube.com/watch?v=eQAIojcArRY">Storing Images in S3 from Node Server</a>
       - Goes over how to use AWS S3 with Node
 
+- Serverless Functions:
+  - <a href="https://aws.amazon.com/lambda/">AWS Lambda</a>
+    - <a href="https://www.youtube.com/watch?v/3mYvM-LyEDk">AWS Lambda Tutorial For Beginners</a>
+    - <a href="https://docs.aws.amazon.com/lambda/latest/dg/welcome.html">Official AWS Lambda Documentation</a>
+  - Useful for running backend logic without actively managing servers
+
+- Additional Backend Services:
+  - <a href="https://aws.amazon.com/api-gateway/">API Gateway</a>
+    - <a href="https://www.youtube.com/watch?v=OtRD1zsszQI">AWS API Gateway Tutorial</a>
+  - <a href="https://aws.amazon.com/iam/">IAM (Identity and Access Management)</a>
+    - Important for managing security roles and permissions
+
 - API:
   - <a href="https://aws.amazon.com/amplify/">Amplify</a>
     - <a href="https://www.youtube.com/watch?v=HdCmo0a3ngM">AWS Amplify (Gen 1) in Plain English | Getting Started Tutorial for Beginners</a>
